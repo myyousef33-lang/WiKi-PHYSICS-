@@ -193,6 +193,7 @@ export interface PlatformSettings {
   instructorName: string;
   instructorTitle: string;
   instructorPhone: string;
+  instructorPhotoUrl?: string;
   telegramChannel: string;
   whatsappNumber: string;
   adminPin: string;

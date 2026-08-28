@@ -2039,6 +2039,76 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
               </div>
             </div>
 
+            {/* Teacher Photo Upload & Customization */}
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-950/20 p-4 space-y-3">
+              <label className="text-xs font-bold text-amber-300 flex items-center gap-2">
+                <ImageIcon className="h-4 w-4 text-amber-400" />
+                <span>صورة المعلم الشخصية (تغير الصورة في الواجهة الرئيسية فوراً)</span>
+              </label>
+              
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                {/* Current Photo Preview */}
+                <div className="relative h-28 w-24 shrink-0 rounded-xl overflow-hidden border border-slate-700 bg-slate-950 shadow-md">
+                  <img
+                    src={settings.instructorPhotoUrl || '/teacher.jpg'}
+                    alt="صورة المعلم"
+                    className="h-full w-full object-cover"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = '/teacher.jpg';
+                    }}
+                  />
+                </div>
+
+                {/* Upload Controls */}
+                <div className="space-y-3 flex-1 w-full">
+                  <div>
+                    <label className="text-[11px] text-slate-400 block mb-1.5 font-medium">اختيار صورة جديدة من الموبايل أو الكمبيوتر:</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          if (file.size > 8 * 1024 * 1024) {
+                            alert('حجم الصورة كبير جداً، يرجى اختيار صورة أقل من 8 ميجابايت');
+                            return;
+                          }
+                          const reader = new FileReader();
+                          reader.onload = (evt) => {
+                            const result = evt.target?.result as string;
+                            if (result) {
+                              setSettings({ ...settings, instructorPhotoUrl: result });
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="w-full text-xs text-slate-300 file:mr-0 file:ml-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-400 cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-[11px] text-slate-400 shrink-0">رابط صورة خارجي:</span>
+                    <input
+                      type="text"
+                      placeholder="https://..."
+                      value={settings.instructorPhotoUrl || ''}
+                      onChange={e => setSettings({ ...settings, instructorPhotoUrl: e.target.value })}
+                      className="flex-1 rounded-xl border border-slate-700 bg-slate-950 p-2 text-xs text-white font-mono"
+                      dir="ltr"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setSettings({ ...settings, instructorPhotoUrl: '/teacher.jpg' })}
+                      className="text-[11px] text-slate-400 hover:text-amber-400 underline whitespace-nowrap px-1"
+                    >
+                      إعادة الصورة الافتراضية
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-300">رقم واتساب الدعم الفني والأكواد</label>

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { Course, PdfMaterial, Student } from '../types';
+import teacherPhoto from '../assets/images/teacher.jpg';
 
 interface HomeLandingViewProps {
   onNavigate: (view: string, params?: any) => void;
@@ -130,15 +131,19 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 <div className="relative rounded-3xl border-2 border-amber-500/30 bg-gradient-to-b from-slate-900 via-slate-900 to-amber-950/40 p-4 shadow-2xl overflow-hidden group">
                   
                   {/* Teacher Photo */}
-                  <div className="relative aspect-[4/5] w-full rounded-2xl overflow-hidden bg-slate-950 border border-slate-800">
+                  <div className="relative aspect-[3/4] w-full rounded-2xl overflow-hidden bg-slate-950 border border-slate-800">
                     <img
-                      src="/teacher-original.jpg"
+                      src={settings.instructorPhotoUrl || '/teacher.jpg'}
                       alt={settings.instructorTitle}
+                      referrerPolicy="no-referrer"
                       onError={(e) => {
-                        // fallback if local file path is served differently
-                        (e.target as HTMLElement).setAttribute('src', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80');
+                        const target = e.currentTarget;
+                        if (!target.dataset.triedFallback) {
+                          target.dataset.triedFallback = 'true';
+                          target.src = '/teacher.jpg';
+                        }
                       }}
-                      className="h-full w-full object-cover object-top transition-transform duration-700 group-hover:scale-105"
+                      className="h-full w-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
                     

@@ -51,6 +51,7 @@ const SEED_SETTINGS: PlatformSettings = {
   instructorName: 'أ / إبراهيم خليل (مستر الفيزياء)',
   instructorTitle: 'كبير معلمي ومعد مادة الفيزياء للثانوية العامة',
   instructorPhone: '01012345678',
+  instructorPhotoUrl: '/teacher.jpg',
   telegramChannel: 'https://t.me/wikifizya_physics',
   whatsappNumber: '01012345678',
   adminPin: 'WikiPhys@9988#Master',
