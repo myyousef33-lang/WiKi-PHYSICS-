@@ -1,5 +1,5 @@
 import React from 'react';
-import { Send, Phone, ShieldCheck, Zap, Sparkles } from 'lucide-react';
+import { Send, Phone, ShieldCheck, Zap, Sparkles, Code2, Heart } from 'lucide-react';
 import { StorageService } from '../services/storage';
 import { Logo } from './Logo';
 
@@ -74,9 +74,17 @@ export const Footer: React.FC = () => {
 
         </div>
 
-        {/* Bottom Bar */}
-        <div className="mt-10 border-t border-slate-900 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+        {/* Bottom Bar with English Developer Signature */}
+        <div className="mt-10 border-t border-slate-900 pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400">
           <p>© {new Date().getFullYear()} منصة ويكيفزياء التعليمية — جميع الحقوق محفوظة</p>
+
+          {/* Designed & Developed by YOUSEF EMAD */}
+          <div className="inline-flex items-center gap-2 rounded-2xl border border-amber-500/30 bg-gradient-to-r from-slate-900 via-amber-950/20 to-slate-900 px-4 py-2 shadow-lg shadow-amber-500/5 transition-all hover:border-amber-500/60 group" dir="ltr">
+            <Code2 className="h-4 w-4 text-amber-400 group-hover:scale-110 transition-transform" />
+            <span className="text-[12px] font-medium text-slate-300 tracking-wide font-sans">
+              Crafted & Developed with <Heart className="h-3 w-3 inline text-rose-500 fill-rose-500 mx-0.5" /> by <span className="font-extrabold text-amber-400 tracking-wider">YOUSEF EMAD</span>
+            </span>
+          </div>
 
           <div className="flex items-center gap-2 text-slate-400">
             <Sparkles className="h-3.5 w-3.5 text-amber-500" />
