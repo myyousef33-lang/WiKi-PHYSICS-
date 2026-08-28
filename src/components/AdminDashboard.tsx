@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Users, 
   BookOpen, 
@@ -23,7 +23,15 @@ import {
   Layers,
   HelpCircle,
   Clock,
-  Send
+  Send,
+  Upload,
+  Video,
+  Image as ImageIcon,
+  Copy,
+  Check,
+  FileCheck,
+  Link,
+  Film
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { 
@@ -139,6 +147,61 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     message: '',
     targetGrade: 'all'
   });
+
+  // Generated Codes Modal & Copy States
+  const [recentlyGeneratedCodes, setRecentlyGeneratedCodes] = useState<ActivationCode[]>([]);
+  const [showGeneratedSuccessModal, setShowGeneratedSuccessModal] = useState(false);
+  const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
+
+  // File upload state / previews
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+
+  // Helper for reading files as Base64 / Data URL with size checking
+  const handleFileUpload = (
+    file: File, 
+    type: 'image' | 'video' | 'pdf', 
+    onSuccess: (dataUrl: string, fileName?: string, fileSizeFormatted?: string) => void
+  ) => {
+    // Check reasonable size for browser local persistence
+    // Images: up to 5MB, PDF/Video: up to 15MB or warn
+    const maxMb = type === 'video' ? 25 : type === 'pdf' ? 15 : 5;
+    if (file.size > maxMb * 1024 * 1024) {
+      alert(`حجم الملف كبير (${(file.size / (1024 * 1024)).toFixed(1)}MB). الحد الأقصى المقترح للرفع المباشر هو ${maxMb}MB لتجنب بطء المتصفح.`);
+    }
+
+    setIsUploadingFile(true);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setIsUploadingFile(false);
+      const result = e.target?.result as string;
+      if (result) {
+        const sizeFormatted = file.size > 1024 * 1024 
+          ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` 
+          : `${Math.round(file.size / 1024)} KB`;
+        onSuccess(result, file.name, sizeFormatted);
+      }
+    };
+    reader.onerror = () => {
+      setIsUploadingFile(false);
+      alert('حدث خطأ أثناء قراءة الملف من جهازك.');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Copy single code
+  const handleCopyCode = (codeText: string, id: string) => {
+    navigator.clipboard.writeText(codeText);
+    setCopiedCodeId(id);
+    setTimeout(() => setCopiedCodeId(null), 2500);
+  };
+
+  // Copy all generated codes
+  const handleCopyAllGeneratedCodes = () => {
+    const allText = recentlyGeneratedCodes.map(c => `${c.code} (${c.targetName})`).join('\n');
+    navigator.clipboard.writeText(allText);
+    setCopiedCodeId('ALL');
+    setTimeout(() => setCopiedCodeId(null), 2500);
+  };
 
   useEffect(() => {
     const update = () => {
@@ -304,7 +367,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     }
 
     StorageService.createActivationCodes(newCodes);
+    setRecentlyGeneratedCodes(newCodes);
     setShowAddCode(false);
+    setShowGeneratedSuccessModal(true);
   };
 
   // Create PDF
@@ -606,14 +671,51 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                       className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
                     />
                   </div>
-                  <div className="space-y-1 sm:col-span-2">
-                    <label className="text-xs font-bold text-slate-300">رابط صورة الكورس (Thumbnail URL)</label>
-                    <input
-                      type="text"
-                      value={courseForm.thumbnail}
-                      onChange={e => setCourseForm({ ...courseForm, thumbnail: e.target.value })}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
-                    />
+                  <div className="space-y-2 sm:col-span-2">
+                    <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
+                      <span>صورة غلاف الكورس (Thumbnail)</span>
+                      <span className="text-[10px] text-amber-400 font-normal">رفع من الجهاز أو رابط مباشر</span>
+                    </label>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        type="text"
+                        value={courseForm.thumbnail}
+                        onChange={e => setCourseForm({ ...courseForm, thumbnail: e.target.value })}
+                        placeholder="أدخل رابط الصورة أو ارفع من جهازك..."
+                        className="flex-1 rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                      />
+                      <label className="relative flex items-center justify-center gap-2 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-750 px-4 py-2.5 text-xs font-bold text-amber-400 cursor-pointer shrink-0 transition-colors">
+                        <Upload className="h-4 w-4" />
+                        <span>اختر صورة</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              handleFileUpload(file, 'image', (dataUrl) => {
+                                setCourseForm({ ...courseForm, thumbnail: dataUrl });
+                              });
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
+                    {courseForm.thumbnail && (
+                      <div className="flex items-center gap-3 pt-1">
+                        <img 
+                          src={courseForm.thumbnail} 
+                          alt="معاينة الغلاف" 
+                          className="h-12 w-20 object-cover rounded-lg border border-slate-700 bg-slate-950" 
+                          onError={(e) => (e.currentTarget.style.display = 'none')}
+                        />
+                        <span className="text-[11px] text-emerald-400 flex items-center gap-1 font-medium">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          تم ضبط صورة الغلاف بنجاح
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -714,27 +816,135 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                           </div>
 
                           {/* Add Lesson to this Unit Form */}
-                          <div className="pt-2 border-t border-slate-800/80 space-y-2">
-                            <input
-                              type="text"
-                              value={lessonForm.unitId === u.id ? lessonForm.title : ''}
-                              onChange={e => setLessonForm({ ...lessonForm, unitId: u.id, title: e.target.value })}
-                              placeholder="عنوان الدرس الجديد..."
-                              className="w-full rounded-lg border border-slate-700 bg-slate-950 p-2 text-xs text-white"
-                            />
-                            <div className="flex gap-2">
+                          <div className="pt-3 border-t border-slate-800/80 space-y-3 bg-slate-950/60 p-3 rounded-xl">
+                            <span className="text-[11px] font-bold text-amber-400 block">إضافة درس جديد لهذا الفصل:</span>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               <input
                                 type="text"
-                                value={lessonForm.unitId === u.id ? lessonForm.videoUrl : ''}
-                                onChange={e => setLessonForm({ ...lessonForm, unitId: u.id, videoUrl: e.target.value })}
-                                placeholder="رابط فيديو اليوتيوب أو MP4..."
-                                className="flex-1 rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-xs text-white"
+                                value={lessonForm.unitId === u.id ? lessonForm.title : ''}
+                                onChange={e => setLessonForm({ ...lessonForm, unitId: u.id, title: e.target.value })}
+                                placeholder="عنوان الدرس..."
+                                className="w-full rounded-lg border border-slate-700 bg-slate-950 p-2 text-xs text-white"
                               />
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={lessonForm.unitId === u.id ? lessonForm.videoType : 'youtube'}
+                                  onChange={e => setLessonForm({ ...lessonForm, unitId: u.id, videoType: e.target.value as any })}
+                                  className="rounded-lg border border-slate-700 bg-slate-950 p-2 text-xs text-slate-300"
+                                >
+                                  <option value="youtube">يوتيوب (YouTube)</option>
+                                  <option value="uploaded">ملف فيديو من الجهاز (MP4/WebM)</option>
+                                  <option value="external">رابط خارجي مباشر</option>
+                                </select>
+                                <input
+                                  type="number"
+                                  placeholder="المدة (د)"
+                                  value={lessonForm.unitId === u.id ? lessonForm.durationMinutes : 45}
+                                  onChange={e => setLessonForm({ ...lessonForm, unitId: u.id, durationMinutes: Number(e.target.value) })}
+                                  className="w-20 rounded-lg border border-slate-700 bg-slate-950 p-2 text-xs text-white"
+                                  title="المدة بالدقائق"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Video Input & Upload Button */}
+                            <div className="space-y-1">
+                              <label className="text-[10px] text-slate-400 font-bold flex items-center justify-between">
+                                <span>مصدر الفيديو ({lessonForm.unitId === u.id && lessonForm.videoType === 'uploaded' ? 'فيديو محلي' : 'رابط الفيديو'})</span>
+                                {lessonForm.unitId === u.id && lessonForm.videoUrl && (
+                                  <span className="text-emerald-400 text-[10px] flex items-center gap-1">
+                                    <Check className="h-3 w-3" /> تم تحديد الفيديو
+                                  </span>
+                                )}
+                              </label>
+                              <div className="flex flex-col sm:flex-row gap-2">
+                                <input
+                                  type="text"
+                                  value={lessonForm.unitId === u.id ? lessonForm.videoUrl : ''}
+                                  onChange={e => setLessonForm({ ...lessonForm, unitId: u.id, videoUrl: e.target.value })}
+                                  placeholder="رابط يوتيوب أو رابط مباشر أو ارفع فيديو..."
+                                  className="flex-1 rounded-lg border border-slate-700 bg-slate-950 p-2 text-xs text-white"
+                                />
+                                <label className="flex items-center justify-center gap-1.5 rounded-lg bg-blue-600/20 border border-blue-500/40 hover:bg-blue-600/30 px-3 py-2 text-xs font-bold text-blue-400 cursor-pointer shrink-0 transition-colors">
+                                  <Film className="h-3.5 w-3.5" />
+                                  <span>رفع فيديو من الجهاز</span>
+                                  <input
+                                    type="file"
+                                    accept="video/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        handleFileUpload(file, 'video', (dataUrl, fileName) => {
+                                          setLessonForm({
+                                            ...lessonForm,
+                                            unitId: u.id,
+                                            videoUrl: dataUrl,
+                                            videoType: 'uploaded',
+                                            title: lessonForm.title || fileName?.replace(/\.[^/.]+$/, '') || 'درس فيديو'
+                                          });
+                                        });
+                                      }
+                                    }}
+                                  />
+                                </label>
+                              </div>
+                            </div>
+
+                            {/* Optional Attached PDF Material for this Lesson */}
+                            <div className="space-y-1 pt-1">
+                              <label className="text-[10px] text-slate-400 font-bold">ملف PDF مرفق مع هذا الدرس (اختياري)</label>
+                              <div className="flex flex-col sm:flex-row gap-2">
+                                <input
+                                  type="text"
+                                  value={lessonForm.unitId === u.id ? (lessonForm.pdfUrl || '') : ''}
+                                  onChange={e => setLessonForm({ ...lessonForm, unitId: u.id, pdfUrl: e.target.value })}
+                                  placeholder="رابط PDF أو ارفع من جهازك..."
+                                  className="flex-1 rounded-lg border border-slate-700 bg-slate-950 p-2 text-xs text-white"
+                                />
+                                <label className="flex items-center justify-center gap-1.5 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-750 px-3 py-2 text-xs font-bold text-amber-400 cursor-pointer shrink-0 transition-colors">
+                                  <FileCheck className="h-3.5 w-3.5" />
+                                  <span>رفع ملزمة PDF</span>
+                                  <input
+                                    type="file"
+                                    accept="application/pdf"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        handleFileUpload(file, 'pdf', (dataUrl, fileName) => {
+                                          setLessonForm({
+                                            ...lessonForm,
+                                            unitId: u.id,
+                                            pdfUrl: dataUrl,
+                                            pdfTitle: fileName || 'ملزمة الدرس'
+                                          });
+                                        });
+                                      }
+                                    }}
+                                  />
+                                </label>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-1">
+                              <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                                <input
+                                  type="checkbox"
+                                  checked={lessonForm.unitId === u.id ? lessonForm.isFreePreview : false}
+                                  onChange={e => setLessonForm({ ...lessonForm, unitId: u.id, isFreePreview: e.target.checked })}
+                                  className="rounded border-slate-700 bg-slate-950 text-amber-500 h-4 w-4"
+                                />
+                                <span>درس معاينة مجاني لغير المشتركين</span>
+                              </label>
+
                               <button
+                                type="button"
                                 onClick={() => handleAddLesson(course.id, u.id)}
-                                className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-500 shrink-0"
+                                disabled={isUploadingFile}
+                                className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 shrink-0 shadow-sm"
                               >
-                                حفظ الدرس
+                                {isUploadingFile ? 'جاري رفع الملف...' : 'حفظ الدرس في الفصل'}
                               </button>
                             </div>
                           </div>
@@ -1045,6 +1255,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                 <thead className="border-b border-slate-800 bg-slate-950/80 text-slate-400">
                   <tr>
                     <th className="py-3.5 px-4 font-bold">كود التفعيل</th>
+                    <th className="py-3.5 px-4 font-bold">نسخ الكود</th>
                     <th className="py-3.5 px-4 font-bold">العنصر المفعل</th>
                     <th className="py-3.5 px-4 font-bold">النوع</th>
                     <th className="py-3.5 px-4 font-bold">الحالة</th>
@@ -1056,6 +1267,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                   {codes.map(code => (
                     <tr key={code.id} className="hover:bg-slate-800/40 transition-colors">
                       <td className="py-3.5 px-4 font-mono font-bold text-amber-400" dir="ltr">{code.code}</td>
+                      <td className="py-3.5 px-4">
+                        <button
+                          type="button"
+                          onClick={() => handleCopyCode(code.code, code.id)}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                            copiedCodeId === code.id
+                              ? 'bg-emerald-500 text-slate-950 shadow'
+                              : 'bg-slate-800 text-slate-300 hover:bg-amber-500 hover:text-slate-950 border border-slate-700'
+                          }`}
+                          title="نسخ كود التفعيل"
+                        >
+                          {copiedCodeId === code.id ? (
+                            <>
+                              <Check className="h-3 w-3" />
+                              <span>تم النسخ!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3 w-3" />
+                              <span>نسخ</span>
+                            </>
+                          )}
+                        </button>
+                      </td>
                       <td className="py-3.5 px-4 text-white font-bold">{code.targetName}</td>
                       <td className="py-3.5 px-4 text-slate-400">{code.targetType === 'course' ? 'كورس' : 'مذكرة PDF'}</td>
                       <td className="py-3.5 px-4">
@@ -1075,6 +1310,71 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
               </table>
             </div>
           </div>
+
+          {/* Generated Codes Success Modal with Copy Options */}
+          {showGeneratedSuccessModal && recentlyGeneratedCodes.length > 0 && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-in fade-in">
+              <div className="w-full max-w-lg rounded-3xl border border-emerald-500/40 bg-slate-900 p-6 shadow-2xl space-y-5 animate-in zoom-in-95">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    <CheckCircle2 className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">تم إنشاء الأكواد بنجاح! 🎉</h3>
+                    <p className="text-xs text-slate-300">
+                      تم توليد {recentlyGeneratedCodes.length} كود تفعيل لـ ({recentlyGeneratedCodes[0]?.targetName})
+                    </p>
+                  </div>
+                </div>
+
+                <div className="max-h-60 overflow-y-auto rounded-2xl border border-slate-800 bg-slate-950 p-3 space-y-2">
+                  {recentlyGeneratedCodes.map((c, idx) => (
+                    <div key={c.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-500 font-mono">#{idx + 1}</span>
+                        <span className="font-mono font-bold text-amber-400 text-sm tracking-wider" dir="ltr">{c.code}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyCode(c.code, c.id)}
+                        className={`flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                          copiedCodeId === c.id 
+                            ? 'bg-emerald-500 text-slate-950' 
+                            : 'bg-slate-800 text-slate-200 hover:bg-amber-500 hover:text-slate-950 border border-slate-700'
+                        }`}
+                      >
+                        {copiedCodeId === c.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                        <span>{copiedCodeId === c.id ? 'تم النسخ' : 'نسخ'}</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleCopyAllGeneratedCodes}
+                    className={`w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold transition-all ${
+                      copiedCodeId === 'ALL'
+                        ? 'bg-emerald-500 text-slate-950'
+                        : 'bg-amber-500 text-slate-950 hover:bg-amber-400 shadow-md shadow-amber-500/20'
+                    }`}
+                  >
+                    {copiedCodeId === 'ALL' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    <span>{copiedCodeId === 'ALL' ? '✓ تم نسخ جميع الأكواد!' : 'نسخ جميع الأكواد دفعة واحدة'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowGeneratedSuccessModal(false)}
+                    className="w-full sm:w-auto rounded-xl border border-slate-700 bg-slate-800 px-5 py-2.5 text-xs font-bold text-slate-200 hover:bg-slate-700"
+                  >
+                    تم وإغلاق النافذة
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1128,15 +1428,49 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="space-y-1 sm:col-span-2">
-                    <label className="text-xs font-bold text-slate-300">رابط ملف الـ PDF (Direct URL)</label>
-                    <input
-                      type="text"
-                      value={pdfForm.url}
-                      onChange={e => setPdfForm({ ...pdfForm, url: e.target.value })}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
-                      required
-                    />
+                  <div className="space-y-2 sm:col-span-2">
+                    <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
+                      <span>ملف المذكرة (PDF)</span>
+                      <span className="text-[10px] text-amber-400 font-normal">رفع من الجهاز أو رابط مباشر</span>
+                    </label>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        type="text"
+                        value={pdfForm.url}
+                        onChange={e => setPdfForm({ ...pdfForm, url: e.target.value })}
+                        placeholder="أدخل رابط مباشر لملف PDF أو ارفع من جهازك..."
+                        className="flex-1 rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                        required
+                      />
+                      <label className="flex items-center justify-center gap-1.5 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-750 px-4 py-2.5 text-xs font-bold text-amber-400 cursor-pointer shrink-0 transition-colors">
+                        <Upload className="h-4 w-4" />
+                        <span>رفع PDF من الجهاز</span>
+                        <input
+                          type="file"
+                          accept="application/pdf"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              handleFileUpload(file, 'pdf', (dataUrl, fileName, fileSize) => {
+                                setPdfForm({ 
+                                  ...pdfForm, 
+                                  url: dataUrl,
+                                  title: pdfForm.title || fileName?.replace(/\.[^/.]+$/, '') || 'مذكرة فيزياء',
+                                  fileSize: fileSize || '4.5 MB'
+                                });
+                              });
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
+                    {pdfForm.url && (
+                      <p className="text-[11px] text-emerald-400 flex items-center gap-1">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        تم تجهيز ملف الـ PDF بنجاح ({pdfForm.fileSize || 'جاهز'})
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-300">المرحلة الدراسية</label>
