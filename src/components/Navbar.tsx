@@ -167,13 +167,16 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             </div>
           ) : (
-            <button
-              onClick={onOpenAuthModal}
-              className="flex items-center gap-2 rounded-xl border border-slate-700 bg-gradient-to-r from-slate-900 to-slate-800 px-4 py-2 text-xs font-bold text-white transition-all hover:border-amber-500/40 hover:from-slate-800 hover:to-slate-700"
-            >
-              <User className="h-4 w-4 text-amber-400" />
-              <span>تسجيل الدخول / حساب جديد</span>
-            </button>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <button
+                onClick={onOpenAuthModal}
+                className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/15 to-amber-600/10 px-3 py-2 text-xs font-bold text-amber-300 transition-all hover:bg-amber-500 hover:text-slate-950 hover:border-amber-500 shadow-sm"
+              >
+                <User className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">تسجيل الدخول / حساب جديد</span>
+                <span className="sm:hidden">دخول</span>
+              </button>
+            </div>
           )}
 
           {/* Mobile Menu Trigger */}

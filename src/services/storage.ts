@@ -681,6 +681,9 @@ export const StorageService = {
     const list = this.getPdfFiles().filter(p => p.id !== pdfId);
     setStored(STORAGE_KEYS.PDF_FILES, list);
   },
+  deletePdf(pdfId: string): void {
+    this.deletePdfFile(pdfId);
+  },
 
   // === Notifications ===
   getNotifications(): NotificationItem[] {

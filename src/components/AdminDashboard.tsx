@@ -148,6 +148,64 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     targetGrade: 'all'
   });
 
+  // Manual Question Creator State
+  const [newQuestionForm, setNewQuestionForm] = useState({
+    text: '',
+    option0: '',
+    option1: '',
+    option2: '',
+    option3: '',
+    correctOptionIndex: 0,
+    explanation: '',
+    points: 1
+  });
+
+  // Add Question to Exam Form
+  const handleAddQuestionToExam = () => {
+    if (!newQuestionForm.text.trim() || !newQuestionForm.option0.trim() || !newQuestionForm.option1.trim()) {
+      alert('يرجى كتابة نص السؤال وخيارين على الأقل');
+      return;
+    }
+
+    const options = [
+      newQuestionForm.option0.trim(),
+      newQuestionForm.option1.trim(),
+      newQuestionForm.option2.trim() || 'خيار إضافي',
+      newQuestionForm.option3.trim() || 'خيار إضافي'
+    ];
+
+    const newQ: Question = {
+      id: 'q-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+      text: newQuestionForm.text.trim(),
+      options,
+      correctOptionIndex: Number(newQuestionForm.correctOptionIndex) || 0,
+      explanation: newQuestionForm.explanation.trim() || undefined,
+      points: Number(newQuestionForm.points) || 1
+    };
+
+    setExamForm({
+      ...examForm,
+      questions: [...examForm.questions, newQ]
+    });
+
+    // Reset question builder form
+    setNewQuestionForm({
+      text: '',
+      option0: '',
+      option1: '',
+      option2: '',
+      option3: '',
+      correctOptionIndex: 0,
+      explanation: '',
+      points: 1
+    });
+  };
+
+  const handleRemoveQuestionFromExam = (questionIndex: number) => {
+    const updated = examForm.questions.filter((_, idx) => idx !== questionIndex);
+    setExamForm({ ...examForm, questions: updated });
+  };
+
   // Generated Codes Modal & Copy States
   const [recentlyGeneratedCodes, setRecentlyGeneratedCodes] = useState<ActivationCode[]>([]);
   const [showGeneratedSuccessModal, setShowGeneratedSuccessModal] = useState(false);
@@ -335,6 +393,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     });
 
     setShowAddExam(false);
+    setExamForm({
+      title: '',
+      courseId: '',
+      grade: GradeLevel.GRADE_12,
+      durationMinutes: 30,
+      passingPercentage: 60,
+      type: 'quiz',
+      questions: [
+        {
+          id: 'q-1',
+          text: 'ما هي وحدة قياس شدة التيار الكهربي في النظام الدولي؟',
+          options: ['الفولت (V)', 'الأمبير (A)', 'الأوم (Ω)', 'الجول (J)'],
+          correctOptionIndex: 1,
+          explanation: 'يقاس التيار بوحدة الأمبير وهي تكافئ كولوم/ثانية.',
+          points: 1
+        }
+      ]
+    });
   };
 
   // Generate Codes in Bulk
@@ -389,6 +465,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     });
 
     setShowAddPdf(false);
+    setPdfForm({
+      title: '',
+      description: '',
+      grade: GradeLevel.GRADE_12,
+      category: 'مذكرات الشرح',
+      url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+      pageCount: 35,
+      fileSize: '6.4 MB',
+      isLocked: true
+    });
   };
 
   // Send Notification Broadcast
@@ -1015,15 +1101,209 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                   </div>
                 </div>
 
-                {/* Questions Preview & Simple Add */}
-                <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-3">
-                  <h4 className="text-xs font-bold text-amber-400">الأسئلة المدرجة ({examForm.questions.length})</h4>
-                  {examForm.questions.map((q, idx) => (
-                    <div key={idx} className="text-xs text-slate-300 space-y-1 pb-2 border-b border-slate-800/60">
-                      <p className="font-bold text-white">{idx + 1}. {q.text}</p>
-                      <p className="text-[11px] text-emerald-400">الإجابة الصحيحة: {q.options[q.correctOptionIndex]}</p>
+                {/* Manual Question Creator Section */}
+                <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <div className="flex items-center gap-2">
+                      <HelpCircle className="h-4 w-4 text-amber-400" />
+                      <h4 className="text-xs font-bold text-white">إضافة سؤال جديد يدوياً إلى هذا الامتحان</h4>
                     </div>
-                  ))}
+                    <span className="text-[11px] text-slate-400">إجمالي الأسئلة المضافة: {examForm.questions.length}</span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* Question Text */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-300">نص السؤال</label>
+                      <textarea
+                        rows={2}
+                        value={newQuestionForm.text}
+                        onChange={e => setNewQuestionForm({ ...newQuestionForm, text: e.target.value })}
+                        placeholder="اكتب صيغة السؤال الفيزيائي هنا..."
+                        className="w-full rounded-xl border border-slate-700 bg-slate-900 p-2.5 text-xs text-white placeholder:text-slate-500 focus:border-amber-500 focus:outline-none"
+                      />
+                    </div>
+
+                    {/* 4 Options Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold text-slate-300">الخيار (أ)</label>
+                          <label className="text-[10px] text-emerald-400 cursor-pointer flex items-center gap-1">
+                            <input
+                              type="radio"
+                              name="correctChoice"
+                              checked={newQuestionForm.correctOptionIndex === 0}
+                              onChange={() => setNewQuestionForm({ ...newQuestionForm, correctOptionIndex: 0 })}
+                              className="text-emerald-500"
+                            />
+                            <span>الإجابة الصحيحة</span>
+                          </label>
+                        </div>
+                        <input
+                          type="text"
+                          value={newQuestionForm.option0}
+                          onChange={e => setNewQuestionForm({ ...newQuestionForm, option0: e.target.value })}
+                          placeholder="الخيار الأول..."
+                          className="w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-xs text-white"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold text-slate-300">الخيار (ب)</label>
+                          <label className="text-[10px] text-emerald-400 cursor-pointer flex items-center gap-1">
+                            <input
+                              type="radio"
+                              name="correctChoice"
+                              checked={newQuestionForm.correctOptionIndex === 1}
+                              onChange={() => setNewQuestionForm({ ...newQuestionForm, correctOptionIndex: 1 })}
+                              className="text-emerald-500"
+                            />
+                            <span>الإجابة الصحيحة</span>
+                          </label>
+                        </div>
+                        <input
+                          type="text"
+                          value={newQuestionForm.option1}
+                          onChange={e => setNewQuestionForm({ ...newQuestionForm, option1: e.target.value })}
+                          placeholder="الخيار الثاني..."
+                          className="w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-xs text-white"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold text-slate-300">الخيار (ج)</label>
+                          <label className="text-[10px] text-emerald-400 cursor-pointer flex items-center gap-1">
+                            <input
+                              type="radio"
+                              name="correctChoice"
+                              checked={newQuestionForm.correctOptionIndex === 2}
+                              onChange={() => setNewQuestionForm({ ...newQuestionForm, correctOptionIndex: 2 })}
+                              className="text-emerald-500"
+                            />
+                            <span>الإجابة الصحيحة</span>
+                          </label>
+                        </div>
+                        <input
+                          type="text"
+                          value={newQuestionForm.option2}
+                          onChange={e => setNewQuestionForm({ ...newQuestionForm, option2: e.target.value })}
+                          placeholder="الخيار الثالث..."
+                          className="w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-xs text-white"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold text-slate-300">الخيار (د)</label>
+                          <label className="text-[10px] text-emerald-400 cursor-pointer flex items-center gap-1">
+                            <input
+                              type="radio"
+                              name="correctChoice"
+                              checked={newQuestionForm.correctOptionIndex === 3}
+                              onChange={() => setNewQuestionForm({ ...newQuestionForm, correctOptionIndex: 3 })}
+                              className="text-emerald-500"
+                            />
+                            <span>الإجابة الصحيحة</span>
+                          </label>
+                        </div>
+                        <input
+                          type="text"
+                          value={newQuestionForm.option3}
+                          onChange={e => setNewQuestionForm({ ...newQuestionForm, option3: e.target.value })}
+                          placeholder="الخيار الرابع..."
+                          className="w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-xs text-white"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Explanation & Points */}
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-1">
+                      <div className="sm:col-span-3 space-y-1">
+                        <label className="text-[10px] font-bold text-slate-300">تفسير ونموذج الإجابة (يظهر للطالب بعد التسليم)</label>
+                        <input
+                          type="text"
+                          value={newQuestionForm.explanation}
+                          onChange={e => setNewQuestionForm({ ...newQuestionForm, explanation: e.target.value })}
+                          placeholder="شرح سبب صحة الإجابة أو خطوات الحل والقانون المستخدم..."
+                          className="w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-xs text-white"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-300">درجة السؤال</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="10"
+                          value={newQuestionForm.points}
+                          onChange={e => setNewQuestionForm({ ...newQuestionForm, points: Number(e.target.value) })}
+                          className="w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-xs text-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end pt-1">
+                      <button
+                        type="button"
+                        onClick={handleAddQuestionToExam}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 text-xs shadow-md transition-all"
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span>إدراج هذا السؤال في الاختبار</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Questions List & Manager */}
+                <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-amber-400">قائمة أسئلة الاختبار ({examForm.questions.length})</h4>
+                    <span className="text-[10px] text-slate-400">إجمالي الدرجات: {examForm.questions.reduce((acc, q) => acc + (q.points || 1), 0)} درجة</span>
+                  </div>
+
+                  {examForm.questions.length === 0 ? (
+                    <p className="text-xs text-slate-500 py-3 text-center">لم تقم بإضافة أسئلة بعد. استخدم النموذج أعلاه لإضافة أول سؤال.</p>
+                  ) : (
+                    <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                      {examForm.questions.map((q, idx) => (
+                        <div key={q.id || idx} className="rounded-xl bg-slate-900/90 border border-slate-800/80 p-3 space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="space-y-1 flex-1">
+                              <p className="font-bold text-white text-xs">{idx + 1}. {q.text}</p>
+                              <div className="grid grid-cols-2 gap-1 text-[11px] pt-1">
+                                {q.options.map((opt, oIdx) => (
+                                  <div 
+                                    key={oIdx} 
+                                    className={`px-2 py-0.5 rounded text-[10px] ${
+                                      oIdx === q.correctOptionIndex 
+                                        ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30' 
+                                        : 'text-slate-400'
+                                    }`}
+                                  >
+                                    {String.fromCharCode(65 + oIdx)}: {opt} {oIdx === q.correctOptionIndex && '✓'}
+                                  </div>
+                                ))}
+                              </div>
+                              {q.explanation && (
+                                <p className="text-[10px] text-slate-400 pt-1">💡 التفسير: {q.explanation}</p>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveQuestionFromExam(idx)}
+                              className="text-rose-400 hover:text-rose-300 p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 shrink-0"
+                              title="حذف هذا السؤال"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
@@ -1060,12 +1340,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                   <span>عدد الأسئلة: {ex.questions?.length || 0}</span>
                   <span>النجاح: {ex.passingPercentage}%</span>
                 </div>
-                <button
-                  onClick={() => onNavigate('exam-runner', { examId: ex.id })}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-800 py-2 text-xs font-bold text-white hover:bg-slate-700"
-                >
-                  معاينة تجربة الامتحان
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => onNavigate('exam-runner', { examId: ex.id })}
+                    className="flex-1 rounded-xl border border-slate-700 bg-slate-800 py-2 text-xs font-bold text-white hover:bg-slate-700"
+                  >
+                    معاينة تجربة الامتحان
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm(`هل أنت متأكد من حذف امتحان "${ex.title}"؟`)) {
+                        StorageService.deleteExam(ex.id);
+                      }
+                    }}
+                    className="p-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
+                    title="حذف الامتحان"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -1521,17 +1814,46 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
           {/* PDFs Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {pdfs.map(pdf => (
-              <div key={pdf.id} className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="rounded bg-amber-500/10 text-amber-400 text-[10px] font-bold px-2 py-0.5">
-                    {pdf.category}
-                  </span>
-                  <span className="text-xs text-slate-400">{pdf.pageCount} صفحة</span>
+              <div key={pdf.id} className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-3 flex flex-col justify-between">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="rounded bg-amber-500/10 text-amber-400 text-[10px] font-bold px-2 py-0.5">
+                      {pdf.category}
+                    </span>
+                    <span className="text-xs text-slate-400">{pdf.pageCount} صفحة</span>
+                  </div>
+                  <h3 className="font-bold text-white text-base leading-snug">{pdf.title}</h3>
+                  {pdf.description && (
+                    <p className="text-xs text-slate-400 line-clamp-2">{pdf.description}</p>
+                  )}
                 </div>
-                <h3 className="font-bold text-white text-base leading-snug">{pdf.title}</h3>
-                <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800">
-                  <span>{pdf.isLocked ? '🔒 يتطلب كود' : '🔓 متاح مجاناً'}</span>
-                  <span>{pdf.downloadCount || 0} تنزيل</span>
+
+                <div className="space-y-2.5 pt-2 border-t border-slate-800">
+                  <div className="flex items-center justify-between text-xs text-slate-400">
+                    <span>{pdf.isLocked ? '🔒 يتطلب كود تفعيل' : '🔓 متاح مجاناً'}</span>
+                    <span>{pdf.fileSize || '5 MB'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={pdf.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex-1 text-center rounded-xl border border-slate-700 bg-slate-800 py-1.5 text-xs font-bold text-slate-200 hover:bg-slate-700"
+                    >
+                      معاينة الملف
+                    </a>
+                    <button
+                      onClick={() => {
+                        if (confirm(`هل أنت متأكد من حذف مذكرة "${pdf.title}"؟`)) {
+                          StorageService.deletePdf(pdf.id);
+                        }
+                      }}
+                      className="p-1.5 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
+                      title="حذف المذكرة"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
