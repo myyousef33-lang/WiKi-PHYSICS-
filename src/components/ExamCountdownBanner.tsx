@@ -7,7 +7,15 @@ interface ExamCountdownBannerProps {
 }
 
 export const ExamCountdownBanner: React.FC<ExamCountdownBannerProps> = ({ onNavigate }) => {
-  const settings = StorageService.getSettings();
+  const [settings, setSettings] = useState(() => StorageService.getSettings());
+
+  useEffect(() => {
+    const unsub = StorageService.subscribeToStorage(() => {
+      setSettings(StorageService.getSettings());
+    });
+    return unsub;
+  }, []);
+
   const examDateStr = settings.ministryExamDate || '2026-06-14T09:00:00.000Z';
   const targetDate = new Date(examDateStr).getTime();
 
@@ -30,6 +38,8 @@ export const ExamCountdownBanner: React.FC<ExamCountdownBannerProps> = ({ onNavi
           minutes: Math.floor((difference / 1000 / 60) % 60),
           seconds: Math.floor((difference / 1000) % 60)
         });
+      } else {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
       }
     };
 

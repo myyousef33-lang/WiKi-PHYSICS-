@@ -660,20 +660,71 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     alert('تم حفظ إعدادات المنصة بنجاح.');
   };
 
-  const navTabs = [
-    { id: 'overview', label: 'الإحصائيات العامة', icon: BarChart3 },
-    { id: 'courses', label: 'إدارة الكورسات والدروس', icon: BookOpen },
-    { id: 'exams', label: 'بنك الأسئلة والامتحانات', icon: HelpCircle },
-    { id: 'students', label: 'إدارة الطلاب والأجهزة', icon: Users },
-    { id: 'codes', label: 'توليد أكواد التفعيل', icon: Key },
-    { id: 'pdfs', label: 'المذكرات والملازم PDF', icon: FileText },
-    { id: 'results', label: 'نتائج وتقارير الطلاب', icon: Award },
-    { id: 'challenges', label: 'تحديات الأسبوع والمسابقات', icon: Trophy },
-    { id: 'leaderboard-admin', label: 'لوحة الشرف وأوائل المنصة 🥇', icon: Award },
-    { id: 'weakness-admin', label: 'تشخيص نقاط الضعف العامة 🧠', icon: Brain },
-    { id: 'ai-admin', label: 'المساعد الذكي AI ⚛️', icon: Bot },
-    { id: 'notifs', label: 'إرسال الإشعارات', icon: Bell },
-    { id: 'settings', label: 'إعدادات المنصة', icon: Settings }
+  const formatForDatetimeInput = (dateStr?: string) => {
+    if (!dateStr) return '2026-06-14T09:00';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '2026-06-14T09:00';
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    } catch {
+      return '2026-06-14T09:00';
+    }
+  };
+
+  const handleExamDateUpdate = (val: string) => {
+    if (!val) return;
+    try {
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) {
+        const isoStr = d.toISOString();
+        const updated = { ...settings, ministryExamDate: isoStr };
+        setSettings(updated);
+        StorageService.saveSettings(updated);
+      }
+    } catch (e) {
+      console.error('Invalid date string', e);
+    }
+  };
+
+  const tabCategories = [
+    {
+      title: '📊 الرئيسية والإداريات',
+      items: [
+        { id: 'overview', label: 'الإحصائيات العامة', icon: BarChart3 },
+        { id: 'results', label: 'نتائج وتقارير الطلاب', icon: Award },
+        { id: 'notifs', label: 'إرسال الإشعارات', icon: Bell },
+        { id: 'settings', label: 'إعدادات المنصة', icon: Settings }
+      ]
+    },
+    {
+      title: '📚 إدارة المحتوى والملازم',
+      items: [
+        { id: 'courses', label: 'الكورسات والدروس', icon: BookOpen },
+        { id: 'exams', label: 'بنك الأسئلة والامتحانات', icon: HelpCircle },
+        { id: 'pdfs', label: 'المذكرات والملازم PDF', icon: FileText }
+      ]
+    },
+    {
+      title: '👥 الطلاب والاشتراكات',
+      items: [
+        { id: 'students', label: 'إدارة الطلاب والأجهزة', icon: Users },
+        { id: 'codes', label: 'توليد أكواد التفعيل', icon: Key }
+      ]
+    },
+    {
+      title: '⚛️ المسابقات والشرف والـ AI',
+      items: [
+        { id: 'challenges', label: 'تحديات الأسبوع والمسابقات', icon: Trophy },
+        { id: 'leaderboard-admin', label: 'لوحة الشرف وتكريم الأوائل 🥇', icon: Award },
+        { id: 'weakness-admin', label: 'تشخيص نقاط الضعف 🧠', icon: Brain },
+        { id: 'ai-admin', label: 'المساعد الذكي AI ⚛️', icon: Bot }
+      ]
+    }
   ];
 
   const sendParentWhatsappReport = (student: Student) => {
@@ -785,26 +836,37 @@ ${weakConceptsText}
         </div>
       )}
 
-      {/* Tabs Navigation */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-4">
-        {navTabs.map(t => {
-          const Icon = t.icon;
-          const isActive = activeTab === t.id;
-          return (
-            <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id as any)}
-              className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
-                isActive 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25 ring-2 ring-blue-400' 
-                  : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800'
-              }`}
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              <span>{t.label}</span>
-            </button>
-          );
-        })}
+      {/* Categorized Tabs Navigation */}
+      <div className="space-y-3 border-b border-slate-800 pb-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          {tabCategories.map((cat, catIdx) => (
+            <div key={catIdx} className="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-3 space-y-2">
+              <span className="text-[11px] font-black text-slate-400 block border-b border-slate-800/60 pb-1.5 px-1">
+                {cat.title}
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {cat.items.map(t => {
+                  const Icon = t.icon;
+                  const isActive = activeTab === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => setActiveTab(t.id as any)}
+                      className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
+                        isActive 
+                          ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 ring-2 ring-blue-400/80 scale-[1.02]' 
+                          : 'bg-slate-950/80 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-800'
+                      }`}
+                    >
+                      <Icon className="h-3.5 w-3.5 shrink-0 text-blue-400" />
+                      <span>{t.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* TAB 1: OVERVIEW */}
@@ -839,14 +901,9 @@ ${weakConceptsText}
                 <div className="space-y-2">
                   <input
                     type="datetime-local"
-                    value={settings.ministryExamDate ? new Date(settings.ministryExamDate).toISOString().slice(0, 16) : '2026-06-14T09:00'}
-                    onChange={e => {
-                      const isoStr = new Date(e.target.value).toISOString();
-                      const updated = { ...settings, ministryExamDate: isoStr };
-                      setSettings(updated);
-                      StorageService.saveSettings(updated);
-                    }}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-900 p-2 text-xs text-white font-mono"
+                    value={formatForDatetimeInput(settings.ministryExamDate)}
+                    onChange={e => handleExamDateUpdate(e.target.value)}
+                    className="w-full rounded-xl border border-slate-700 bg-slate-900 p-2 text-xs text-white font-mono cursor-pointer"
                   />
                   <p className="text-[10px] text-slate-400">
                     الموعد الحالي: <span className="text-amber-400 font-bold">{new Date(settings.ministryExamDate || '2026-06-14T09:00').toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
@@ -3031,12 +3088,9 @@ ${weakConceptsText}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
                 <input
                   type="datetime-local"
-                  value={settings.ministryExamDate ? new Date(settings.ministryExamDate).toISOString().slice(0, 16) : '2026-06-14T09:00'}
-                  onChange={e => {
-                    const isoStr = e.target.value ? new Date(e.target.value).toISOString() : '2026-06-14T09:00:00.000Z';
-                    setSettings({ ...settings, ministryExamDate: isoStr });
-                  }}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white font-mono"
+                  value={formatForDatetimeInput(settings.ministryExamDate)}
+                  onChange={e => handleExamDateUpdate(e.target.value)}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white font-mono cursor-pointer"
                 />
                 <p className="text-[11px] text-slate-400">تحديث هذا الموعد يغير شريط العد التنازلي لأيام وساعات الامتحان في واجهة الطلاب تلقائياً.</p>
               </div>
