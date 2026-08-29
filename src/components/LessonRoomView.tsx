@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   PlayCircle, 
   CheckCircle2, 
@@ -12,9 +12,17 @@ import {
   Clock,
   BookOpen,
   Check,
-  ListOrdered
+  ListOrdered,
+  Maximize2,
+  Minimize2,
+  RotateCcw,
+  RotateCw,
+  Gauge,
+  Tv,
+  ShieldCheck
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
+import { MediaStore } from '../services/mediaStore';
 import { Course, Lesson, Student, QuizExam } from '../types';
 
 interface LessonRoomViewProps {
@@ -36,6 +44,25 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
   const [allLessons, setAllLessons] = useState<Lesson[]>([]);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [exams, setExams] = useState<QuizExam[]>(StorageService.getExams());
+  const [resolvedVideoUrl, setResolvedVideoUrl] = useState<string>('');
+  const [videoQuality, setVideoQuality] = useState<'1080p' | '720p' | '480p' | 'auto'>('1080p');
+  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
+  const [isTheaterMode, setIsTheaterMode] = useState<boolean>(false);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const videoContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(!!document.fullscreenElement || !!(document as any).webkitFullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    document.addEventListener('webkitfullscreenchange', handleFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange);
+      document.removeEventListener('webkitfullscreenchange', handleFsChange);
+    };
+  }, []);
 
   useEffect(() => {
     const update = () => {
@@ -63,6 +90,33 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
     update();
     return subscribeToStorage(update);
   }, [courseId, lessonId]);
+
+  // Resolve local-media IndexedDB blob or remote URL
+  useEffect(() => {
+    let active = true;
+    const resolveUrl = async () => {
+      if (!currentLesson?.videoUrl) {
+        setResolvedVideoUrl('');
+        return;
+      }
+
+      if (currentLesson.videoUrl.startsWith('local-media:')) {
+        const blobUrl = await MediaStore.getMediaUrl(currentLesson.videoUrl);
+        if (active) {
+          setResolvedVideoUrl(blobUrl || currentLesson.videoUrl);
+        }
+      } else {
+        if (active) {
+          setResolvedVideoUrl(currentLesson.videoUrl);
+        }
+      }
+    };
+
+    resolveUrl();
+    return () => {
+      active = false;
+    };
+  }, [currentLesson?.videoUrl]);
 
   if (!course || !currentLesson) {
     return (
@@ -97,21 +151,28 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
   // Video embed & direct playback helper
   const isDirectVideo = (url: string, type?: string) => {
     if (!url) return false;
-    if (type === 'uploaded' || url.startsWith('/uploads/') || url.startsWith('blob:') || url.startsWith('data:video')) {
+    if (
+      type === 'uploaded' || 
+      url.startsWith('/uploads/') || 
+      url.startsWith('blob:') || 
+      url.startsWith('data:video') || 
+      url.startsWith('local-media:')
+    ) {
       return true;
     }
     return /\.(mp4|webm|ogg|mov|mkv|m4v)(\?.*)?$/i.test(url);
   };
 
-  const getEmbedUrl = (url: string, _type?: string) => {
+  const getEmbedUrl = (url: string, _type?: string, quality = '1080p') => {
     if (!url) return '';
     
-    // YouTube
+    // YouTube with HD 1080p parameters & high resolution flags
     if (url.includes('youtube.com') || url.includes('youtu.be')) {
       const videoIdMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
       const videoId = videoIdMatch ? videoIdMatch[1] : '';
       if (videoId) {
-        return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=0&rel=0&modestbranding=1`;
+        const qualityParam = quality === '1080p' ? 'hd1080' : quality === '720p' ? 'hd720' : 'medium';
+        return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=0&rel=0&modestbranding=1&enablejsapi=1&vq=${qualityParam}&playsinline=1`;
       }
     }
 
@@ -127,15 +188,53 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
     if (url.includes('vimeo.com')) {
       const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/);
       if (vimeoMatch && vimeoMatch[1]) {
-        return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+        return `https://player.vimeo.com/video/${vimeoMatch[1]}?quality=1080p`;
       }
     }
 
     return url;
   };
 
+  const handleSpeedChange = (speed: number) => {
+    setPlaybackSpeed(speed);
+    if (videoRef.current) {
+      videoRef.current.playbackRate = speed;
+    }
+  };
+
+  const handleSkipTime = (seconds: number) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime += seconds;
+    }
+  };
+
+  const handleToggleFullscreen = () => {
+    const container = videoContainerRef.current;
+    if (!container) return;
+
+    if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
+      if (container.requestFullscreen) {
+        container.requestFullscreen().catch(err => console.warn(err));
+      } else if ((container as any).webkitRequestFullscreen) {
+        (container as any).webkitRequestFullscreen();
+      } else if ((container as any).mozRequestFullScreen) {
+        (container as any).mozRequestFullScreen();
+      } else if ((container as any).msRequestFullscreen) {
+        (container as any).msRequestFullscreen();
+      } else if (videoRef.current && (videoRef.current as any).webkitEnterFullscreen) {
+        (videoRef.current as any).webkitEnterFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(err => console.warn(err));
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      }
+    }
+  };
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6 animate-in fade-in duration-300">
+    <div className={`mx-auto ${isTheaterMode ? 'max-w-full px-2 sm:px-4' : 'max-w-7xl px-4 sm:px-6 lg:px-8'} py-6 space-y-6 animate-in fade-in duration-300 transition-all`}>
       
       {/* Navigation Breadcrumbs */}
       <div className="flex items-center justify-between gap-4 border-b border-slate-800 pb-4 text-xs">
@@ -151,27 +250,43 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
           <span className="text-white font-bold truncate">{currentLesson.title}</span>
         </div>
 
-        <button
-          onClick={() => onNavigate('course-details', { courseId: course.id })}
-          className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-1.5 text-slate-300 hover:text-white shrink-0"
-        >
-          فهرس المنهج
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsTheaterMode(!isTheaterMode)}
+            className={`hidden sm:flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors ${
+              isTheaterMode ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' : 'border-slate-800 bg-slate-900 text-slate-300 hover:text-white'
+            }`}
+          >
+            <Tv className="h-3.5 w-3.5" />
+            <span>{isTheaterMode ? 'الوضع العادي' : 'وضع المسرح (شاشة عريضة)'}</span>
+          </button>
+
+          <button
+            onClick={() => onNavigate('course-details', { courseId: course.id })}
+            className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-1.5 text-slate-300 hover:text-white shrink-0"
+          >
+            فهرس المنهج
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+      <div className={`grid grid-cols-1 ${isTheaterMode ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-8 items-start`}>
         
         {/* Main Content: Video Player & Lesson Details */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className={`${isTheaterMode ? 'w-full' : 'lg:col-span-2'} space-y-4`}>
           
-          {/* Responsive Video Container */}
-          <div className="relative aspect-video w-full rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 shadow-2xl">
+          {/* Responsive Video Container with Fullscreen support */}
+          <div 
+            ref={videoContainerRef}
+            className="relative aspect-video w-full rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 shadow-2xl group flex items-center justify-center"
+          >
             {isDirectVideo(currentLesson.videoUrl, currentLesson.videoType) ? (
               <video
-                src={currentLesson.videoUrl}
+                ref={videoRef}
+                src={resolvedVideoUrl || currentLesson.videoUrl}
                 controls
                 playsInline
-                preload="metadata"
+                preload="auto"
                 className="h-full w-full object-contain bg-black"
                 poster={course.thumbnail}
               >
@@ -179,13 +294,101 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
               </video>
             ) : (
               <iframe
-                src={getEmbedUrl(currentLesson.videoUrl, currentLesson.videoType)}
+                src={getEmbedUrl(currentLesson.videoUrl, currentLesson.videoType, videoQuality)}
                 title={currentLesson.title}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
                 allowFullScreen
                 className="h-full w-full border-0"
               />
             )}
+
+            {/* Quality Badge */}
+            <div className="absolute top-3 left-3 pointer-events-none rounded-lg bg-slate-950/85 backdrop-blur-md border border-slate-700/60 px-2.5 py-1 text-[11px] font-black text-amber-400 flex items-center gap-1.5 shadow-lg">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Full HD 1080p</span>
+            </div>
+
+            {/* Quick Fullscreen Floating Button (top right) */}
+            <button
+              onClick={handleToggleFullscreen}
+              className="absolute top-3 right-3 rounded-lg bg-slate-950/85 backdrop-blur-md border border-slate-700/60 p-2 text-slate-200 hover:text-amber-400 hover:bg-slate-900 transition-all opacity-80 hover:opacity-100 shadow-lg"
+              title={isFullscreen ? 'تصغير الشاشة' : 'تكبير الشاشة ملء الشاشة'}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </button>
+          </div>
+
+          {/* Video Playback & Quality Controls Bar */}
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
+            
+            {/* Speed & Seek Controls */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-slate-400 font-bold flex items-center gap-1">
+                <Gauge className="h-3.5 w-3.5 text-amber-400" />
+                <span>السرعة:</span>
+              </span>
+              {[1, 1.25, 1.5, 1.75, 2].map((spd) => (
+                <button
+                  key={spd}
+                  onClick={() => handleSpeedChange(spd)}
+                  className={`rounded-lg px-2.5 py-1 font-mono font-bold transition-all ${
+                    playbackSpeed === spd
+                      ? 'bg-amber-500 text-slate-950 shadow-sm'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
+                  }`}
+                >
+                  {spd}x
+                </button>
+              ))}
+
+              {isDirectVideo(currentLesson.videoUrl, currentLesson.videoType) && (
+                <div className="flex items-center gap-1 mr-2 border-r border-slate-700 pr-2">
+                  <button
+                    onClick={() => handleSkipTime(-10)}
+                    className="rounded-lg bg-slate-800 p-1.5 text-slate-300 hover:text-white hover:bg-slate-700"
+                    title="إرجاع 10 ثواني"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleSkipTime(10)}
+                    className="rounded-lg bg-slate-800 p-1.5 text-slate-300 hover:text-white hover:bg-slate-700"
+                    title="تقديم 10 ثواني"
+                  >
+                    <RotateCw className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Quality and Fullscreen Button */}
+            <div className="flex items-center gap-2">
+              <span className="text-slate-400 font-bold">الجودة:</span>
+              {(['1080p', '720p', '480p'] as const).map((q) => (
+                <button
+                  key={q}
+                  onClick={() => setVideoQuality(q)}
+                  className={`rounded-lg px-2.5 py-1 font-bold transition-all ${
+                    videoQuality === q
+                      ? 'bg-emerald-500 text-slate-950 font-black shadow-sm'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  {q}
+                </button>
+              ))}
+
+              {/* Dedicated Fullscreen Toggle Button */}
+              <button
+                onClick={handleToggleFullscreen}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 px-3 py-1 font-black transition-all shadow-sm shadow-amber-500/20"
+                title="تكبير الشاشة بالكامل"
+              >
+                {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                <span>{isFullscreen ? 'تصغير الشاشة' : 'تكبير الشاشة'}</span>
+              </button>
+            </div>
+
           </div>
 
           {/* Action Bar (Complete Lesson & Previous / Next Buttons) */}

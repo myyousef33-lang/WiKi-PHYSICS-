@@ -24,7 +24,7 @@ export const ActivationCodeModal: React.FC<ActivationCodeModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleRedeem = (e: React.FormEvent) => {
+  const handleRedeem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!code.trim()) {
       setError('يرجى كتابة كود التفعيل');
@@ -32,7 +32,7 @@ export const ActivationCodeModal: React.FC<ActivationCodeModalProps> = ({
     }
 
     if (!student) {
-      setError('يرجى تسجيل الدخول بحساب الطالب أولاً قبل تفعيل الكود');
+      setError('يرجى تسجيل الدخول أو إنشاء حساب طالب أولاً ليتم ربط الكورس بحسابك');
       return;
     }
 
@@ -40,8 +40,8 @@ export const ActivationCodeModal: React.FC<ActivationCodeModalProps> = ({
     setError(null);
     setSuccessMsg(null);
 
-    setTimeout(() => {
-      const res = StorageService.redeemCode(code.trim(), student.id);
+    try {
+      const res = await StorageService.redeemCodeAsync(code.trim(), student.id);
       setIsLoading(false);
 
       if (res.success) {
@@ -63,7 +63,10 @@ export const ActivationCodeModal: React.FC<ActivationCodeModalProps> = ({
       } else {
         setError(res.message);
       }
-    }, 400);
+    } catch (err: any) {
+      setIsLoading(false);
+      setError('حدث خطأ أثناء الاتصال بقاعدة البيانات للتحقق من الكود، يرجى المحاولة مرة أخرى.');
+    }
   };
 
   return (

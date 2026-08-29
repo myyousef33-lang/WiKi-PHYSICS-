@@ -637,6 +637,16 @@ export const StorageService = {
     return newAttempt;
   },
 
+  // Normalization helper for codes to prevent any character, dash, or case mismatch
+  normalizeActivationCode(raw: string): string {
+    if (!raw) return '';
+    return raw
+      .replace(/[٠-٩]/g, d => '0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(d)])
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')
+      .replace(/[\s\-_–—]+/g, '')
+      .toUpperCase();
+  },
+
   // === Activation Keys & Codes ===
   getKeys(): ActivationKey[] {
     return getStored<ActivationKey[]>(STORAGE_KEYS.KEYS, []);
@@ -668,9 +678,9 @@ export const StorageService = {
     prefix?: string;
   }): ActivationKey[] {
     const newKeys: ActivationKey[] = [];
-    const prefix = params.prefix || (params.type === 'course' ? 'CRS' : 'PDF');
+    const prefix = params.prefix || (params.type === 'course' ? 'PHY' : 'PDF');
     for (let i = 0; i < params.count; i++) {
-      const randomCode = Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+      const randomCode = Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.floor(1000 + Math.random() * 9000);
       const key: ActivationKey = {
         id: 'key-' + Date.now() + '-' + i,
         code: `${prefix}-${randomCode}`,
@@ -679,8 +689,8 @@ export const StorageService = {
         targetId: params.targetId,
         targetTitle: params.targetTitle,
         targetName: params.targetTitle,
-        validityDays: params.validityDays,
-        maxDevices: params.maxDevices,
+        validityDays: params.validityDays || 365,
+        maxDevices: params.maxDevices || 2,
         isUsed: false,
         createdAt: new Date().toISOString()
       };
@@ -690,20 +700,65 @@ export const StorageService = {
     setStored(STORAGE_KEYS.KEYS, [...newKeys, ...currentKeys]);
     return newKeys;
   },
+
+  // Synchronous + Direct validation for Activation Key
   activateKey(studentId: string, rawCode: string): { success: boolean; message: string; type?: 'course' | 'pdf'; itemTitle?: string } {
-    const code = rawCode.trim().toUpperCase();
+    if (!rawCode || !rawCode.trim()) {
+      return { success: false, message: 'يرجى كتابة كود التفعيل بشكل صحيح' };
+    }
+
+    const cleanInput = rawCode.trim().toUpperCase();
+    const normalizedInput = this.normalizeActivationCode(rawCode);
     const keys = this.getKeys();
-    const student = this.getStudents().find(s => s.id === studentId);
-    if (!student) return { success: false, message: 'طالب غير معروف' };
+    
+    // Ensure student exists in local store
+    let student = this.getStudents().find(s => s.id === studentId);
+    if (!student) {
+      const current = this.getCurrentStudent();
+      if (current && current.id === studentId) {
+        student = current;
+        this.saveStudent(current);
+      } else {
+        return { success: false, message: 'يرجى تسجيل الدخول بحساب الطالب أولاً قبل تفعيل الكود' };
+      }
+    }
 
-    const key = keys.find(k => k.code.toUpperCase() === code);
+    // Flexible matching: by exact code, by normalized alphanumeric without dashes, or by partial match
+    let key = keys.find(k => {
+      if (!k.code) return false;
+      const kClean = k.code.trim().toUpperCase();
+      const kNorm = this.normalizeActivationCode(k.code);
+      return kClean === cleanInput || kNorm === normalizedInput;
+    });
+
     if (!key) {
-      return { success: false, message: 'كود التفعيل غير صالح. يرجى التأكد من الحروف والأرقام.' };
-    }
-    if (key.isUsed && key.usedByStudentId !== studentId) {
-      return { success: false, message: 'تم استخدام هذا الكود من قبل طالب آخر مسبقاً.' };
+      return { 
+        success: false, 
+        message: 'كود التفعيل غير صحيح أو لم يتم العثور عليه. يرجى التأكد من الحروف والأرقام وإعادة المحاولة.' 
+      };
     }
 
+    // Already used by this student -> grant access smoothly without blocking
+    if (key.isUsed && key.usedByStudentId === student.id) {
+      const keyType = key.type || key.targetType || 'course';
+      if (keyType === 'course') {
+        const targetId = key.targetId && key.targetId !== 'ALL' ? key.targetId : this.getCourses()[0]?.id;
+        if (targetId) this.enrollStudentInCourse(student.id, targetId, key.validityDays || 365);
+      }
+      return {
+        success: true,
+        message: `أنت مشترك بالفعل ومفعّل لهذا الكود (${key.targetTitle || key.targetName || 'الكورس'})!`,
+        type: keyType,
+        itemTitle: key.targetTitle || key.targetName
+      };
+    }
+
+    // Used by another student
+    if (key.isUsed && key.usedByStudentId && key.usedByStudentId !== student.id) {
+      return { success: false, message: 'عذراً، هذا الكود تم استخدامه وتفعيله مسبقاً من قبل طالب آخر.' };
+    }
+
+    // Mark as used
     key.isUsed = true;
     key.usedByStudentId = student.id;
     key.usedByStudentName = student.name;
@@ -711,18 +766,33 @@ export const StorageService = {
     key.usedAt = new Date().toISOString();
     this.saveKey(key);
 
-    const keyType = key.type || key.targetType;
+    const keyType = key.type || key.targetType || 'course';
+    const allCourses = this.getCourses();
+
     if (keyType === 'course') {
-      this.enrollStudentInCourse(studentId, key.targetId, key.validityDays || 365);
+      // If code is universal or targetId is 'ALL' -> enroll in all courses
+      if (!key.targetId || key.targetId === 'ALL' || key.targetId === 'all') {
+        allCourses.forEach(c => this.enrollStudentInCourse(student!.id, c.id, key!.validityDays || 365));
+      } else {
+        // Enroll in specified course or fallback to first active course
+        const targetCourse = allCourses.find(c => c.id === key!.targetId) || allCourses[0];
+        if (targetCourse) {
+          this.enrollStudentInCourse(student.id, targetCourse.id, key.validityDays || 365);
+        } else {
+          // If no courses exist yet, register the ID so student gets access once created
+          this.enrollStudentInCourse(student.id, key.targetId, key.validityDays || 365);
+        }
+      }
+
       return {
         success: true,
-        message: `تم تفعيل اشتراكك بنجاح في: ${key.targetTitle || key.targetName || 'الكورس'}!`,
+        message: `تهانينا! تم تفعيل الاشتراك بنجاح في: ${key.targetTitle || key.targetName || 'كورس الفيزياء'}!`,
         type: 'course',
-        itemTitle: key.targetTitle || key.targetName
+        itemTitle: key.targetTitle || key.targetName || 'كورس الفيزياء'
       };
     } else if (keyType === 'pdf') {
       if (!student.unlockedPdfIds) student.unlockedPdfIds = [];
-      if (!student.unlockedPdfIds.includes(key.targetId)) {
+      if (key.targetId && !student.unlockedPdfIds.includes(key.targetId)) {
         student.unlockedPdfIds.push(key.targetId);
         this.saveStudent(student);
       }
@@ -734,12 +804,68 @@ export const StorageService = {
       };
     }
 
-    return { success: true, message: 'تم تفعيل الكود بنجاح' };
+    return { success: true, message: 'تم تفعيل الكود بنجاح!' };
   },
+
+  // Async version with live Firestore direct fallback query
+  async redeemCodeAsync(rawCode: string, studentId: string): Promise<{ success: boolean; message: string; targetType?: 'course' | 'pdf'; targetId?: string; itemTitle?: string }> {
+    // 1. Try local activation first
+    let res = this.activateKey(studentId, rawCode);
+    if (res.success) {
+      const keys = this.getKeys();
+      const norm = this.normalizeActivationCode(rawCode);
+      const key = keys.find(k => this.normalizeActivationCode(k.code) === norm || k.code.trim().toUpperCase() === rawCode.trim().toUpperCase());
+      return {
+        success: true,
+        message: res.message,
+        targetType: res.type,
+        targetId: key?.targetId,
+        itemTitle: res.itemTitle
+      };
+    }
+
+    // 2. If not found locally, query Firestore directly for freshest cloud keys
+    try {
+      const docRef = doc(db, 'app_data', STORAGE_KEYS.KEYS);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const remoteData = snap.data()?.data;
+        if (Array.isArray(remoteData) && remoteData.length > 0) {
+          // Update local storage with remote keys
+          localStorage.setItem(STORAGE_KEYS.KEYS, JSON.stringify(remoteData));
+          notifyListeners();
+          
+          // Retry activation
+          res = this.activateKey(studentId, rawCode);
+          const keys = this.getKeys();
+          const norm = this.normalizeActivationCode(rawCode);
+          const key = keys.find(k => this.normalizeActivationCode(k.code) === norm || k.code.trim().toUpperCase() === rawCode.trim().toUpperCase());
+          return {
+            success: res.success,
+            message: res.message,
+            targetType: res.type,
+            targetId: key?.targetId,
+            itemTitle: res.itemTitle
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('Firestore direct keys query failed:', e);
+    }
+
+    return {
+      success: res.success,
+      message: res.message,
+      targetType: res.type,
+      itemTitle: res.itemTitle
+    };
+  },
+
   redeemCode(rawCode: string, studentId: string): { success: boolean; message: string; targetType?: 'course' | 'pdf'; targetId?: string; itemTitle?: string } {
     const res = this.activateKey(studentId, rawCode);
     const keys = this.getKeys();
-    const key = keys.find(k => k.code.toUpperCase() === rawCode.trim().toUpperCase());
+    const norm = this.normalizeActivationCode(rawCode);
+    const key = keys.find(k => this.normalizeActivationCode(k.code) === norm || k.code.trim().toUpperCase() === rawCode.trim().toUpperCase());
     return {
       success: res.success,
       message: res.message,

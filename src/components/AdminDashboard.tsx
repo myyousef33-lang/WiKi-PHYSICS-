@@ -41,6 +41,7 @@ import {
   Eye
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
+import { MediaStore } from '../services/mediaStore';
 import { 
   Student, 
   Course, 
@@ -236,7 +237,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     });
   };
 
-  // Robust File Uploader with API backend & graceful cloud fallbacks
+  // Robust File Uploader with API backend & graceful cloud / IndexedDB fallbacks
   const handleFileUpload = async (
     file: File, 
     type: 'image' | 'video' | 'pdf', 
@@ -281,15 +282,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       }
       throw new Error('API server upload unavailable on current host');
     } catch (err: any) {
-      console.warn('Server upload not reachable, trying client-side handling...', err);
+      console.warn('Server upload not reachable, saving to local device media store...', err);
       
-      // Fallback for smaller PDFs / images
-      if (type !== 'video' && file.size <= 4 * 1024 * 1024) {
+      // Zero-fail client-side persistence via IndexedDB (handles large videos and PDFs up to hundreds of MBs)
+      try {
+        const mediaId = `${type}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const mediaKey = await MediaStore.saveMedia(mediaId, file, file.name);
+        setIsUploadingFile(false);
+        setUploadProgressText('');
+        const sizeFormatted = `${mbSize} MB`;
+        onSuccess(mediaKey, file.name, sizeFormatted);
+        return;
+      } catch (dbErr) {
+        console.warn('IndexedDB save failed, trying dataUrl fallback...', dbErr);
+      }
+
+      // Fallback for smaller files
+      if (file.size <= 8 * 1024 * 1024) {
         try {
           const dataUrl = await readFileAsDataUrl(file);
           setIsUploadingFile(false);
           setUploadProgressText('');
-          const sizeFormatted = `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+          const sizeFormatted = `${mbSize} MB`;
           onSuccess(dataUrl, file.name, sizeFormatted);
           return;
         } catch (e) {
@@ -300,7 +314,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       setIsUploadingFile(false);
       setUploadProgressText('');
 
-      // If video on static deployment (e.g. Vercel), open the interactive guide
       if (type === 'video') {
         setShowVideoGuideModal(true);
       } else {
@@ -495,10 +508,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
   const handleGenerateCodes = (e: React.FormEvent) => {
     e.preventDefault();
     const count = Number(codeGenForm.count) || 1;
-    const targetId = codeGenForm.targetId || (codeGenForm.targetType === 'course' ? courses[0]?.id : pdfs[0]?.id);
+    let targetId = codeGenForm.targetId;
+    if (!targetId) {
+      targetId = codeGenForm.targetType === 'course' ? 'ALL' : (pdfs[0]?.id || 'ALL_PDFS');
+    }
+
     let targetName = 'كورس الفيزياء';
     if (codeGenForm.targetType === 'course') {
-      targetName = courses.find(c => c.id === targetId)?.title || 'كورس فيزياء';
+      if (targetId === 'ALL') {
+        targetName = 'جميع كورسات المنصة (اشتراك شامل)';
+      } else {
+        const found = courses.find(c => c.id === targetId);
+        targetName = found ? `${found.title} (${found.grade})` : 'كورس فيزياء';
+      }
     } else {
       targetName = pdfs.find(p => p.id === targetId)?.title || 'مذكرة فيزياء';
     }
@@ -1692,12 +1714,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                     <select
                       value={codeGenForm.targetId}
                       onChange={e => setCodeGenForm({ ...codeGenForm, targetId: e.target.value })}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white font-medium"
                     >
                       {codeGenForm.targetType === 'course' ? (
-                        courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)
+                        <>
+                          <option value="ALL">🌟 كود شامل (تفعيل لجميع كورسات المنصة)</option>
+                          {courses.map(c => (
+                            <option key={c.id} value={c.id}>
+                              {c.title} • {c.grade}
+                            </option>
+                          ))}
+                        </>
                       ) : (
-                        pdfs.map(p => <option key={p.id} value={p.id}>{p.title}</option>)
+                        <>
+                          <option value="ALL_PDFS">📚 جميع مذكرات المنصة</option>
+                          {pdfs.map(p => (
+                            <option key={p.id} value={p.id}>
+                              {p.title}
+                            </option>
+                          ))}
+                        </>
                       )}
                     </select>
                   </div>
