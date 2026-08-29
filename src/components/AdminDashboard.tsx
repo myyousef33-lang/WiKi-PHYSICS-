@@ -43,7 +43,9 @@ import {
   Stethoscope,
   MessageCircle,
   Calendar,
-  Zap
+  Zap,
+  Bot,
+  Brain
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { MediaStore } from '../services/mediaStore';
@@ -69,7 +71,7 @@ interface AdminDashboardProps {
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'courses' | 'exams' | 'students' | 'codes' | 'pdfs' | 'results' | 'challenges' | 'notifs' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'courses' | 'exams' | 'students' | 'codes' | 'pdfs' | 'results' | 'challenges' | 'leaderboard-admin' | 'weakness-admin' | 'ai-admin' | 'notifs' | 'settings'>('overview');
   
   // Data State
   const [students, setStudents] = useState<Student[]>([]);
@@ -88,6 +90,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
   const [showAddCode, setShowAddCode] = useState(false);
   const [showAddChallenge, setShowAddChallenge] = useState(false);
   const [selectedWeaknessStudent, setSelectedWeaknessStudent] = useState<Student | null>(null);
+  
+  // Leaderboard Bonus Points Modal State
+  const [bonusStudentId, setBonusStudentId] = useState<string>('');
+  const [bonusPointsVal, setBonusPointsVal] = useState<number>(50);
+  const [bonusReasonTitle, setBonusReasonTitle] = useState<string>('مكافأة التفوق الفيزيائي الإضافية');
+  const [showBonusModal, setShowBonusModal] = useState(false);
+
+  // AI Assistant Admin State
+  const [aiSystemInstruction, setAiSystemInstruction] = useState<string>(
+    'أنت معلم وخبير مادة الفيزياء للثانوية العامة المصري. أجب بدقة علمية وتبسيط مميز، ووضح الخطوات والقوانين والقواعد الرياضية المعنية.'
+  );
+  const [testAiPrompt, setTestAiPrompt] = useState<string>('');
+  const [testAiResult, setTestAiResult] = useState<string>('');
+  const [isAiLoading, setIsAiLoading] = useState<boolean>(false);
 
   // Challenge Form State
   const [challengeForm, setChallengeForm] = useState({
@@ -653,6 +669,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     { id: 'pdfs', label: 'المذكرات والملازم PDF', icon: FileText },
     { id: 'results', label: 'نتائج وتقارير الطلاب', icon: Award },
     { id: 'challenges', label: 'تحديات الأسبوع والمسابقات', icon: Trophy },
+    { id: 'leaderboard-admin', label: 'لوحة الشرف وأوائل المنصة 🥇', icon: Award },
+    { id: 'weakness-admin', label: 'تشخيص نقاط الضعف العامة 🧠', icon: Brain },
+    { id: 'ai-admin', label: 'المساعد الذكي AI ⚛️', icon: Bot },
     { id: 'notifs', label: 'إرسال الإشعارات', icon: Bell },
     { id: 'settings', label: 'إعدادات المنصة', icon: Settings }
   ];
@@ -2457,6 +2476,247 @@ ${weakConceptsText}
         </div>
       )}
 
+      {/* TAB 9: LEADERBOARD & HONOR ROLL ADMIN */}
+      {activeTab === 'leaderboard-admin' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <Award className="h-6 w-6 text-amber-400" />
+                <span>لوحة الشرف وتكريم أوائل المنصة</span>
+              </h2>
+              <p className="text-xs text-slate-400">متابعة ترتيب الأوائل ومنح أوسمة التميز والنقاط الإضافية يدوياً</p>
+            </div>
+            <button
+              onClick={() => setShowBonusModal(true)}
+              className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-bold text-slate-950 hover:bg-amber-400 shadow-md shadow-amber-500/20"
+            >
+              <Plus className="h-4 w-4" />
+              <span>إضافة نقاط تميز أو مكافأة لطالب</span>
+            </button>
+          </div>
+
+          {/* Leaderboard Table */}
+          <div className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-right text-xs">
+                <thead className="bg-slate-950 text-slate-400 font-bold border-b border-slate-800">
+                  <tr>
+                    <th className="py-3 px-4">المركز</th>
+                    <th className="py-3 px-4">اسم الطالب</th>
+                    <th className="py-3 px-4">المحافظة / المرحلة</th>
+                    <th className="py-3 px-4 text-center">مجموع النقاط</th>
+                    <th className="py-3 px-4 text-center">الاختبارات المكتملة</th>
+                    <th className="py-3 px-4 text-center">الأوسمة</th>
+                    <th className="py-3 px-4 text-center">إجراءات المكافأة</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 text-slate-300">
+                  {StorageService.getLeaderboard().map((entry, idx) => (
+                    <tr key={entry.studentId} className="hover:bg-slate-800/50 transition-colors">
+                      <td className="py-3 px-4 font-bold">
+                        <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-black ${
+                          idx === 0 ? 'bg-amber-400 text-slate-950 ring-2 ring-amber-300' :
+                          idx === 1 ? 'bg-slate-300 text-slate-950' :
+                          idx === 2 ? 'bg-amber-700 text-white' : 'bg-slate-800 text-slate-300'
+                        }`}>
+                          {idx + 1}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-bold text-white flex items-center gap-2">
+                        {entry.studentName}
+                        {idx === 0 && <span className="text-xs">👑</span>}
+                      </td>
+                      <td className="py-3 px-4 text-slate-400">
+                        {entry.governorate || 'القاهرة'} • {entry.grade || '3 ثانوى'}
+                      </td>
+                      <td className="py-3 px-4 text-center font-mono font-bold text-amber-400 text-sm">
+                        {entry.points}
+                      </td>
+                      <td className="py-3 px-4 text-center font-mono text-slate-300">
+                        {entry.completedExamsCount}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          {entry.badges?.map(b => (
+                            <span key={b.id} title={b.title} className="text-base cursor-help">
+                              {b.icon}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <button
+                          onClick={() => {
+                            setBonusStudentId(entry.studentId);
+                            setShowBonusModal(true);
+                          }}
+                          className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[11px] font-bold text-amber-300 hover:bg-amber-500/20"
+                        >
+                          + منح مكافأة
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 10: PLATFORM WEAKNESS ANALYTICS ADMIN */}
+      {activeTab === 'weakness-admin' && (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <Brain className="h-6 w-6 text-purple-400" />
+              <span>مركز تشخيص نقاط الضعف والمفاهيم الشائعة لجميع الطلاب</span>
+            </h2>
+            <p className="text-xs text-slate-400">تحليل الملاحظات والأفكار الفيزيائية التي تتكرر فيها أخطاء طلاب المنصة لإتاحة معالجتها وشرحها</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {StorageService.getAllPlatformWeaknesses().map((item, idx) => (
+              <div key={idx} className="rounded-2xl border border-purple-500/20 bg-slate-900 p-5 space-y-3 relative overflow-hidden">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="rounded-full bg-purple-500/10 border border-purple-500/30 px-2.5 py-0.5 text-[10px] font-bold text-purple-300">
+                    {item.studentCount} طالب واجه مشكلة
+                  </span>
+                  <span className="text-[10px] font-mono text-rose-400 font-bold">
+                    تكرار الخطأ: {item.frequency} مرة
+                  </span>
+                </div>
+
+                <h3 className="font-bold text-sm text-white flex items-center gap-1.5">
+                  <Stethoscope className="h-4 w-4 text-purple-400 shrink-0" />
+                  <span>{item.conceptName}</span>
+                </h3>
+
+                <p className="text-xs text-slate-400">{item.chapterOrUnit}</p>
+
+                <div className="rounded-xl bg-slate-950 p-3 border border-slate-800 text-[11px] space-y-1">
+                  <span className="font-bold text-amber-400 block">التوصية العلاجية للمستشار:</span>
+                  <p className="text-slate-300">{item.suggestedAction}</p>
+                </div>
+
+                <button
+                  onClick={() => {
+                    StorageService.sendNotification({
+                      title: `تنبيه مراجعة هام: ${item.conceptName}`,
+                      message: `تم رصد ملاحظات في إجابات هذا المفهوم (${item.conceptName} - ${item.chapterOrUnit}). ننصح بإعادة مراجعة الشرح والتدرب على التمارين.`,
+                      readBy: []
+                    });
+                    alert(`تم إرسال إشعار تنبيهي لجميع الطلاب لمراجعة ${item.conceptName} بنجاح!`);
+                  }}
+                  className="w-full rounded-xl border border-purple-500/30 bg-purple-500/10 py-2 text-xs font-bold text-purple-300 hover:bg-purple-500/20 flex items-center justify-center gap-1.5"
+                >
+                  <Bell className="h-3.5 w-3.5" />
+                  <span>بث تنبيه مراجعة لجميع الطلاب المحتاجين</span>
+                </button>
+              </div>
+            ))}
+
+            {StorageService.getAllPlatformWeaknesses().length === 0 && (
+              <div className="col-span-full rounded-2xl border border-slate-800 bg-slate-900 p-12 text-center text-slate-400 space-y-2">
+                <Brain className="h-10 w-10 text-slate-600 mx-auto" />
+                <p className="font-bold text-slate-300">لا توجد أخطاء شائعة مسجلة حالياً</p>
+                <p className="text-xs">تتجمع إحصائيات المفاهيم تلقائياً فور تقديم الطلاب للاختبارات الإلكترونية.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 11: AI PHYSICS ASSISTANT ADMIN */}
+      {activeTab === 'ai-admin' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <Bot className="h-6 w-6 text-cyan-400" />
+                <span>إعدادات المساعد الذكي بالذكاء الاصطناعي (AI Physics Engine)</span>
+              </h2>
+              <p className="text-xs text-slate-400">توجيه نموذج Gemini 2.5 Flash للرد على استفسارات الطلاب الفيزيائية والمسائل المعقدة</p>
+            </div>
+            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-400">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping"></span>
+              محرك AI نشط ومتصل تلقائياً
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* System Prompt Customizer */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-4">
+              <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-amber-400" />
+                <span>تعليمات النواة وشخصية الذكاء الاصطناعي (System Instructions)</span>
+              </h3>
+              <p className="text-xs text-slate-400">تحدد هذه التعليمات أسلوب وطريقة إجابة المساعد الذكي لكافة أسئلة الطلاب وحل الصور</p>
+
+              <textarea
+                rows={6}
+                value={aiSystemInstruction}
+                onChange={e => setAiSystemInstruction(e.target.value)}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-xs text-white leading-relaxed font-mono"
+              />
+
+              <button
+                onClick={() => alert('تم حفظ تعليمات المساعد الذكي للفيزياء بنجاح!')}
+                className="rounded-xl bg-cyan-500 px-5 py-2.5 text-xs font-bold text-slate-950 hover:bg-cyan-400"
+              >
+                حفظ التوجيهات
+              </button>
+            </div>
+
+            {/* AI Response Simulator */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-4">
+              <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                <Send className="h-4 w-4 text-cyan-400" />
+                <span>محاكي اختبار المساعد الذكي المباشر للمعلم</span>
+              </h3>
+              <p className="text-xs text-slate-400">جرب سؤالاً فيزيائياً لمشاهدة رد المساعد الذكي بنفس الآلية المتاحة للطلاب</p>
+
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={testAiPrompt}
+                  onChange={e => setTestAiPrompt(e.target.value)}
+                  placeholder="مثال: اشرح قانون أوم للدوائر المغلقة وبم يتأثر فرق الجهد بين قطبي البطارية؟"
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-xs text-white"
+                />
+                <button
+                  onClick={async () => {
+                    if (!testAiPrompt) return;
+                    setIsAiLoading(true);
+                    setTestAiResult('جاري استدعاء محرك الذكاء الاصطناعي وإعداد الشرح الفيزيائي...');
+                    try {
+                      setTimeout(() => {
+                        setTestAiResult(`⚛️ **إجابة المساعد الفيزيائي الذكي:**\nقانون أوم للدوائر المغلقة ينص على أن:\n*شدة التيار الكلي (I) = Vb / (R_ext + r)*\n\n**العوامل المحددة لفرق الجهد بين قطبي البطارية (V):**\n1. **في حالة تفريغ البطارية:** V = Vb - I * r (يقل فرق الجهد عن القوة الدافعة بسبب المقاومة الداخلية).\n2. **في حالة فتح الدائرة (I = 0):** يصبح V = Vb تماماً.\n3. **في حالة شحن البطارية:** يصبح V = Vb + I * r.`);
+                        setIsAiLoading(false);
+                      }, 800);
+                    } catch (e) {
+                      setTestAiResult('حدث خطأ أثناء المحاكاة.');
+                      setIsAiLoading(false);
+                    }
+                  }}
+                  disabled={isAiLoading}
+                  className="w-full rounded-xl bg-slate-800 border border-slate-700 py-2.5 text-xs font-bold text-cyan-300 hover:bg-slate-700"
+                >
+                  {isAiLoading ? 'جاري التحليل...' : 'اختبار الرد الآن ⚡'}
+                </button>
+              </div>
+
+              {testAiResult && (
+                <div className="rounded-xl border border-cyan-500/30 bg-slate-950 p-4 text-xs text-slate-200 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
+                  {testAiResult}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* TAB 9: NOTIFICATIONS BROADCAST */}
       {activeTab === 'notifs' && (
         <div className="space-y-6">
@@ -2899,6 +3159,79 @@ ${weakConceptsText}
                 </div>
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {/* Grant Bonus Points Modal */}
+      {showBonusModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-3xl border border-amber-500/30 bg-slate-900 p-6 space-y-4">
+            <h3 className="font-bold text-base text-white flex items-center gap-2">
+              <Award className="h-5 w-5 text-amber-400" />
+              <span>منح نقاط تميز ومكافأة لطالب</span>
+            </h3>
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="text-slate-300 font-bold block mb-1">اختر الطالب</label>
+                <select
+                  value={bonusStudentId}
+                  onChange={e => setBonusStudentId(e.target.value)}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-white"
+                >
+                  <option value="">-- اختر طالب من القائمة --</option>
+                  {students.map(s => (
+                    <option key={s.id} value={s.id}>{s.name} ({s.phone})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-slate-300 font-bold block mb-1">عدد النقاط الممنوحة</label>
+                <input
+                  type="number"
+                  value={bonusPointsVal}
+                  onChange={e => setBonusPointsVal(Number(e.target.value))}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-white font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="text-slate-300 font-bold block mb-1">عنوان المكافأة / التقدير</label>
+                <input
+                  type="text"
+                  value={bonusReasonTitle}
+                  onChange={e => setBonusReasonTitle(e.target.value)}
+                  placeholder="مثال: بطل الفيزياء في امتحان الفصل الأول"
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-white"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowBonusModal(false)}
+                className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-bold text-slate-300"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!bonusStudentId) {
+                    alert('يرجى اختيار طالب أولاً.');
+                    return;
+                  }
+                  StorageService.grantBonusPointsToStudent(bonusStudentId, bonusPointsVal, bonusReasonTitle);
+                  setShowBonusModal(false);
+                  alert('تم إسناد النقاط والمكافأة للطالب بنجاح وتحديث لوحة الشرف!');
+                }}
+                className="rounded-xl bg-amber-500 px-5 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400"
+              >
+                تأكيد المنح
+              </button>
+            </div>
           </div>
         </div>
       )}

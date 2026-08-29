@@ -1403,6 +1403,76 @@ export const StorageService = {
     const list = this.getWeeklyChallenges().filter(c => c.id !== id);
     setStored(STORAGE_KEYS.WEEKLY_CHALLENGES, list);
   },
+  grantBonusPointsToStudent(studentId: string, points: number, badgeTitle: string = 'مكافأة المعلم الإضافية'): void {
+    const leaderboard = this.getLeaderboard();
+    const student = this.getStudentById(studentId);
+    if (!student) return;
+
+    let foundIndex = leaderboard.findIndex(l => l.studentId === studentId);
+    if (foundIndex !== -1) {
+      leaderboard[foundIndex].points += points;
+      leaderboard[foundIndex].weeklyScore += points;
+      leaderboard[foundIndex].badges.push({
+        id: 'badge-' + Date.now(),
+        title: badgeTitle,
+        description: `تمت إضافتها بواسطة المعلم (+${points} نقطة)`,
+        icon: '🎖️',
+        earnedAt: new Date().toISOString(),
+        category: 'points'
+      });
+    } else {
+      leaderboard.push({
+        studentId: student.id,
+        studentName: student.name,
+        grade: student.grade,
+        governorate: student.governorate,
+        points: points,
+        rank: leaderboard.length + 1,
+        completedExamsCount: 0,
+        badges: [{
+          id: 'badge-' + Date.now(),
+          title: badgeTitle,
+          description: `تمت إضافتها بواسطة المعلم (+${points} نقطة)`,
+          icon: '🎖️',
+          earnedAt: new Date().toISOString(),
+          category: 'points'
+        }],
+        weeklyScore: points,
+        lastActive: new Date().toISOString()
+      });
+    }
+
+    const sorted = leaderboard.sort((a, b) => b.points - a.points).map((entry, idx) => ({ ...entry, rank: idx + 1 }));
+    setStored(STORAGE_KEYS.LEADERBOARD, sorted);
+  },
+  getAllPlatformWeaknesses(): { conceptName: string; chapterOrUnit: string; frequency: number; studentCount: number; suggestedAction: string }[] {
+    const profiles = this.getWeaknessProfiles();
+    const conceptMap: Record<string, { conceptName: string; chapterOrUnit: string; frequency: number; studentCount: number; studentIds: Set<string>; suggestedAction: string }> = {};
+
+    Object.values(profiles).forEach(profile => {
+      profile.weakPoints.forEach(wp => {
+        const key = `${wp.conceptName}_${wp.chapterOrUnit}`;
+        if (!conceptMap[key]) {
+          conceptMap[key] = {
+            conceptName: wp.conceptName,
+            chapterOrUnit: wp.chapterOrUnit,
+            frequency: wp.frequency,
+            studentCount: 1,
+            studentIds: new Set([profile.studentId]),
+            suggestedAction: wp.suggestedAction
+          };
+        } else {
+          conceptMap[key].frequency += wp.frequency;
+          if (!conceptMap[key].studentIds.has(profile.studentId)) {
+            conceptMap[key].studentIds.add(profile.studentId);
+            conceptMap[key].studentCount += 1;
+          }
+        }
+      });
+    });
+
+    return Object.values(conceptMap).sort((a, b) => b.studentCount - a.studentCount);
+  },
 
   // === AI Chat History (Phase 2) ===
   getAIChatHistory(studentId: string, lessonId?: string): AIChatMessage[] {

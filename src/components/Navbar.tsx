@@ -71,6 +71,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'courses-catalog', label: 'المناهج والكورسات', icon: BookOpen },
     { id: 'leaderboard', label: 'لوحة الشرف', icon: Trophy },
     { id: 'ai-assistant', label: 'المساعد الذكي ⚛️', icon: Bot },
+    { id: 'weakness-profile', label: 'تشخيص ضعفي 🧠', icon: Brain, authRequired: true },
     { id: 'pdf-library', label: 'المذكرات', icon: FileText },
     { id: 'my-results', label: 'نتائجي', icon: Award, authRequired: true }
   ];
