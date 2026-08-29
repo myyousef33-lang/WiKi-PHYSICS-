@@ -38,7 +38,12 @@ import {
   Play,
   Info,
   ExternalLink,
-  Eye
+  Eye,
+  Trophy,
+  Stethoscope,
+  MessageCircle,
+  Calendar,
+  Zap
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { MediaStore } from '../services/mediaStore';
@@ -54,7 +59,9 @@ import {
   GradeLevel,
   Question,
   Unit,
-  Lesson
+  Lesson,
+  WeeklyChallenge,
+  StudentWeaknessProfile
 } from '../types';
 
 interface AdminDashboardProps {
@@ -62,7 +69,7 @@ interface AdminDashboardProps {
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'courses' | 'exams' | 'students' | 'codes' | 'pdfs' | 'results' | 'notifs' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'courses' | 'exams' | 'students' | 'codes' | 'pdfs' | 'results' | 'challenges' | 'notifs' | 'settings'>('overview');
   
   // Data State
   const [students, setStudents] = useState<Student[]>([]);
@@ -72,12 +79,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
   const [pdfs, setPdfs] = useState<PdfMaterial[]>([]);
   const [notifs, setNotifs] = useState<NotificationItem[]>([]);
   const [attempts, setAttempts] = useState<ExamAttempt[]>([]);
+  const [challenges, setChallenges] = useState<WeeklyChallenge[]>(StorageService.getWeeklyChallenges());
   const [settings, setSettings] = useState<PlatformSettings>(StorageService.getSettings());
 
   // Modals / Sub-forms
   const [showAddCourse, setShowAddCourse] = useState(false);
   const [showAddExam, setShowAddExam] = useState(false);
   const [showAddCode, setShowAddCode] = useState(false);
+  const [showAddChallenge, setShowAddChallenge] = useState(false);
+  const [selectedWeaknessStudent, setSelectedWeaknessStudent] = useState<Student | null>(null);
+
+  // Challenge Form State
+  const [challengeForm, setChallengeForm] = useState({
+    title: '',
+    description: '',
+    grade: 'الصف الثالث الثانوي (ثانوية عامة)',
+    bonusPoints: 50,
+    validityDays: 7,
+    qText: '',
+    opt1: '',
+    opt2: '',
+    opt3: '',
+    opt4: '',
+    correctIdx: 0,
+    explanation: ''
+  });
   const [showAddPdf, setShowAddPdf] = useState(false);
   const [showAddNotif, setShowAddNotif] = useState(false);
   const [selectedCourseForUnits, setSelectedCourseForUnits] = useState<Course | null>(null);
@@ -626,9 +652,45 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     { id: 'codes', label: 'توليد أكواد التفعيل', icon: Key },
     { id: 'pdfs', label: 'المذكرات والملازم PDF', icon: FileText },
     { id: 'results', label: 'نتائج وتقارير الطلاب', icon: Award },
+    { id: 'challenges', label: 'تحديات الأسبوع والمسابقات', icon: Trophy },
     { id: 'notifs', label: 'إرسال الإشعارات', icon: Bell },
     { id: 'settings', label: 'إعدادات المنصة', icon: Settings }
   ];
+
+  const sendParentWhatsappReport = (student: Student) => {
+    const studentAttempts = attempts.filter(a => a.studentId === student.id);
+    const totalAttempts = studentAttempts.length;
+    const avgPercentage = totalAttempts > 0 
+      ? Math.round(studentAttempts.reduce((acc, curr) => acc + curr.percentage, 0) / totalAttempts)
+      : 0;
+    const weaknessProfile = StorageService.getStudentWeaknessProfile(student.id);
+    const weakConceptsText = weaknessProfile.weakPoints.length > 0
+      ? weaknessProfile.weakPoints.slice(0, 4).map(w => `• ${w.conceptName} (${w.chapterOrUnit})`).join('\n')
+      : '• لا توجد نقاط ضعف مسجلة حالياً (أداء ممتاز بجدارة)';
+
+    const message = `السلام عليكم ورحمة الله وبركاته 🌹
+تقرير ولي الأمر المعتمد للطالب/ة: *${student.name}*
+منصة: *${settings.platformName}*
+المعلم: *${settings.instructorTitle}*
+
+📊 **ملخص الأداء والمشاركات:**
+• الكورسات المفعلة: ${student.enrolledCourseIds?.length || 0} كورس
+• عدد الاختبارات المكتملة: ${totalAttempts} اختبار
+• متوسط التقدير العام: *${avgPercentage}%*
+
+🎯 **النقاط والمفاهيم الجاري تركيز المراجعة عليها:**
+${weakConceptsText}
+
+💡 **توجيهات المعلم:**
+نحث الطالب على استكمال مراجعة الفيديوهات الموصى بها وحل تحديات الأسبوع الفيزيائية لرفع مستواه وتحقيق 60/60.
+
+لأي استفسار التواصل مع الإدارة: ${settings.whatsappNumber}`;
+
+    const encoded = encodeURIComponent(message);
+    const phoneDigits = student.phone.replace(/[^0-9]/g, '');
+    const fullPhone = phoneDigits.startsWith('0') ? '2' + phoneDigits : phoneDigits;
+    window.open(`https://wa.me/${fullPhone}?text=${encoded}`, '_blank');
+  };
 
   const filteredStudents = students.filter(s => 
     s.name.toLowerCase().includes(studentSearch.toLowerCase()) || 
@@ -1652,17 +1714,35 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                         </span>
                       </td>
                       <td className="py-4 px-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                          <button
+                            onClick={() => setSelectedWeaknessStudent(student)}
+                            className="rounded-lg border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-[11px] font-bold text-purple-300 hover:bg-purple-500/20 flex items-center gap-1"
+                            title="تشخيص نقاط الضعف والمفاهيم المفقودة"
+                          >
+                            <Stethoscope className="h-3 w-3" />
+                            <span>تشخيص الضعف</span>
+                          </button>
+
+                          <button
+                            onClick={() => sendParentWhatsappReport(student)}
+                            className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold text-emerald-300 hover:bg-emerald-500/20 flex items-center gap-1"
+                            title="إرسال تقرير ولي الأمر مباشرة عبر واتساب"
+                          >
+                            <MessageCircle className="h-3 w-3" />
+                            <span>تقرير واتساب</span>
+                          </button>
+
                           <button
                             onClick={() => handleResetDevices(student)}
-                            className="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1 text-[11px] font-bold text-slate-300 hover:bg-slate-700"
+                            className="rounded-lg border border-slate-700 bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-300 hover:bg-slate-700"
                             title="إعادة ضبط أجهزة الطالب"
                           >
                             تفريغ الأجهزة
                           </button>
                           <button
                             onClick={() => handleToggleBlockStudent(student)}
-                            className={`rounded-lg px-2.5 py-1 text-[11px] font-bold ${
+                            className={`rounded-lg px-2 py-1 text-[11px] font-bold ${
                               student.isBlocked 
                                 ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30' 
                                 : 'bg-rose-500/20 text-rose-400 hover:bg-rose-500/30'
@@ -2166,7 +2246,218 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
         </div>
       )}
 
-      {/* TAB 8: NOTIFICATIONS BROADCAST */}
+      {/* TAB 8: WEEKLY CHALLENGES & COMPETITIONS */}
+      {activeTab === 'challenges' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <Trophy className="h-6 w-6 text-amber-400" />
+                <span>إدارة تحديات الأسبوع ومسابقات الفيزياء</span>
+              </h2>
+              <p className="text-xs text-slate-400">طرح أسئلة التميز الأسبوعية لتشجيع الطلاب ومنح النقاط الإضافية لرفع ترتيبهم في لائحة الشرف</p>
+            </div>
+            <button
+              onClick={() => setShowAddChallenge(!showAddChallenge)}
+              className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-bold text-slate-950 hover:bg-amber-400 shadow-md shadow-amber-500/20"
+            >
+              <Plus className="h-4 w-4" />
+              <span>{showAddChallenge ? 'إلغاء النافذة' : 'إضافة تحدي أسبوعي جديد'}</span>
+            </button>
+          </div>
+
+          {/* Add Weekly Challenge Form Modal / Card */}
+          {showAddChallenge && (
+            <div className="rounded-3xl border border-amber-500/30 bg-slate-900 p-6 space-y-4 animate-in fade-in">
+              <h3 className="font-bold text-base text-white flex items-center gap-2">
+                <Zap className="h-5 w-5 text-amber-400" />
+                <span>إنشاء ونشر تحدي فيزيائي جديد</span>
+              </h3>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (!challengeForm.title || !challengeForm.qText || !challengeForm.opt1 || !challengeForm.opt2) {
+                  alert('يرجى ملء كافة الحقول الأساسية للتحدي.');
+                  return;
+                }
+                const newCh: WeeklyChallenge = {
+                  id: 'challenge-' + Date.now(),
+                  title: challengeForm.title,
+                  description: challengeForm.description || 'تحدي أسبوعي متميز من إعداد المعلم',
+                  grade: challengeForm.grade,
+                  startDate: new Date().toISOString(),
+                  endDate: new Date(Date.now() + challengeForm.validityDays * 24 * 60 * 60 * 1000).toISOString(),
+                  bonusPoints: Number(challengeForm.bonusPoints) || 50,
+                  isPublished: true,
+                  questions: [
+                    {
+                      id: 'cq-' + Date.now(),
+                      text: challengeForm.qText,
+                      options: [challengeForm.opt1, challengeForm.opt2, challengeForm.opt3, challengeForm.opt4].filter(Boolean),
+                      correctOptionIndex: Number(challengeForm.correctIdx),
+                      points: Number(challengeForm.bonusPoints) || 50,
+                      explanation: challengeForm.explanation || 'تم شرح المسألة بنجاح'
+                    }
+                  ]
+                };
+                StorageService.saveWeeklyChallenge(newCh);
+                setChallenges(StorageService.getWeeklyChallenges());
+                setShowAddChallenge(false);
+                alert('تم نشر التحدي الجديد بنجاح!');
+              }} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-300">عنوان التحدي الأسبوعي</label>
+                    <input
+                      type="text"
+                      value={challengeForm.title}
+                      onChange={e => setChallengeForm({ ...challengeForm, title: e.target.value })}
+                      placeholder="مثال: تحدي قانون كيرشوف والدوائر المعقدة"
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-300">النقاط الإضافية المكتسبة</label>
+                    <input
+                      type="number"
+                      value={challengeForm.bonusPoints}
+                      onChange={e => setChallengeForm({ ...challengeForm, bonusPoints: Number(e.target.value) })}
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white font-mono"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-300">نص السؤال أو المسألة الفيزياء</label>
+                  <textarea
+                    rows={3}
+                    value={challengeForm.qText}
+                    onChange={e => setChallengeForm({ ...challengeForm, qText: e.target.value })}
+                    placeholder="أدخل نص السؤال الفيزيائي بالتفصيل..."
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-400">الخيار (1)</label>
+                    <input
+                      type="text"
+                      value={challengeForm.opt1}
+                      onChange={e => setChallengeForm({ ...challengeForm, opt1: e.target.value })}
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2 text-xs text-white"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-400">الخيار (2)</label>
+                    <input
+                      type="text"
+                      value={challengeForm.opt2}
+                      onChange={e => setChallengeForm({ ...challengeForm, opt2: e.target.value })}
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2 text-xs text-white"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-400">الخيار (3)</label>
+                    <input
+                      type="text"
+                      value={challengeForm.opt3}
+                      onChange={e => setChallengeForm({ ...challengeForm, opt3: e.target.value })}
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2 text-xs text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-400">الخيار (4)</label>
+                    <input
+                      type="text"
+                      value={challengeForm.opt4}
+                      onChange={e => setChallengeForm({ ...challengeForm, opt4: e.target.value })}
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2 text-xs text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-300">الخيار الصحيح الإجابة</label>
+                    <select
+                      value={challengeForm.correctIdx}
+                      onChange={e => setChallengeForm({ ...challengeForm, correctIdx: Number(e.target.value) })}
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                    >
+                      <option value={0}>الخيار الأول (1)</option>
+                      <option value={1}>الخيار الثاني (2)</option>
+                      <option value={2}>الخيار الثالث (3)</option>
+                      <option value={3}>الخيار الرابع (4)</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-300">شرح طريقة الحل (تظهر للطالب بعد الإجابة)</label>
+                    <input
+                      type="text"
+                      value={challengeForm.explanation}
+                      onChange={e => setChallengeForm({ ...challengeForm, explanation: e.target.value })}
+                      placeholder="خطوات الحل والقوانين المستخدمة..."
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="submit"
+                    className="rounded-xl bg-amber-500 px-6 py-2.5 text-xs font-bold text-slate-950 hover:bg-amber-400"
+                  >
+                    نشر التحدي الآن
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Existing Challenges List */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {challenges.map(ch => (
+              <div key={ch.id} className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 space-y-3 relative">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="inline-block rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold text-amber-400 border border-amber-500/20 mb-1">
+                      +{ch.bonusPoints} نقطة تميز
+                    </span>
+                    <h3 className="font-bold text-sm text-white">{ch.title}</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">{ch.description}</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (window.confirm('هل أنت متأكد من حذف هذا التحدي؟')) {
+                        StorageService.deleteWeeklyChallenge(ch.id);
+                        setChallenges(StorageService.getWeeklyChallenges());
+                      }
+                    }}
+                    className="rounded-lg p-2 text-rose-400 hover:bg-rose-500/20"
+                    title="حذف التحدي"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {ch.questions && ch.questions[0] && (
+                  <div className="rounded-xl bg-slate-950 p-3 border border-slate-800 text-xs space-y-1.5">
+                    <p className="font-bold text-slate-300">السؤال: {ch.questions[0].text}</p>
+                    <p className="text-[11px] text-emerald-400">الإجابة الصحيحة: {ch.questions[0].options[ch.questions[0].correctOptionIndex]}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 9: NOTIFICATIONS BROADCAST */}
       {activeTab === 'notifs' && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
@@ -2380,6 +2671,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
               </div>
             </div>
 
+            {/* Ministry Exam Date Countdown Setting */}
+            <div className="rounded-2xl border border-purple-500/30 bg-purple-950/20 p-4 space-y-3">
+              <label className="text-xs font-bold text-purple-300 flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-purple-400" />
+                <span>موعد امتحانات الثانوية العامة الرسمي (معداد العد التنازلي التفاعلي للطلاب)</span>
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                <input
+                  type="datetime-local"
+                  value={settings.ministryExamDate ? new Date(settings.ministryExamDate).toISOString().slice(0, 16) : '2026-06-14T09:00'}
+                  onChange={e => {
+                    const isoStr = e.target.value ? new Date(e.target.value).toISOString() : '2026-06-14T09:00:00.000Z';
+                    setSettings({ ...settings, ministryExamDate: isoStr });
+                  }}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white font-mono"
+                />
+                <p className="text-[11px] text-slate-400">تحديث هذا الموعد يغير شريط العد التنازلي لأيام وساعات الامتحان في واجهة الطلاب تلقائياً.</p>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-300">رمز PIN السري لدخول الإدارة</label>
@@ -2512,6 +2823,82 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                 فهمت، شكراً لك!
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Student Weakness Diagnosis Modal */}
+      {selectedWeaknessStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="relative w-full max-w-2xl rounded-3xl border border-slate-700 bg-slate-900 p-6 sm:p-8 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400">
+                  <Stethoscope className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-white">تقرير تشخيص نقاط الضعف للطالب 🩺</h3>
+                  <p className="text-xs text-slate-400">الطالب: {selectedWeaknessStudent.name} ({selectedWeaknessStudent.phone})</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedWeaknessStudent(null)}
+                className="rounded-xl border border-slate-700 bg-slate-800 p-2 text-slate-400 hover:text-white"
+              >
+                <XCircle className="h-5 w-5" />
+              </button>
+            </div>
+
+            {(() => {
+              const profile = StorageService.getStudentWeaknessProfile(selectedWeaknessStudent.id);
+              return (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-center">
+                      <span className="text-[11px] text-slate-400 block">إجمالي الأسئلة المربكة</span>
+                      <span className="text-xl font-bold text-purple-400">{profile.totalErrors}</span>
+                    </div>
+                    <div className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-center">
+                      <span className="text-[11px] text-slate-400 block">المفاهيم المتقنة</span>
+                      <span className="text-xl font-bold text-emerald-400">{profile.masteredConcepts?.length || 0}</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-xs text-slate-300 mb-2">المفاهيم الفيزيائية المحتاجة لمراجعة وحل تمارين:</h4>
+                    {profile.weakPoints.length === 0 ? (
+                      <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-center text-xs text-emerald-300">
+                        🎉 أداء ممتاز! لا توجد نقاط ضعف مسجلة لهذا الطالب في الاختبارات الأخيرة.
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                        {profile.weakPoints.map(wp => (
+                          <div key={wp.id} className="rounded-xl border border-rose-500/20 bg-rose-950/10 p-3 text-xs space-y-1">
+                            <div className="flex items-center justify-between text-white font-bold">
+                              <span>• {wp.conceptName}</span>
+                              <span className="text-[10px] text-rose-400">تكرار الخطأ: {wp.frequency} مرة</span>
+                            </div>
+                            <p className="text-slate-400 text-[11px]">الوحدة/الفصل: {wp.chapterOrUnit}</p>
+                            <p className="text-amber-400 text-[11px]">التوجيه: {wp.suggestedAction}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button
+                      onClick={() => sendParentWhatsappReport(selectedWeaknessStudent)}
+                      className="rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 flex items-center gap-1.5 shadow-md shadow-emerald-600/20"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      <span>إرسال التقرير لولي الأمر عبر واتساب</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
