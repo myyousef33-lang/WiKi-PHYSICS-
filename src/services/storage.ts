@@ -12,6 +12,7 @@ import {
   NotificationItem,
   PlatformSettings
 } from '../types';
+import { db, doc, setDoc, onSnapshot } from './firebase';
 
 const STORAGE_KEYS = {
   STUDENTS: 'wikifizya_db_students_v4',
@@ -42,6 +43,60 @@ export const subscribeToStorage = (callback: () => void) => {
 const notifyListeners = () => {
   listeners.forEach(cb => {
     try { cb(); } catch (e) { console.error('Listener error:', e); }
+  });
+};
+
+// Firebase Firestore Cloud Sync Helpers
+const syncToFirestore = (key: string, data: any) => {
+  try {
+    const docRef = doc(db, 'app_data', key);
+    setDoc(docRef, { data, updatedAt: new Date().toISOString() }, { merge: true }).catch(err => {
+      console.warn('Firestore sync write warning:', err);
+    });
+  } catch (err) {
+    console.warn('Firestore sync call error:', err);
+  }
+};
+
+let isFirestoreInitialized = false;
+const initFirestoreSync = () => {
+  if (isFirestoreInitialized) return;
+  isFirestoreInitialized = true;
+
+  const syncKeys = [
+    STORAGE_KEYS.SETTINGS,
+    STORAGE_KEYS.COURSES,
+    STORAGE_KEYS.EXAMS,
+    STORAGE_KEYS.STUDENTS,
+    STORAGE_KEYS.KEYS,
+    STORAGE_KEYS.PDF_CATEGORIES,
+    STORAGE_KEYS.PDF_FILES,
+    STORAGE_KEYS.NOTIFICATIONS,
+    STORAGE_KEYS.PROGRESS,
+    STORAGE_KEYS.ATTEMPTS
+  ];
+
+  syncKeys.forEach(key => {
+    try {
+      const docRef = doc(db, 'app_data', key);
+      onSnapshot(docRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const remoteData = snapshot.data()?.data;
+          if (remoteData !== undefined) {
+            const localStr = localStorage.getItem(key);
+            const remoteStr = JSON.stringify(remoteData);
+            if (localStr !== remoteStr) {
+              localStorage.setItem(key, remoteStr);
+              notifyListeners();
+            }
+          }
+        }
+      }, (err) => {
+        console.warn('Firestore listener warning for', key, err);
+      });
+    } catch (e) {
+      console.warn('Error setting up snapshot for', key, e);
+    }
   });
 };
 
@@ -78,6 +133,9 @@ const setStored = <T>(key: string, val: T): void => {
   try {
     localStorage.setItem(key, JSON.stringify(val));
     notifyListeners();
+    if (key !== STORAGE_KEYS.ADMIN_AUTH && key !== STORAGE_KEYS.CURRENT_STUDENT && key !== STORAGE_KEYS.LAST_VIEWED) {
+      syncToFirestore(key, val);
+    }
   } catch (e) {
     console.error(`Error writing ${key} to storage:`, e);
   }
@@ -115,6 +173,8 @@ export const initializeStorage = () => {
   if (!localStorage.getItem(STORAGE_KEYS.ATTEMPTS)) {
     localStorage.setItem(STORAGE_KEYS.ATTEMPTS, JSON.stringify([]));
   }
+  // Initialize Cloud Firestore Real-time Sync
+  initFirestoreSync();
 };
 
 // Execute initial storage bootstrap
@@ -124,7 +184,8 @@ initializeStorage();
 export const StorageService = {
   // === Settings ===
   getSettings(): PlatformSettings {
-    return getStored(STORAGE_KEYS.SETTINGS, SEED_SETTINGS);
+    const stored = getStored(STORAGE_KEYS.SETTINGS, SEED_SETTINGS);
+    return { ...SEED_SETTINGS, ...stored };
   },
   updateSettings(settings: Partial<PlatformSettings>): PlatformSettings {
     const current = this.getSettings();

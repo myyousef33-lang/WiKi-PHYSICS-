@@ -79,10 +79,14 @@ export const Footer: React.FC = () => {
           <p>© {new Date().getFullYear()} منصة ويكيفزياء التعليمية — جميع الحقوق محفوظة</p>
 
           {/* Designed & Developed by YOUSEF EMAD */}
-          <div className="inline-flex items-center gap-2 rounded-2xl border border-amber-500/30 bg-gradient-to-r from-slate-900 via-amber-950/20 to-slate-900 px-4 py-2 shadow-lg shadow-amber-500/5 transition-all hover:border-amber-500/60 group" dir="ltr">
-            <Code2 className="h-4 w-4 text-amber-400 group-hover:scale-110 transition-transform" />
-            <span className="text-[12px] font-medium text-slate-300 tracking-wide font-sans">
-              Crafted & Developed with <Heart className="h-3 w-3 inline text-rose-500 fill-rose-500 mx-0.5" /> by <span className="font-extrabold text-amber-400 tracking-wider">YOUSEF EMAD</span>
+          <div className="inline-flex items-center gap-2.5 rounded-full border border-amber-500/30 bg-slate-900/90 px-4 py-2 shadow-lg shadow-amber-500/5 hover:border-amber-400/60 transition-all duration-300 group cursor-default" dir="ltr">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+            </span>
+            <Code2 className="h-4 w-4 text-amber-400 group-hover:rotate-12 transition-transform duration-300" />
+            <span className="text-xs text-slate-300 font-sans tracking-wide">
+              Designed & Engineered by <span className="font-bold text-amber-400 group-hover:text-amber-300 transition-colors tracking-wider">Yousef Emad</span>
             </span>
           </div>
 
