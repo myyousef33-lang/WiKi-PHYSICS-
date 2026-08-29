@@ -265,7 +265,9 @@ export const PdfLibraryView: React.FC<PdfLibraryViewProps> = ({
             {/* Embedded PDF iframe / viewer */}
             <div className="flex-1 bg-slate-950 p-2 overflow-hidden">
               <iframe
-                src={`${previewPdf.url}#toolbar=1&navpanes=0`}
+                src={previewPdf.url.includes('drive.google.com')
+                  ? (previewPdf.url.replace(/\/view(\?.*)?$/, '/preview'))
+                  : `${previewPdf.url}#toolbar=1&navpanes=0`}
                 title={previewPdf.title}
                 className="h-full w-full rounded-xl border border-slate-800 bg-white"
               />

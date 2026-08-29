@@ -153,6 +153,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
   // Manual Question Creator State
   const [newQuestionForm, setNewQuestionForm] = useState({
     text: '',
+    image: '',
     option0: '',
     option1: '',
     option2: '',
@@ -182,6 +183,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       options,
       correctOptionIndex: Number(newQuestionForm.correctOptionIndex) || 0,
       explanation: newQuestionForm.explanation.trim() || undefined,
+      image: newQuestionForm.image.trim() || undefined,
       points: Number(newQuestionForm.points) || 1
     };
 
@@ -193,6 +195,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     // Reset question builder form
     setNewQuestionForm({
       text: '',
+      image: '',
       option0: '',
       option1: '',
       option2: '',
@@ -215,37 +218,68 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
 
   // File upload state / previews
   const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [uploadProgressText, setUploadProgressText] = useState<string>('');
 
-  // Helper for reading files as Base64 / Data URL with size checking
-  const handleFileUpload = (
+  // Robust File Uploader with API backend & fallback
+  const handleFileUpload = async (
     file: File, 
     type: 'image' | 'video' | 'pdf', 
-    onSuccess: (dataUrl: string, fileName?: string, fileSizeFormatted?: string) => void
+    onSuccess: (url: string, fileName?: string, fileSizeFormatted?: string) => void
   ) => {
-    // Check reasonable size for browser local persistence
-    // Images: up to 5MB, PDF/Video: up to 15MB or warn
-    const maxMb = type === 'video' ? 25 : type === 'pdf' ? 15 : 5;
-    if (file.size > maxMb * 1024 * 1024) {
-      alert(`حجم الملف كبير (${(file.size / (1024 * 1024)).toFixed(1)}MB). الحد الأقصى المقترح للرفع المباشر هو ${maxMb}MB لتجنب بطء المتصفح.`);
-    }
-
     setIsUploadingFile(true);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setIsUploadingFile(false);
-      const result = e.target?.result as string;
-      if (result) {
-        const sizeFormatted = file.size > 1024 * 1024 
-          ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` 
-          : `${Math.round(file.size / 1024)} KB`;
-        onSuccess(result, file.name, sizeFormatted);
+    const typeLabel = type === 'video' ? 'الفيديو' : type === 'pdf' ? 'ملف الـ PDF' : 'الصورة';
+    const mbSize = (file.size / (1024 * 1024)).toFixed(1);
+    setUploadProgressText(`جارٍ رفع ${typeLabel} من جهازك (${mbSize} MB)...`);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`خطأ في الرفع (${response.status})`);
       }
-    };
-    reader.onerror = () => {
-      setIsUploadingFile(false);
-      alert('حدث خطأ أثناء قراءة الملف من جهازك.');
-    };
-    reader.readAsDataURL(file);
+
+      const resData = await response.json();
+      if (resData.success && resData.url) {
+        setIsUploadingFile(false);
+        setUploadProgressText('');
+        onSuccess(resData.url, resData.originalName || file.name, resData.sizeFormatted);
+        return;
+      }
+      throw new Error(resData.error || 'فشل في استلام رابط الملف');
+    } catch (err: any) {
+      console.warn('API upload error, attempting fallback...', err);
+      // Fallback for smaller files (< 2MB)
+      if (file.size <= 2 * 1024 * 1024) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setIsUploadingFile(false);
+          setUploadProgressText('');
+          const result = e.target?.result as string;
+          if (result) {
+            const sizeFormatted = file.size > 1024 * 1024 
+              ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` 
+              : `${Math.round(file.size / 1024)} KB`;
+            onSuccess(result, file.name, sizeFormatted);
+          }
+        };
+        reader.onerror = () => {
+          setIsUploadingFile(false);
+          setUploadProgressText('');
+          alert('حدث خطأ أثناء قراءة الملف من جهازك.');
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setIsUploadingFile(false);
+        setUploadProgressText('');
+        alert(`فشل رفع الملف (${mbSize} MB). يرجى التأكد من تشغيل الخادم أو استخدام رابط سحابي مباشر.`);
+      }
+    }
   };
 
   // Copy single code
@@ -597,6 +631,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
             <span className="font-bold">{syncFeedback}</span>
           </div>
           <span className="text-[10px] text-emerald-400/80 font-mono">Firebase Firestore Cloud Active</span>
+        </div>
+      )}
+
+      {/* Active File Upload Progress Banner */}
+      {isUploadingFile && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-blue-500/40 bg-blue-950/50 p-4 text-xs text-blue-200 animate-pulse">
+          <div className="flex items-center gap-3">
+            <RefreshCw className="h-5 w-5 animate-spin text-blue-400" />
+            <div>
+              <p className="font-bold text-white text-sm">{uploadProgressText || 'جارٍ رفع الملف من جهازك إلى السيرفر...'}</p>
+              <p className="text-[11px] text-blue-300">يتم حفظ الملف ومعالجته ليعمل بسرعة فائقة لدى جميع الطلاب</p>
+            </div>
+          </div>
+          <span className="rounded-full bg-blue-500/20 px-3 py-1 text-[10px] font-bold text-blue-300">جاري الرفع...</span>
         </div>
       )}
 
@@ -1159,6 +1207,58 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                         placeholder="اكتب صيغة السؤال الفيزيائي هنا..."
                         className="w-full rounded-xl border border-slate-700 bg-slate-900 p-2.5 text-xs text-white placeholder:text-slate-500 focus:border-amber-500 focus:outline-none"
                       />
+                    </div>
+
+                    {/* Question Diagram / Image (Optional for physics diagrams, circuits, etc.) */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 flex items-center justify-between">
+                        <span>صورة أو رسم توضيحي للسؤال (اختياري للدوائر والرسوم البيانية)</span>
+                        {newQuestionForm.image && (
+                          <button
+                            type="button"
+                            onClick={() => setNewQuestionForm({ ...newQuestionForm, image: '' })}
+                            className="text-rose-400 hover:underline text-[10px]"
+                          >
+                            إزالة الصورة
+                          </button>
+                        )}
+                      </label>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <input
+                          type="text"
+                          value={newQuestionForm.image}
+                          onChange={e => setNewQuestionForm({ ...newQuestionForm, image: e.target.value })}
+                          placeholder="رابط الصورة أو الرسم التوضيحي..."
+                          className="flex-1 rounded-lg border border-slate-700 bg-slate-900 p-2 text-xs text-white"
+                        />
+                        <label className="flex items-center justify-center gap-1.5 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-750 px-3 py-2 text-xs font-bold text-amber-400 cursor-pointer shrink-0 transition-colors">
+                          <Upload className="h-3.5 w-3.5" />
+                          <span>رفع رسم للسؤال</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                handleFileUpload(file, 'image', (url) => {
+                                  setNewQuestionForm({ ...newQuestionForm, image: url });
+                                });
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+                      {newQuestionForm.image && (
+                        <div className="pt-1">
+                          <img
+                            src={newQuestionForm.image}
+                            alt="رسم توضيحي للسؤال"
+                            className="max-h-32 rounded-lg border border-slate-700 bg-slate-950 object-contain"
+                            onError={(e) => (e.currentTarget.style.display = 'none')}
+                          />
+                        </div>
+                      )}
                     </div>
 
                     {/* 4 Options Grid */}
@@ -2112,18 +2212,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          if (file.size > 8 * 1024 * 1024) {
-                            alert('حجم الصورة كبير جداً، يرجى اختيار صورة أقل من 8 ميجابايت');
-                            return;
-                          }
-                          const reader = new FileReader();
-                          reader.onload = (evt) => {
-                            const result = evt.target?.result as string;
-                            if (result) {
-                              setSettings({ ...settings, instructorPhotoUrl: result });
-                            }
-                          };
-                          reader.readAsDataURL(file);
+                          handleFileUpload(file, 'image', (url) => {
+                            setSettings({ ...settings, instructorPhotoUrl: url });
+                          });
                         }
                       }}
                       className="w-full text-xs text-slate-300 file:mr-0 file:ml-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-400 cursor-pointer"

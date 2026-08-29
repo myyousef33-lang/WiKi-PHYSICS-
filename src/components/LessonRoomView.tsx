@@ -94,14 +94,43 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
   // Associated Lesson Quiz
   const lessonQuiz = exams.find(e => e.id === currentLesson.quizId || (e.lessonId === currentLesson.id && e.type === 'quiz'));
 
-  // Video embed helper
-  const getEmbedUrl = (url: string, type: string) => {
-    if (!url) return '';
-    if (url.includes('youtube.com') || url.includes('youtu.be')) {
-      const videoIdMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
-      const videoId = videoIdMatch ? videoIdMatch[1] : '';
-      return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=0&rel=0&modestbranding=1`;
+  // Video embed & direct playback helper
+  const isDirectVideo = (url: string, type?: string) => {
+    if (!url) return false;
+    if (type === 'uploaded' || url.startsWith('/uploads/') || url.startsWith('blob:') || url.startsWith('data:video')) {
+      return true;
     }
+    return /\.(mp4|webm|ogg|mov|mkv|m4v)(\?.*)?$/i.test(url);
+  };
+
+  const getEmbedUrl = (url: string, _type?: string) => {
+    if (!url) return '';
+    
+    // YouTube
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      const videoIdMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
+      const videoId = videoIdMatch ? videoIdMatch[1] : '';
+      if (videoId) {
+        return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=0&rel=0&modestbranding=1`;
+      }
+    }
+
+    // Google Drive
+    if (url.includes('drive.google.com')) {
+      const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
+      if (driveMatch && driveMatch[1]) {
+        return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+      }
+    }
+
+    // Vimeo
+    if (url.includes('vimeo.com')) {
+      const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/);
+      if (vimeoMatch && vimeoMatch[1]) {
+        return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+      }
+    }
+
     return url;
   };
 
@@ -137,11 +166,13 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
           
           {/* Responsive Video Container */}
           <div className="relative aspect-video w-full rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 shadow-2xl">
-            {currentLesson.videoType === 'uploaded' || currentLesson.videoUrl.endsWith('.mp4') ? (
+            {isDirectVideo(currentLesson.videoUrl, currentLesson.videoType) ? (
               <video
                 src={currentLesson.videoUrl}
                 controls
-                className="h-full w-full object-contain"
+                playsInline
+                preload="metadata"
+                className="h-full w-full object-contain bg-black"
                 poster={course.thumbnail}
               >
                 متصفحك لا يدعم تشغيل الفيديو المباشر.
@@ -150,7 +181,7 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
               <iframe
                 src={getEmbedUrl(currentLesson.videoUrl, currentLesson.videoType)}
                 title={currentLesson.title}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
                 className="h-full w-full border-0"
               />
