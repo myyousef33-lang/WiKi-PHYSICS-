@@ -755,6 +755,9 @@ export const StorageService = {
   getAttempts(): ExamAttempt[] {
     return getStored<ExamAttempt[]>(STORAGE_KEYS.ATTEMPTS, []);
   },
+  getExamAttempts(): ExamAttempt[] {
+    return this.getAttempts();
+  },
   getAttemptById(attemptId: string): ExamAttempt | undefined {
     return this.getAttempts().find(a => a.id === attemptId);
   },
@@ -1296,7 +1299,7 @@ export const StorageService = {
     }
     // Generate dynamic ranking from existing students and exam attempts
     const students = this.getStudents();
-    const attempts = this.getExamAttempts();
+    const attempts = this.getAttempts();
 
     const dynamicEntries: LeaderboardEntry[] = students.map((std, idx) => {
       const studentAttempts = attempts.filter(a => a.studentId === std.id);

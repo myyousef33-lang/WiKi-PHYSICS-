@@ -200,8 +200,9 @@ const getGemini = (): GoogleGenAI => {
   return geminiClient;
 };
 
+export const app = express();
+
 async function startServer() {
-  const app = express();
   const PORT = 3000;
 
   // JSON and URL-encoded body parsers
@@ -520,4 +521,6 @@ ${latestExamScore ? `- 🎯 *آخر امتحان تم تسليمه:* ${latestExa
 startServer().catch((err) => {
   console.error('Fatal Server Start Error:', err);
 });
+
+export default app;
 
