@@ -12,7 +12,7 @@ import {
   NotificationItem,
   PlatformSettings
 } from '../types';
-import { db, doc, setDoc, onSnapshot } from './firebase';
+import { db, doc, getDoc, setDoc, onSnapshot } from './firebase';
 
 const STORAGE_KEYS = {
   STUDENTS: 'wikifizya_db_students_v4',
@@ -46,15 +46,43 @@ const notifyListeners = () => {
   });
 };
 
+// Sanitizer to remove any undefined fields before sending to Firestore
+const sanitizeForFirestore = (val: any): any => {
+  if (val === undefined) return null;
+  return JSON.parse(JSON.stringify(val, (_, v) => (v === undefined ? null : v)));
+};
+
+let cloudSyncStatus: 'synced' | 'syncing' | 'error' = 'synced';
+let lastSyncTimestamp: string = new Date().toISOString();
+
+const syncKeys = [
+  STORAGE_KEYS.SETTINGS,
+  STORAGE_KEYS.COURSES,
+  STORAGE_KEYS.EXAMS,
+  STORAGE_KEYS.STUDENTS,
+  STORAGE_KEYS.KEYS,
+  STORAGE_KEYS.PDF_CATEGORIES,
+  STORAGE_KEYS.PDF_FILES,
+  STORAGE_KEYS.NOTIFICATIONS,
+  STORAGE_KEYS.PROGRESS,
+  STORAGE_KEYS.ATTEMPTS
+];
+
 // Firebase Firestore Cloud Sync Helpers
-const syncToFirestore = (key: string, data: any) => {
+const syncToFirestore = async (key: string, data: any) => {
   try {
+    cloudSyncStatus = 'syncing';
+    notifyListeners();
     const docRef = doc(db, 'app_data', key);
-    setDoc(docRef, { data, updatedAt: new Date().toISOString() }, { merge: true }).catch(err => {
-      console.warn('Firestore sync write warning:', err);
-    });
+    const cleanData = sanitizeForFirestore(data);
+    await setDoc(docRef, { data: cleanData, updatedAt: new Date().toISOString() });
+    cloudSyncStatus = 'synced';
+    lastSyncTimestamp = new Date().toISOString();
+    notifyListeners();
   } catch (err) {
-    console.warn('Firestore sync call error:', err);
+    console.error(`Firestore sync write error for ${key}:`, err);
+    cloudSyncStatus = 'error';
+    notifyListeners();
   }
 };
 
@@ -63,26 +91,44 @@ const initFirestoreSync = () => {
   if (isFirestoreInitialized) return;
   isFirestoreInitialized = true;
 
-  const syncKeys = [
-    STORAGE_KEYS.SETTINGS,
-    STORAGE_KEYS.COURSES,
-    STORAGE_KEYS.EXAMS,
-    STORAGE_KEYS.STUDENTS,
-    STORAGE_KEYS.KEYS,
-    STORAGE_KEYS.PDF_CATEGORIES,
-    STORAGE_KEYS.PDF_FILES,
-    STORAGE_KEYS.NOTIFICATIONS,
-    STORAGE_KEYS.PROGRESS,
-    STORAGE_KEYS.ATTEMPTS
-  ];
-
-  syncKeys.forEach(key => {
+  syncKeys.forEach(async (key) => {
     try {
       const docRef = doc(db, 'app_data', key);
+
+      // 1. Initial fast pull from Firestore on startup
+      try {
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          const remoteData = snap.data()?.data;
+          if (remoteData !== undefined && remoteData !== null) {
+            const localStr = localStorage.getItem(key);
+            const remoteStr = JSON.stringify(remoteData);
+            if (localStr !== remoteStr) {
+              localStorage.setItem(key, remoteStr);
+              notifyListeners();
+            }
+          }
+        } else {
+          // If Firestore is empty for this key, seed it with local data if present
+          const localStr = localStorage.getItem(key);
+          if (localStr) {
+            try {
+              const localVal = JSON.parse(localStr);
+              if (key === STORAGE_KEYS.SETTINGS || (Array.isArray(localVal) && localVal.length > 0)) {
+                await setDoc(docRef, { data: sanitizeForFirestore(localVal), updatedAt: new Date().toISOString() });
+              }
+            } catch (_) {}
+          }
+        }
+      } catch (e) {
+        console.warn(`Initial fetch warning for ${key}:`, e);
+      }
+
+      // 2. Real-time active snapshot listener for instantaneous live sync
       onSnapshot(docRef, (snapshot) => {
         if (snapshot.exists()) {
           const remoteData = snapshot.data()?.data;
-          if (remoteData !== undefined) {
+          if (remoteData !== undefined && remoteData !== null) {
             const localStr = localStorage.getItem(key);
             const remoteStr = JSON.stringify(remoteData);
             if (localStr !== remoteStr) {
@@ -845,5 +891,66 @@ export const StorageService = {
     localStorage.removeItem(STORAGE_KEYS.CURRENT_STUDENT);
     localStorage.removeItem(STORAGE_KEYS.LAST_VIEWED);
     notifyListeners();
+  },
+
+  // === Cloud Firestore Sync Diagnostics & Manual Controls ===
+  getCloudSyncStatus(): 'synced' | 'syncing' | 'error' {
+    return cloudSyncStatus;
+  },
+  getLastSyncTimestamp(): string {
+    return lastSyncTimestamp;
+  },
+  async forceSyncAllToFirestore(): Promise<boolean> {
+    try {
+      cloudSyncStatus = 'syncing';
+      notifyListeners();
+      for (const key of syncKeys) {
+        const localStr = localStorage.getItem(key);
+        if (localStr) {
+          const localData = JSON.parse(localStr);
+          const docRef = doc(db, 'app_data', key);
+          await setDoc(docRef, { data: sanitizeForFirestore(localData), updatedAt: new Date().toISOString() });
+        }
+      }
+      cloudSyncStatus = 'synced';
+      lastSyncTimestamp = new Date().toISOString();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      console.error('Failed to force sync to Firestore:', e);
+      cloudSyncStatus = 'error';
+      notifyListeners();
+      return false;
+    }
+  },
+  async forcePullFromFirestore(): Promise<boolean> {
+    try {
+      cloudSyncStatus = 'syncing';
+      notifyListeners();
+      let changed = false;
+      for (const key of syncKeys) {
+        const docRef = doc(db, 'app_data', key);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          const remoteData = snap.data()?.data;
+          if (remoteData !== undefined && remoteData !== null) {
+            localStorage.setItem(key, JSON.stringify(remoteData));
+            changed = true;
+          }
+        }
+      }
+      if (changed) {
+        notifyListeners();
+      }
+      cloudSyncStatus = 'synced';
+      lastSyncTimestamp = new Date().toISOString();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      console.error('Failed to force pull from Firestore:', e);
+      cloudSyncStatus = 'error';
+      notifyListeners();
+      return false;
+    }
   }
 };

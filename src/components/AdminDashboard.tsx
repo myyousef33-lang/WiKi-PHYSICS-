@@ -31,7 +31,9 @@ import {
   Check,
   FileCheck,
   Link,
-  Film
+  Film,
+  Cloud,
+  RefreshCw
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { 
@@ -275,6 +277,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     update();
     return subscribeToStorage(update);
   }, []);
+
+  const [isSyncingCloud, setIsSyncingCloud] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+
+  const handleForceSyncCloud = async () => {
+    setIsSyncingCloud(true);
+    const success = await StorageService.forceSyncAllToFirestore();
+    setIsSyncingCloud(false);
+    if (success) {
+      setSyncFeedback('تمت مزامنة جميع الكورسات والبيانات سحابياً مع Firestore بنجاح 🚀');
+    } else {
+      setSyncFeedback('حدث خطأ أثناء المزامنة السحابية. يرجى المحاولة لاحقاً');
+    }
+    setTimeout(() => setSyncFeedback(null), 4000);
+  };
 
   const handleLogout = () => {
     StorageService.logoutAdmin();
@@ -546,7 +563,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={handleForceSyncCloud}
+            disabled={isSyncingCloud}
+            className="flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-2 text-xs font-bold text-emerald-400 hover:bg-emerald-500/20 transition-all disabled:opacity-50"
+            title="مزامنة فورية لكل البيانات مع قاعدة بيانات Firebase Firestore"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isSyncingCloud ? 'animate-spin' : ''}`} />
+            <span>{isSyncingCloud ? 'جارٍ المزامنة السحابية...' : 'مزامنة سحابية الآن (Firestore)'}</span>
+          </button>
           <button
             onClick={() => onNavigate('dashboard')}
             className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-bold text-white hover:bg-slate-700"
@@ -562,6 +588,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
           </button>
         </div>
       </div>
+
+      {/* Cloud Sync Feedback Banner */}
+      {syncFeedback && (
+        <div className="flex items-center justify-between gap-2 rounded-2xl border border-emerald-500/40 bg-emerald-950/40 p-3.5 text-xs text-emerald-300 animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-2">
+            <Cloud className="h-4 w-4 text-emerald-400" />
+            <span className="font-bold">{syncFeedback}</span>
+          </div>
+          <span className="text-[10px] text-emerald-400/80 font-mono">Firebase Firestore Cloud Active</span>
+        </div>
+      )}
 
       {/* Tabs Navigation */}
       <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-800 pb-2 scrollbar-none">
