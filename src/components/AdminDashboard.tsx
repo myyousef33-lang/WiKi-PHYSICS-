@@ -33,7 +33,12 @@ import {
   Link,
   Film,
   Cloud,
-  RefreshCw
+  RefreshCw,
+  Youtube,
+  Play,
+  Info,
+  ExternalLink,
+  Eye
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { 
@@ -216,11 +221,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
   const [showGeneratedSuccessModal, setShowGeneratedSuccessModal] = useState(false);
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
 
-  // File upload state / previews
+  // File upload state / previews / guide modal
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [uploadProgressText, setUploadProgressText] = useState<string>('');
+  const [showVideoGuideModal, setShowVideoGuideModal] = useState(false);
 
-  // Robust File Uploader with API backend & fallback
+  // Helper for reading files as base64
+  const readFileAsDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Robust File Uploader with API backend & graceful cloud fallbacks
   const handleFileUpload = async (
     file: File, 
     type: 'image' | 'video' | 'pdf', 
@@ -229,8 +245,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     setIsUploadingFile(true);
     const typeLabel = type === 'video' ? 'الفيديو' : type === 'pdf' ? 'ملف الـ PDF' : 'الصورة';
     const mbSize = (file.size / (1024 * 1024)).toFixed(1);
-    setUploadProgressText(`جارٍ رفع ${typeLabel} من جهازك (${mbSize} MB)...`);
+    setUploadProgressText(`جارٍ معالجة ${typeLabel} (${mbSize} MB)...`);
     
+    // For images under 5MB: instant zero-fail client fallback
+    if (type === 'image' && file.size <= 5 * 1024 * 1024) {
+      try {
+        const dataUrl = await readFileAsDataUrl(file);
+        setIsUploadingFile(false);
+        setUploadProgressText('');
+        const sizeFormatted = `${Math.round(file.size / 1024)} KB`;
+        onSuccess(dataUrl, file.name, sizeFormatted);
+        return;
+      } catch (e) {
+        console.warn('Image read error, trying API upload...', e);
+      }
+    }
+
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -240,44 +270,41 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
         body: formData,
       });
 
-      if (!response.ok) {
-        throw new Error(`خطأ في الرفع (${response.status})`);
+      if (response.ok) {
+        const resData = await response.json();
+        if (resData.success && resData.url) {
+          setIsUploadingFile(false);
+          setUploadProgressText('');
+          onSuccess(resData.url, resData.originalName || file.name, resData.sizeFormatted);
+          return;
+        }
+      }
+      throw new Error('API server upload unavailable on current host');
+    } catch (err: any) {
+      console.warn('Server upload not reachable, trying client-side handling...', err);
+      
+      // Fallback for smaller PDFs / images
+      if (type !== 'video' && file.size <= 4 * 1024 * 1024) {
+        try {
+          const dataUrl = await readFileAsDataUrl(file);
+          setIsUploadingFile(false);
+          setUploadProgressText('');
+          const sizeFormatted = `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+          onSuccess(dataUrl, file.name, sizeFormatted);
+          return;
+        } catch (e) {
+          // fallback failed
+        }
       }
 
-      const resData = await response.json();
-      if (resData.success && resData.url) {
-        setIsUploadingFile(false);
-        setUploadProgressText('');
-        onSuccess(resData.url, resData.originalName || file.name, resData.sizeFormatted);
-        return;
-      }
-      throw new Error(resData.error || 'فشل في استلام رابط الملف');
-    } catch (err: any) {
-      console.warn('API upload error, attempting fallback...', err);
-      // Fallback for smaller files (< 2MB)
-      if (file.size <= 2 * 1024 * 1024) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          setIsUploadingFile(false);
-          setUploadProgressText('');
-          const result = e.target?.result as string;
-          if (result) {
-            const sizeFormatted = file.size > 1024 * 1024 
-              ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` 
-              : `${Math.round(file.size / 1024)} KB`;
-            onSuccess(result, file.name, sizeFormatted);
-          }
-        };
-        reader.onerror = () => {
-          setIsUploadingFile(false);
-          setUploadProgressText('');
-          alert('حدث خطأ أثناء قراءة الملف من جهازك.');
-        };
-        reader.readAsDataURL(file);
+      setIsUploadingFile(false);
+      setUploadProgressText('');
+
+      // If video on static deployment (e.g. Vercel), open the interactive guide
+      if (type === 'video') {
+        setShowVideoGuideModal(true);
       } else {
-        setIsUploadingFile(false);
-        setUploadProgressText('');
-        alert(`فشل رفع الملف (${mbSize} MB). يرجى التأكد من تشغيل الخادم أو استخدام رابط سحابي مباشر.`);
+        alert(`الملف كبير (${mbSize} MB). يرجى استخدام رابط سحابي مباشر أو Google Drive أو تقليل حجم الملف.`);
       }
     }
   };
@@ -1004,8 +1031,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                                   className="rounded-lg border border-slate-700 bg-slate-950 p-2 text-xs text-slate-300"
                                 >
                                   <option value="youtube">يوتيوب (YouTube)</option>
+                                  <option value="external">رابط خارجي / Google Drive</option>
                                   <option value="uploaded">ملف فيديو من الجهاز (MP4/WebM)</option>
-                                  <option value="external">رابط خارجي مباشر</option>
                                 </select>
                                 <input
                                   type="number"
@@ -1019,21 +1046,44 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                             </div>
 
                             {/* Video Input & Upload Button */}
-                            <div className="space-y-1">
-                              <label className="text-[10px] text-slate-400 font-bold flex items-center justify-between">
-                                <span>مصدر الفيديو ({lessonForm.unitId === u.id && lessonForm.videoType === 'uploaded' ? 'فيديو محلي' : 'رابط الفيديو'})</span>
-                                {lessonForm.unitId === u.id && lessonForm.videoUrl && (
-                                  <span className="text-emerald-400 text-[10px] flex items-center gap-1">
-                                    <Check className="h-3 w-3" /> تم تحديد الفيديو
-                                  </span>
-                                )}
-                              </label>
+                            <div className="space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <label className="text-[10px] text-slate-400 font-bold flex items-center gap-1.5">
+                                  <span>مصدر الفيديو</span>
+                                  {lessonForm.unitId === u.id && lessonForm.videoUrl && (
+                                    <span className="text-emerald-400 text-[10px] flex items-center gap-1">
+                                      <Check className="h-3 w-3" /> تم تحديد الفيديو
+                                    </span>
+                                  )}
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowVideoGuideModal(true)}
+                                  className="text-[10px] font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 transition-colors"
+                                >
+                                  <Info className="h-3 w-3" />
+                                  <span>دليل الفيديوهات وسرعة التشغيل (يوتيوب ودرايف)</span>
+                                </button>
+                              </div>
                               <div className="flex flex-col sm:flex-row gap-2">
                                 <input
                                   type="text"
                                   value={lessonForm.unitId === u.id ? lessonForm.videoUrl : ''}
-                                  onChange={e => setLessonForm({ ...lessonForm, unitId: u.id, videoUrl: e.target.value })}
-                                  placeholder="رابط يوتيوب أو رابط مباشر أو ارفع فيديو..."
+                                  onChange={e => {
+                                    const val = e.target.value;
+                                    let detectedType: 'youtube' | 'external' | 'uploaded' = 'youtube';
+                                    if (val.includes('youtube.com') || val.includes('youtu.be')) {
+                                      detectedType = 'youtube';
+                                    } else if (val.includes('drive.google.com') || val.includes('vimeo.com')) {
+                                      detectedType = 'external';
+                                    } else if (val.endsWith('.mp4') || val.endsWith('.webm') || val.startsWith('/uploads/')) {
+                                      detectedType = 'uploaded';
+                                    } else if (val.startsWith('http')) {
+                                      detectedType = 'external';
+                                    }
+                                    setLessonForm({ ...lessonForm, unitId: u.id, videoUrl: val, videoType: detectedType });
+                                  }}
+                                  placeholder="ضع رابط يوتيوب (غير مدرج) أو رابط جوجل درايف أو ارفع فيديو..."
                                   className="flex-1 rounded-lg border border-slate-700 bg-slate-950 p-2 text-xs text-white"
                                 />
                                 <label className="flex items-center justify-center gap-1.5 rounded-lg bg-blue-600/20 border border-blue-500/40 hover:bg-blue-600/30 px-3 py-2 text-xs font-bold text-blue-400 cursor-pointer shrink-0 transition-colors">
@@ -2322,6 +2372,83 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
             >
               تفريغ كافة البيانات الآن
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Video & Media Hosting Interactive Guide Modal */}
+      {showVideoGuideModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="relative w-full max-w-2xl rounded-3xl border border-slate-700 bg-slate-900 p-6 sm:p-8 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-4 border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                  <Youtube className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-white">دليل إضافة وتشغيل الفيديوهات للدروس 🎬</h3>
+                  <p className="text-xs text-slate-400">أفضل وأسرع الطرق لتقديم شروحات بجودة عالية لطلابك بدون تقطيع</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowVideoGuideModal(false)}
+                className="rounded-xl border border-slate-700 bg-slate-800 p-2 text-slate-400 hover:text-white transition-colors"
+              >
+                <XCircle className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Why YouTube Unlisted or Google Drive is Best */}
+            <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4 text-xs text-blue-200 space-y-2">
+              <p className="font-bold text-white flex items-center gap-1.5">
+                <Sparkles className="h-4 w-4 text-amber-400" />
+                <span>لماذا تستخدم جميع المنصات التعليمية الكبرى (YouTube Unlisted أو Google Drive)؟</span>
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-slate-300 pr-2 leading-relaxed">
+                <li><strong className="text-white">جودة فائقة وسرعة تشغيل 100%:</strong> دعم جودات (1080p, 720p, 480p) تلقائياً حسب سرعة إنترنت وموبايل الطالب بدون أي تقطيع أو تهنيج.</li>
+                <li><strong className="text-white">مساحة وباقة غير محدودة مجاناً:</strong> يمكنك رفع مئات الساعات بجودة عالية بدون استهلاك سيرفر أو دفع تكاليف تخزين إضافية.</li>
+                <li><strong className="text-white">حماية وخصوصية تامة:</strong> اختيارك لخاصية <span className="text-amber-400 font-bold">"غير مدرج (Unlisted)"</span> يمنع ظهور الفيديو في نتائج بحث يوتيوب أو لعامة الناس، ولا يراه سوى طلاب المنصة المشتركين في الكورس!</li>
+              </ul>
+            </div>
+
+            {/* Method 1: YouTube Unlisted Steps */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 space-y-3">
+              <div className="flex items-center gap-2 text-red-400 font-bold text-sm">
+                <Youtube className="h-5 w-5" />
+                <span>الطريقة الأولى: رفع الفيديو على YouTube (غير مدرج)</span>
+              </div>
+              <ol className="list-decimal list-inside text-xs text-slate-300 space-y-2 leading-relaxed pr-2">
+                <li>ارفع الفيديو على قناتك على <strong>YouTube Studio</strong> من الموبايل أو الكمبيوتر.</li>
+                <li>في خطوة مستوى العرض (Visibility)، اختر <span className="text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">غير مدرج (Unlisted)</span>.</li>
+                <li>انسخ رابط الفيديو (مثال: <code className="text-blue-400 font-mono text-[11px]">https://youtu.be/abc123xyz</code>) والصقه في حقل مصدر الفيديو بالدرس.</li>
+              </ol>
+            </div>
+
+            {/* Method 2: Google Drive Steps */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 space-y-3">
+              <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                <Cloud className="h-5 w-5" />
+                <span>الطريقة الثانية: مشاركة الفيديو من Google Drive</span>
+              </div>
+              <ol className="list-decimal list-inside text-xs text-slate-300 space-y-2 leading-relaxed pr-2">
+                <li>ارفع ملف الفيديو إلى حسابك على <strong>Google Drive</strong>.</li>
+                <li>اضغط كليك يمين / خيارات على الفيديو واختر <strong>مشاركة (Share)</strong> ثم اجعل الوصول <strong>"أي شخص لديه الرابط (Anyone with the link)"</strong>.</li>
+                <li>انسخ رابط المشاركة والصقه في حقل مصدر الفيديو، وسيقوم المشغل بتضمينه تلقائياً للطلاب.</li>
+              </ol>
+            </div>
+
+            {/* Close / Understood Button */}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowVideoGuideModal(false)}
+                className="rounded-xl bg-amber-500 px-6 py-2.5 text-xs font-black text-slate-950 hover:bg-amber-400 shadow-lg shadow-amber-500/20 transition-all"
+              >
+                فهمت، شكراً لك!
+              </button>
+            </div>
           </div>
         </div>
       )}
