@@ -786,7 +786,7 @@ ${weakConceptsText}
       )}
 
       {/* Tabs Navigation */}
-      <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-800 pb-2 scrollbar-none">
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-4">
         {navTabs.map(t => {
           const Icon = t.icon;
           const isActive = activeTab === t.id;
@@ -794,13 +794,13 @@ ${weakConceptsText}
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id as any)}
-              className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold whitespace-nowrap transition-all ${
+              className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
                 isActive 
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 scale-105' 
-                  : 'bg-slate-900/60 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800/80'
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25 ring-2 ring-blue-400' 
+                  : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800'
               }`}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-4 w-4 shrink-0" />
               <span>{t.label}</span>
             </button>
           );
@@ -810,6 +810,97 @@ ${weakConceptsText}
       {/* TAB 1: OVERVIEW */}
       {activeTab === 'overview' && (
         <div className="space-y-8">
+
+          {/* Quick Special Controls Highlights */}
+          <div className="rounded-3xl border border-blue-500/30 bg-gradient-to-r from-slate-900 via-slate-950 to-slate-900 p-6 space-y-4 shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+              <div>
+                <h3 className="font-black text-white text-base flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-amber-400 animate-bounce" />
+                  <span>مركز تحكم ميزات المنصة والعد التنازلي والمسابقات</span>
+                </h3>
+                <p className="text-xs text-slate-400">إدارة سريعة مباشرة لموعد الامتحان الرسمي، التحديات الأسبوعية، ولوحة الشرف والـ AI</p>
+              </div>
+              <span className="rounded-full bg-amber-500/10 border border-amber-500/30 px-3 py-1 text-[11px] font-bold text-amber-400 w-fit">
+                تحكم مباشر بدون تنقل
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+              {/* Exam Date Countdown Quick Control */}
+              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                    <Calendar className="h-4 w-4 text-cyan-400" />
+                    موعد الامتحان الرسمي ⏱
+                  </span>
+                  <span className="text-[10px] text-cyan-400 font-mono">العد التنازلي</span>
+                </div>
+                <div className="space-y-2">
+                  <input
+                    type="datetime-local"
+                    value={settings.ministryExamDate ? new Date(settings.ministryExamDate).toISOString().slice(0, 16) : '2026-06-14T09:00'}
+                    onChange={e => {
+                      const isoStr = new Date(e.target.value).toISOString();
+                      const updated = { ...settings, ministryExamDate: isoStr };
+                      setSettings(updated);
+                      StorageService.saveSettings(updated);
+                    }}
+                    className="w-full rounded-xl border border-slate-700 bg-slate-900 p-2 text-xs text-white font-mono"
+                  />
+                  <p className="text-[10px] text-slate-400">
+                    الموعد الحالي: <span className="text-amber-400 font-bold">{new Date(settings.ministryExamDate || '2026-06-14T09:00').toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Weekly Challenges Quick Control */}
+              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 space-y-3 flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                    <Trophy className="h-4 w-4 text-amber-400" />
+                    تحديات الأسبوع والمسابقات 🏆
+                  </span>
+                  <span className="text-[10px] text-amber-400 font-bold">{StorageService.getWeeklyChallenges().length} مسابقة</span>
+                </div>
+                <p className="text-xs text-slate-400">نشر مسابقة جديدة أسبوعية للفيزياء لمنح أوسمة ونقاط تميز إضافية.</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setActiveTab('challenges'); setShowAddChallenge(true); }}
+                    className="w-full rounded-xl bg-amber-500 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 flex items-center justify-center gap-1"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>إضافة مسابقة جديدة</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('challenges')}
+                    className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-bold text-white hover:bg-slate-700"
+                  >
+                    عرض
+                  </button>
+                </div>
+              </div>
+
+              {/* Leaderboard & Honor Roll Quick Control */}
+              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 space-y-3 flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                    <Award className="h-4 w-4 text-amber-400" />
+                    لوحة الشرف وتكريم الأوائل 🥇
+                  </span>
+                  <span className="text-[10px] text-emerald-400 font-bold">{StorageService.getLeaderboard().length} طالب مكرم</span>
+                </div>
+                <p className="text-xs text-slate-400">استعراض الأوائل ومنح مكافآت وأوسمة التميز الفردية للطلاب المتفوقين.</p>
+                <button
+                  onClick={() => setActiveTab('leaderboard-admin')}
+                  className="w-full rounded-xl border border-amber-500/30 bg-amber-500/10 py-2 text-xs font-bold text-amber-300 hover:bg-amber-500/20 flex items-center justify-center gap-1.5"
+                >
+                  <Award className="h-3.5 w-3.5" />
+                  <span>فتح لوحة الشرف والجوائز</span>
+                </button>
+              </div>
+            </div>
+          </div>
           
           {/* Real Metrics Grid */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
