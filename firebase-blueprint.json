@@ -9,6 +9,7 @@
         "name": { "type": "string" },
         "phone": { "type": "string" },
         "parentPhone": { "type": "string" },
+        "password": { "type": "string" },
         "grade": { "type": "string" },
         "governorate": { "type": "string" },
         "deviceFingerprint": { "type": "string" },

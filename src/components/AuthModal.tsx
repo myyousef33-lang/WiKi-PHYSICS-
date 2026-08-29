@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Phone, Sparkles, X, UserPlus, LogIn, GraduationCap, MapPin } from 'lucide-react';
+import { User, Phone, Sparkles, X, UserPlus, LogIn, GraduationCap, MapPin, Lock, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { StorageService } from '../services/storage';
 import { GradeLevel, Student } from '../types';
 
@@ -20,11 +20,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   
   // Login Form
   const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   
   // Register Form
   const [name, setName] = useState('');
   const [regPhone, setRegPhone] = useState('');
   const [parentPhone, setParentPhone] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [showRegPassword, setShowRegPassword] = useState(false);
   const [grade, setGrade] = useState<GradeLevel>(GradeLevel.GRADE_12);
   const [governorate, setGovernorate] = useState('القاهرة');
 
@@ -37,26 +41,35 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (!phone.trim()) {
-      setError('يرجى إدخال رقم الهاتف المسجل');
+      setError('يرجى إدخال رقم الهاتف المحمول');
+      return;
+    }
+    if (!password.trim()) {
+      setError('يرجى إدخال كلمة المرور (الباسورد)');
       return;
     }
 
-    const found = StorageService.loginStudentByPhone(phone.trim());
-    if (found) {
-      setSuccess(`أهلاً بك يا ${found.name}! تم تسجيل الدخول بنجاح`);
+    const res = StorageService.loginStudent(phone.trim(), password.trim());
+    if (res.success && res.student) {
+      setSuccess(`أهلاً بك مجدداً يا ${res.student.name}! 👋 تم تسجيل الدخول بنجاح`);
       setTimeout(() => {
         onClose();
         if (onSuccess) onSuccess();
       }, 700);
     } else {
-      setError('رقم الهاتف غير مسجل لدينا. يمكنك الضغط على "إنشاء حساب جديد" بالأسفل والتسجيل فوراً.');
+      setError(res.error || 'رقم الهاتف أو كلمة المرور غير صحيحة. يرجى التأكد وإعادة المحاولة.');
     }
   };
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !regPhone.trim()) {
-      setError('يرجى ملء جميع الحقول المطلوبة (الاسم ورقم الهاتف)');
+      setError('يرجى كتابة اسم الطالب ورقم الهاتف المحمول');
+      return;
+    }
+
+    if (!regPassword.trim() || regPassword.trim().length < 4) {
+      setError('يرجى كتابة كلمة مرور تتكون من 4 أرقام أو أحرف على الأقل لحماية حسابك');
       return;
     }
 
@@ -64,6 +77,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       name: name.trim(),
       phone: regPhone.trim(),
       parentPhone: parentPhone.trim() || '01000000000',
+      password: regPassword.trim(),
       grade,
       governorate
     });
@@ -88,6 +102,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         onClose();
         if (onSuccess) onSuccess();
       }, 500);
+    } else {
+      // If demo student doesn't exist, create one
+      const res = StorageService.registerStudent({
+        name: 'أحمد محمود (طالب تجريبي)',
+        phone: '01012345678',
+        parentPhone: '01112345678',
+        password: '123',
+        grade: GradeLevel.GRADE_12,
+        governorate: 'القاهرة'
+      });
+      if (res.student) {
+        StorageService.setCurrentStudent(res.student);
+        setSuccess(`تم الدخول بالحساب التجريبي بنجاح`);
+        setTimeout(() => {
+          onClose();
+          if (onSuccess) onSuccess();
+        }, 500);
+      }
     }
   };
 
@@ -98,24 +130,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 p-6 sm:p-8 shadow-2xl space-y-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 animate-in fade-in duration-200" dir="rtl">
+      <div className="relative w-full max-w-md rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 p-6 sm:p-8 shadow-2xl space-y-5">
         
         {/* Close Button */}
         <button
           onClick={onClose}
           className="absolute top-5 left-5 rounded-xl border border-slate-800 bg-slate-800/80 p-2 text-slate-400 hover:text-white transition-colors"
+          title="إغلاق"
         >
           <X className="h-4 w-4" />
         </button>
 
         {/* Header Title */}
-        <div className="text-center space-y-1 pt-2">
+        <div className="text-center space-y-1 pt-1">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 mb-2 shadow-inner">
             <GraduationCap className="h-6 w-6" />
           </div>
           <h2 className="text-xl font-black text-white">بوابة طلاب ويكيفزياء</h2>
-          <p className="text-xs text-slate-400">سجل دخولك لمتابعة دروسك وامتحاناتك التفاعلية</p>
+          <p className="text-xs text-slate-400">سجل الدخول برقم هاتفك وكلمة المرور لمتابعة دروسك</p>
         </div>
 
         {/* Mode Switcher Tabs */}
@@ -159,32 +192,64 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         {/* Mode: Student Login */}
         {mode === 'login' && (
           <form onSubmit={handleLogin} className="space-y-4">
+            {/* Phone Input */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">رقم الهاتف المحمول</label>
+              <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
+                <span>رقم الهاتف المحمول</span>
+                <span className="text-[11px] text-amber-400/80 font-normal">المسجل بالمنصة</span>
+              </label>
               <div className="relative">
-                <Phone className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <Phone className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
                 <input
                   type="tel"
                   dir="ltr"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="010XXXXXXXX"
-                  className="w-full text-left font-mono rounded-xl border border-slate-700 bg-slate-950 py-3 pr-4 pl-10 text-white placeholder:text-slate-600 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 focus:outline-none transition-all"
+                  className="w-full text-left font-mono rounded-xl border border-slate-700 bg-slate-950 py-3 pr-10 pl-4 text-white placeholder:text-slate-600 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 focus:outline-none transition-all text-sm"
                   autoFocus
+                  required
                 />
               </div>
-              <p className="text-[11px] text-slate-500">أدخل رقم الهاتف الذي سجلت به في المنصة</p>
+            </div>
+
+            {/* Password Input */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
+                <span>كلمة المرور (الباسورد)</span>
+                <span className="text-[11px] text-slate-500 font-normal">لحماية حسابك</span>
+              </label>
+              <div className="relative">
+                <Lock className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
+                <input
+                  type={showLoginPassword ? 'text' : 'password'}
+                  dir="ltr"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full text-left font-mono rounded-xl border border-slate-700 bg-slate-950 py-3 pr-10 pl-10 text-white placeholder:text-slate-600 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 focus:outline-none transition-all text-sm"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowLoginPassword(!showLoginPassword)}
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-amber-400 transition-colors"
+                  title={showLoginPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+                >
+                  {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
 
             <button
               type="submit"
-              className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-3 text-sm font-black text-slate-950 shadow-lg shadow-amber-500/25 hover:from-amber-400 hover:to-amber-500 transition-all active:scale-[0.98]"
+              className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-3 text-sm font-black text-slate-950 shadow-lg shadow-amber-500/25 hover:from-amber-400 hover:to-amber-500 transition-all active:scale-[0.98] mt-2"
             >
               دخول إلى حسابي
             </button>
 
             {/* Quick Demo Switcher */}
-            <div className="pt-4 border-t border-slate-800/80 text-center space-y-2">
+            <div className="pt-3 border-t border-slate-800/80 text-center space-y-2">
               <span className="text-[11px] text-slate-400 font-medium">⚡ حسابات تجريبية للاختبار السريع:</span>
               <div className="flex flex-wrap justify-center gap-2">
                 <button
@@ -202,10 +267,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         {/* Mode: Student Register */}
         {mode === 'register' && (
           <form onSubmit={handleRegister} className="space-y-3.5 max-h-[60vh] overflow-y-auto pr-1">
+            {/* Student Name */}
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-300">اسم الطالب ثلاثي / رباعي <span className="text-amber-400">*</span></label>
               <div className="relative">
-                <User className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <User className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
                 <input
                   type="text"
                   value={name}
@@ -217,18 +283,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
             </div>
 
+            {/* Student Phone & Parent Phone */}
             <div className="grid grid-cols-2 gap-2.5">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-300">هاتف الطالب <span className="text-amber-400">*</span></label>
-                <input
-                  type="tel"
-                  dir="ltr"
-                  value={regPhone}
-                  onChange={(e) => setRegPhone(e.target.value)}
-                  placeholder="010XXXXXXXX"
-                  className="w-full text-left font-mono rounded-xl border border-slate-700 bg-slate-950 py-2.5 px-3 text-xs text-white placeholder:text-slate-600 focus:border-amber-500 focus:outline-none"
-                  required
-                />
+                <div className="relative">
+                  <Phone className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500 pointer-events-none" />
+                  <input
+                    type="tel"
+                    dir="ltr"
+                    value={regPhone}
+                    onChange={(e) => setRegPhone(e.target.value)}
+                    placeholder="010XXXXXXXX"
+                    className="w-full text-left font-mono rounded-xl border border-slate-700 bg-slate-950 py-2.5 pr-8 pl-2.5 text-xs text-white placeholder:text-slate-600 focus:border-amber-500 focus:outline-none"
+                    required
+                  />
+                </div>
               </div>
 
               <div className="space-y-1">
@@ -244,6 +314,37 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
             </div>
 
+            {/* Password Creation */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
+                <span>كلمة المرور للحساب <span className="text-amber-400">*</span></span>
+                <span className="text-[10px] text-amber-400/90 font-medium flex items-center gap-1">
+                  <ShieldCheck className="h-3 w-3 inline" /> أمان الحساب
+                </span>
+              </label>
+              <div className="relative">
+                <Lock className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
+                <input
+                  type={showRegPassword ? 'text' : 'password'}
+                  dir="ltr"
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  placeholder="أنشئ كلمة مرور (4 خانات أو أكثر)"
+                  className="w-full text-left font-mono rounded-xl border border-slate-700 bg-slate-950 py-2.5 pr-10 pl-10 text-xs text-white placeholder:text-slate-600 focus:border-amber-500 focus:outline-none"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowRegPassword(!showRegPassword)}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-amber-400 transition-colors"
+                  title={showRegPassword ? 'إخفاء' : 'إظهار'}
+                >
+                  {showRegPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Grade & Governorate in Grid */}
             <div className="grid grid-cols-2 gap-2.5">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-300">الصف الدراسي <span className="text-amber-400">*</span></label>
@@ -285,4 +386,5 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     </div>
   );
 };
+
 

@@ -207,8 +207,9 @@ export const StorageService = {
   getStudents(): Student[] {
     return getStored<Student[]>(STORAGE_KEYS.STUDENTS, []);
   },
-  loginStudent(phone: string): { success: boolean; student?: Student; error?: string } {
+  loginStudent(phone: string, password?: string): { success: boolean; student?: Student; error?: string } {
     const cleanPhone = phone.trim();
+    const cleanPass = (password || '').trim();
     const students = this.getStudents();
     const found = students.find(s => s.phone === cleanPhone);
     if (!found) {
@@ -217,6 +218,20 @@ export const StorageService = {
     if (found.isBlocked) {
       return { success: false, error: 'هذا الحساب محظور مؤقتًا. يرجى التواصل مع الإدارة.' };
     }
+
+    // Password verification
+    if (found.password && found.password.trim().length > 0) {
+      if (!cleanPass) {
+        return { success: false, error: 'يرجى إدخال كلمة المرور لتسجيل الدخول.' };
+      }
+      if (found.password.trim() !== cleanPass) {
+        return { success: false, error: 'كلمة المرور غير صحيحة، يرجى التأكد وإعادة المحاولة.' };
+      }
+    } else if (cleanPass) {
+      // Set password for legacy account if newly provided
+      found.password = cleanPass;
+    }
+
     found.lastActiveAt = new Date().toISOString();
     this.saveStudent(found);
     this.setCurrentStudent(found);
@@ -226,14 +241,16 @@ export const StorageService = {
     name: string;
     phone: string;
     parentPhone: string;
+    password?: string;
     grade: string;
     governorate: string;
   }): { success: boolean; student?: Student; error?: string } {
     const students = this.getStudents();
     const cleanPhone = data.phone.trim();
+    const cleanPass = (data.password || '').trim();
 
     if (students.some(s => s.phone === cleanPhone)) {
-      return { success: false, error: 'رقم الهاتف مسجل بالفعل مسبقاً، يمكنك تسجيل الدخول به مباشرة.' };
+      return { success: false, error: 'رقم الهاتف مسجل بالفعل مسبقاً، يمكنك تسجيل الدخول به مباشرة مع كلمة المرور.' };
     }
 
     const newStudent: Student = {
@@ -241,6 +258,7 @@ export const StorageService = {
       name: data.name.trim(),
       phone: cleanPhone,
       parentPhone: data.parentPhone.trim(),
+      password: cleanPass,
       grade: data.grade,
       governorate: data.governorate,
       registeredAt: new Date().toISOString(),
@@ -299,8 +317,8 @@ export const StorageService = {
       setStored(STORAGE_KEYS.STUDENTS, students);
     }
   },
-  loginStudentByPhone(phone: string): Student | null {
-    const res = this.loginStudent(phone);
+  loginStudentByPhone(phone: string, password?: string): Student | null {
+    const res = this.loginStudent(phone, password);
     return res.student || null;
   },
   getStudentById(id: string): Student | undefined {

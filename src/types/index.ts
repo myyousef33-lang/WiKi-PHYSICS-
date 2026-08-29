@@ -9,6 +9,7 @@ export interface Student {
   name: string;
   phone: string;
   parentPhone: string;
+  password?: string;
   grade: GradeLevel | string;
   governorate: string;
   deviceFingerprint?: string;

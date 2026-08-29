@@ -1393,6 +1393,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                   <tr>
                     <th className="py-3.5 px-4 font-bold">اسم الطالب</th>
                     <th className="py-3.5 px-4 font-bold">رقم الهاتف</th>
+                    <th className="py-3.5 px-4 font-bold">كلمة المرور</th>
                     <th className="py-3.5 px-4 font-bold">المرحلة</th>
                     <th className="py-3.5 px-4 font-bold">الكورسات المفعلة</th>
                     <th className="py-3.5 px-4 font-bold">الأجهزة المسجلة</th>
@@ -1412,6 +1413,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                         </div>
                       </td>
                       <td className="py-4 px-4 font-mono text-slate-300" dir="ltr">{student.phone}</td>
+                      <td className="py-4 px-4 font-mono">
+                        <span className="inline-block rounded-lg border border-slate-800 bg-slate-950 px-2 py-0.5 text-xs text-amber-400 font-bold">
+                          {student.password || 'غير محدد'}
+                        </span>
+                      </td>
                       <td className="py-4 px-4 text-slate-400">{student.grade.includes('الثالث') ? '3 ثانوي' : '2 ثانوي'}</td>
                       <td className="py-4 px-4 font-bold text-amber-400">{student.enrolledCourseIds?.length || 0} كورس</td>
                       <td className="py-4 px-4 text-slate-300">
