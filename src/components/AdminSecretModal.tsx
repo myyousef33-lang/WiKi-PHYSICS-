@@ -20,7 +20,7 @@ export const AdminSecretModal: React.FC<AdminSecretModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password.trim()) {
       setError('يرجى إدخال كلمة المرور السرية للإدارة');
@@ -30,18 +30,21 @@ export const AdminSecretModal: React.FC<AdminSecretModalProps> = ({
     setLoading(true);
     setError(null);
 
-    setTimeout(() => {
-      const ok = StorageService.loginAdmin(password.trim());
+    try {
+      const res = await StorageService.loginAdmin(password.trim());
       setLoading(false);
 
-      if (ok) {
+      if (res.success) {
         onClose();
         setPassword('');
         onSuccessRedirect();
       } else {
-        setError('كلمة المرور غير صحيحة. تم تسجيل محاولة الدخول لأسباب أمنية.');
+        setError(res.error || 'كلمة المرور غير صحيحة. تم تسجيل محاولة الدخول لأسباب أمنية.');
       }
-    }, 400);
+    } catch {
+      setLoading(false);
+      setError('حدث خطأ أثناء محاولة تسجيل الدخول.');
+    }
   };
 
   return (

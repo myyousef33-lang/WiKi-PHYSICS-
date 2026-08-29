@@ -10,7 +10,10 @@ import {
   Sparkles,
   BookOpen,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Brain,
+  Share2,
+  MessageSquare
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { StorageService } from '../services/storage';
@@ -28,6 +31,7 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
   const [attempt, setAttempt] = useState<ExamAttempt | undefined>(StorageService.getAttemptById(attemptId));
   const [exam, setExam] = useState<QuizExam | undefined>();
   const [showExplanations, setShowExplanations] = useState<boolean>(true);
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
 
   useEffect(() => {
     const att = StorageService.getAttemptById(attemptId);
@@ -35,6 +39,11 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
     if (att) {
       const ex = StorageService.getExamById(att.examId);
       setExam(ex);
+
+      if (ex) {
+        // Automatically analyze errors and update student's weakness profile
+        StorageService.recordExamWeaknesses(att, ex);
+      }
 
       if (att.passed && att.percentage >= 70) {
         try {
@@ -49,6 +58,47 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
       }
     }
   }, [attemptId]);
+
+  const handleSendParentWhatsApp = async () => {
+    if (!attempt || !exam) return;
+    setIsSendingWhatsApp(true);
+    try {
+      const student = StorageService.getCurrentStudent() || StorageService.getStudents().find(s => s.id === attempt.studentId);
+      const studentName = attempt.studentName || student?.name || 'الطالب';
+      const parentPhone = student?.parentPhone || '01000000000';
+      const cleanParentPhone = parentPhone.replace(/[^0-9]/g, '');
+      const formattedPhone = cleanParentPhone.startsWith('0') ? `20${cleanParentPhone.substring(1)}` : cleanParentPhone;
+
+      const res = await fetch('/api/parent-report/whatsapp-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentName,
+          parentPhone: formattedPhone,
+          examTitle: attempt.examTitle,
+          score: attempt.score,
+          maxScore: attempt.maxScore,
+          percentage: attempt.percentage,
+          passed: attempt.passed,
+          feedbackNotes: attempt.passed ? 'مستوى ممتاز ومستمر في التقدم العلمي.' : 'يحتاج لمزيد من التركيز وإعادة مراجعة الدروس والمسائل ذات الصلة.'
+        })
+      });
+
+      const data = await res.json();
+      setIsSendingWhatsApp(false);
+
+      if (data.success && data.whatsappUrl) {
+        window.open(data.whatsappUrl, '_blank');
+      } else {
+        const fallbackMsg = `تقرير أداء الطالب: ${studentName}\nالاختبار: ${attempt.examTitle}\nالدرجة: ${attempt.score} من ${attempt.maxScore} (${attempt.percentage}%)\nالحالة: ${attempt.passed ? 'ناجح ومتميز' : 'يحتاج لمراجعة'}`;
+        const url = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(fallbackMsg)}`;
+        window.open(url, '_blank');
+      }
+    } catch {
+      setIsSendingWhatsApp(false);
+      alert('تم تجهيز التقرير، يرجى مشاركته عبر واتساب.');
+    }
+  };
 
   if (!attempt || !exam) {
     return (
@@ -155,6 +205,23 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
               العودة لمنهج الكورس
             </button>
           )}
+
+          <button
+            onClick={() => onNavigate('weakness-profile')}
+            className="flex items-center gap-2 rounded-xl border border-purple-500/40 bg-purple-500/15 px-5 py-2.5 text-xs font-black text-purple-300 hover:bg-purple-500/25 transition-all shadow-lg shadow-purple-500/10"
+          >
+            <Brain className="h-4 w-4 text-purple-400" />
+            <span>تحليل نقاط الضعف الذكي وخطة العلاج</span>
+          </button>
+
+          <button
+            onClick={handleSendParentWhatsApp}
+            disabled={isSendingWhatsApp}
+            className="flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-5 py-2.5 text-xs font-black text-emerald-300 hover:bg-emerald-500/25 transition-all shadow-lg shadow-emerald-500/10 disabled:opacity-50"
+          >
+            <MessageSquare className="h-4 w-4 text-emerald-400" />
+            <span>{isSendingWhatsApp ? 'جارٍ تجهيز التقرير...' : '📱 إرسال تقرير واتساب لولي الأمر'}</span>
+          </button>
 
           <button
             onClick={() => onNavigate('exam-runner', { examId: exam.id, courseId: attempt.courseId })}

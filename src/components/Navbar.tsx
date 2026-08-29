@@ -11,7 +11,10 @@ import {
   Award, 
   FileText, 
   GraduationCap,
-  PlayCircle
+  PlayCircle,
+  Trophy,
+  Bot,
+  Brain
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { Student } from '../types';
@@ -66,8 +69,10 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'dashboard', label: 'لوحة دراستي', icon: GraduationCap, authRequired: true },
     { id: 'my-courses', label: 'كورساتي', icon: PlayCircle, authRequired: true },
     { id: 'courses-catalog', label: 'المناهج والكورسات', icon: BookOpen },
-    { id: 'pdf-library', label: 'المذكرات والملازم', icon: FileText },
-    { id: 'my-results', label: 'نتائجي وتقييماتي', icon: Award, authRequired: true }
+    { id: 'leaderboard', label: 'لوحة الشرف', icon: Trophy },
+    { id: 'ai-assistant', label: 'المساعد الذكي ⚛️', icon: Bot },
+    { id: 'pdf-library', label: 'المذكرات', icon: FileText },
+    { id: 'my-results', label: 'نتائجي', icon: Award, authRequired: true }
   ];
 
   return (

@@ -12,10 +12,15 @@ import {
   Key, 
   ChevronLeft,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  Brain,
+  Trophy,
+  Bot,
+  MessageSquare
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { Student, Course, Lesson, ExamAttempt, NotificationItem } from '../types';
+import { ExamCountdownBanner } from './ExamCountdownBanner';
 
 interface StudentDashboardProps {
   onNavigate: (view: string, params?: any) => void;
@@ -159,6 +164,83 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         <div className="absolute -left-10 -bottom-10 opacity-5 pointer-events-none select-none text-[160px] font-black text-white font-mono">
           E=mc²
         </div>
+      </div>
+
+      {/* Ministry Exam Countdown Banner */}
+      <ExamCountdownBanner onNavigate={onNavigate} />
+
+      {/* Smart Learning Features Grid (AI, Weakness, Leaderboard) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        
+        {/* AI Physics Assistant */}
+        <button
+          onClick={() => onNavigate('ai-assistant')}
+          className="rounded-3xl border border-purple-500/30 bg-gradient-to-br from-purple-950/40 via-slate-900 to-slate-900 p-5 text-right space-y-3 hover:border-purple-500/60 transition-all shadow-lg shadow-purple-950/20 group"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-purple-500/20 text-purple-400 border border-purple-500/40 group-hover:scale-110 transition-transform">
+              <Bot className="h-5 w-5" />
+            </div>
+            <span className="rounded-full bg-purple-500/20 px-2.5 py-0.5 text-[10px] font-bold text-purple-300">
+              Gemini AI
+            </span>
+          </div>
+          <div>
+            <h3 className="text-sm font-black text-white group-hover:text-purple-300 transition-colors">
+              المساعد الفيزيائي الذكي ⚛️
+            </h3>
+            <p className="text-[11px] text-slate-400 mt-1">
+              اسأل عن أي مسألة أو ارفع صورتها للحصول على حل نموذجي خطوة بخطوة.
+            </p>
+          </div>
+        </button>
+
+        {/* Weakness Diagnosis & Treatment */}
+        <button
+          onClick={() => onNavigate('weakness-profile')}
+          className="rounded-3xl border border-rose-500/30 bg-gradient-to-br from-rose-950/40 via-slate-900 to-slate-900 p-5 text-right space-y-3 hover:border-rose-500/60 transition-all shadow-lg shadow-rose-950/20 group"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/40 group-hover:scale-110 transition-transform">
+              <Brain className="h-5 w-5" />
+            </div>
+            <span className="rounded-full bg-rose-500/20 px-2.5 py-0.5 text-[10px] font-bold text-rose-300">
+              تشخيص فوري
+            </span>
+          </div>
+          <div>
+            <h3 className="text-sm font-black text-white group-hover:text-rose-300 transition-colors">
+              تحليل نقاط الضعف وخطة العلاج 🎯
+            </h3>
+            <p className="text-[11px] text-slate-400 mt-1">
+              تحديد المسائل والقوانين المتكرر خطؤك فيها مع روابط مباشرة للدروس لعلاجها.
+            </p>
+          </div>
+        </button>
+
+        {/* Honor Leaderboard & Weekly Challenge */}
+        <button
+          onClick={() => onNavigate('leaderboard')}
+          className="rounded-3xl border border-amber-500/30 bg-gradient-to-br from-amber-950/40 via-slate-900 to-slate-900 p-5 text-right space-y-3 hover:border-amber-500/60 transition-all shadow-lg shadow-amber-950/20 group"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40 group-hover:scale-110 transition-transform">
+              <Trophy className="h-5 w-5" />
+            </div>
+            <span className="rounded-full bg-amber-500/20 px-2.5 py-0.5 text-[10px] font-bold text-amber-300">
+              تحدي أسبوعي
+            </span>
+          </div>
+          <div>
+            <h3 className="text-sm font-black text-white group-hover:text-amber-300 transition-colors">
+              لوحة الشرف وتحديات الفيزياء 🌟
+            </h3>
+            <p className="text-[11px] text-slate-400 mt-1">
+              ترتيب الطلاب المتفوقين، الأوسمة المحققة، وتحدي الأسبوع لحصد النقاط.
+            </p>
+          </div>
+        </button>
+
       </div>
 
       {/* Real Performance Metrics Cards */}

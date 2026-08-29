@@ -12,6 +12,9 @@ import { ExamResultView } from './components/ExamResultView';
 import { MyResultsView } from './components/MyResultsView';
 import { PdfLibraryView } from './components/PdfLibraryView';
 import { AdminDashboard } from './components/AdminDashboard';
+import { LeaderboardView } from './components/LeaderboardView';
+import { WeaknessAnalysisView } from './components/WeaknessAnalysisView';
+import { AIPhysicsAssistant } from './components/AIPhysicsAssistant';
 import { ActivationCodeModal } from './components/ActivationCodeModal';
 import { AuthModal } from './components/AuthModal';
 import { AdminSecretModal } from './components/AdminSecretModal';
@@ -184,6 +187,24 @@ export default function App() {
             onOpenActivationModal={() => setIsActivationModalOpen(true)}
             onOpenAuthModal={() => handleOpenAuth('login')}
           />
+        )}
+
+        {currentView === 'leaderboard' && (
+          <LeaderboardView
+            onNavigate={handleNavigate}
+          />
+        )}
+
+        {currentView === 'weakness-profile' && (
+          <WeaknessAnalysisView
+            onNavigate={handleNavigate}
+          />
+        )}
+
+        {currentView === 'ai-assistant' && (
+          <div className="mx-auto max-w-4xl px-4 py-8">
+            <AIPhysicsAssistant />
+          </div>
         )}
 
         {currentView === 'admin' && (

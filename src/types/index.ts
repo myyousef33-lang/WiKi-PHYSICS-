@@ -200,4 +200,85 @@ export interface PlatformSettings {
   adminPin: string;
   maxDevicesPerStudent: number;
   maintenanceMode: boolean;
+  ministryExamDate?: string; // ISO date format, e.g. 2026-06-14
+  autoParentReportTemplate?: string;
 }
+
+export interface WeaknessPoint {
+  id: string;
+  examId: string;
+  examTitle: string;
+  questionId: string;
+  conceptName: string;
+  chapterOrUnit: string;
+  errorReason: string;
+  suggestedLessonId?: string;
+  suggestedLessonTitle?: string;
+  suggestedAction: string;
+  frequency: number;
+  lastMissedAt: string;
+  isResolved?: boolean;
+}
+
+export interface StudentWeaknessProfile {
+  studentId: string;
+  weakPoints: WeaknessPoint[];
+  masteredConcepts: string[];
+  totalQuestionsAttempted: number;
+  totalErrors: number;
+  updatedAt: string;
+}
+
+export interface WeeklyChallengeQuestion {
+  id: string;
+  text: string;
+  options: string[];
+  correctOptionIndex: number;
+  points: number;
+  explanation: string;
+}
+
+export interface WeeklyChallenge {
+  id: string;
+  title: string;
+  description: string;
+  grade: GradeLevel | string;
+  startDate: string;
+  endDate: string;
+  bonusPoints: number;
+  questions: WeeklyChallengeQuestion[];
+  isPublished: boolean;
+}
+
+export interface StudentBadge {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  earnedAt: string;
+  category: 'points' | 'exams' | 'streak' | 'challenge';
+}
+
+export interface LeaderboardEntry {
+  studentId: string;
+  studentName: string;
+  grade: string;
+  governorate: string;
+  points: number;
+  completedExamsCount: number;
+  rank?: number;
+  badges: StudentBadge[];
+  weeklyScore: number;
+  lastActive: string;
+}
+
+export interface AIChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  text: string;
+  imageUrl?: string;
+  timestamp: string;
+  lessonId?: string;
+  courseId?: string;
+}
+

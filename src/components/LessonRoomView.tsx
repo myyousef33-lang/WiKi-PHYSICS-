@@ -19,11 +19,14 @@ import {
   RotateCw,
   Gauge,
   Tv,
-  ShieldCheck
+  ShieldCheck,
+  Bot,
+  Brain
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { MediaStore } from '../services/mediaStore';
 import { Course, Lesson, Student, QuizExam } from '../types';
+import { AIPhysicsAssistant } from './AIPhysicsAssistant';
 
 interface LessonRoomViewProps {
   courseId: string;
@@ -49,6 +52,7 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
   const [isTheaterMode, setIsTheaterMode] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [showAIAssistant, setShowAIAssistant] = useState<boolean>(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const videoContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -391,21 +395,36 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
 
           </div>
 
-          {/* Action Bar (Complete Lesson & Previous / Next Buttons) */}
+          {/* Action Bar (Complete Lesson, AI Assistant & Previous / Next Buttons) */}
           <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
             
-            {/* Mark as Complete Toggle */}
-            <button
-              onClick={handleToggleComplete}
-              className={`w-full sm:w-auto inline-flex items-center justify-center gap-2.5 rounded-xl px-5 py-3 text-xs font-bold transition-all ${
-                isCompleted
-                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                  : 'border border-slate-700 bg-slate-800 text-slate-200 hover:border-amber-500 hover:text-white'
-              }`}
-            >
-              <CheckCircle2 className={`h-4 w-4 ${isCompleted ? 'fill-slate-950 text-emerald-500' : 'text-amber-400'}`} />
-              <span>{isCompleted ? '✓ تم إكمال الدرس بنجاح' : 'تحديد الدرس كـ (مكتمل)'}</span>
-            </button>
+            <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+              {/* Mark as Complete Toggle */}
+              <button
+                onClick={handleToggleComplete}
+                className={`inline-flex items-center justify-center gap-2.5 rounded-xl px-4 py-2.5 text-xs font-bold transition-all ${
+                  isCompleted
+                    ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                    : 'border border-slate-700 bg-slate-800 text-slate-200 hover:border-amber-500 hover:text-white'
+                }`}
+              >
+                <CheckCircle2 className={`h-4 w-4 ${isCompleted ? 'fill-slate-950 text-emerald-500' : 'text-amber-400'}`} />
+                <span>{isCompleted ? '✓ تم إكمال الدرس' : 'تحديد الدرس كـ (مكتمل)'}</span>
+              </button>
+
+              {/* Ask AI Assistant About This Lesson */}
+              <button
+                onClick={() => setShowAIAssistant(!showAIAssistant)}
+                className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-bold transition-all ${
+                  showAIAssistant
+                    ? 'border-purple-500 bg-purple-500 text-white shadow-md shadow-purple-500/30'
+                    : 'border-purple-500/40 bg-purple-500/15 text-purple-300 hover:bg-purple-500/25'
+                }`}
+              >
+                <Bot className="h-4 w-4 text-purple-300" />
+                <span>المساعد الذكي للدرس ⚛️</span>
+              </button>
+            </div>
 
             {/* Next / Previous Controls */}
             <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
@@ -569,6 +588,17 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
         </div>
 
       </div>
+
+      {/* Floating AI Physics Assistant Modal / Widget */}
+      {showAIAssistant && (
+        <AIPhysicsAssistant
+          isFloating={true}
+          currentLessonId={currentLesson.id}
+          currentCourseId={course.id}
+          lessonTitle={currentLesson.title}
+          onClose={() => setShowAIAssistant(false)}
+        />
+      )}
 
     </div>
   );

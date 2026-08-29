@@ -35,10 +35,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   // Error & Status
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phone.trim()) {
       setError('يرجى إدخال رقم الهاتف المحمول');
@@ -49,19 +50,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
 
-    const res = StorageService.loginStudent(phone.trim(), password.trim());
-    if (res.success && res.student) {
-      setSuccess(`أهلاً بك مجدداً يا ${res.student.name}! 👋 تم تسجيل الدخول بنجاح`);
-      setTimeout(() => {
-        onClose();
-        if (onSuccess) onSuccess();
-      }, 700);
-    } else {
-      setError(res.error || 'رقم الهاتف أو كلمة المرور غير صحيحة. يرجى التأكد وإعادة المحاولة.');
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await StorageService.loginStudentAsync(phone.trim(), password.trim());
+      setLoading(false);
+      if (res.success && res.student) {
+        setSuccess(`أهلاً بك مجدداً يا ${res.student.name}! 👋 تم تسجيل الدخول بنجاح`);
+        setTimeout(() => {
+          onClose();
+          if (onSuccess) onSuccess();
+        }, 700);
+      } else {
+        setError(res.error || 'رقم الهاتف أو كلمة المرور غير صحيحة. يرجى التأكد وإعادة المحاولة.');
+      }
+    } catch {
+      setLoading(false);
+      setError('حدث خطأ أثناء الاتصال بالخادم.');
     }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !regPhone.trim()) {
       setError('يرجى كتابة اسم الطالب ورقم الهاتف المحمول');
@@ -73,23 +83,32 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
 
-    const res = StorageService.registerStudent({
-      name: name.trim(),
-      phone: regPhone.trim(),
-      parentPhone: parentPhone.trim() || '01000000000',
-      password: regPassword.trim(),
-      grade,
-      governorate
-    });
+    setLoading(true);
+    setError(null);
 
-    if (res.success && res.student) {
-      setSuccess(`تم إنشاء حسابك بنجاح يا ${res.student.name}! مرحباً بك في منصة ويكيفزياء`);
-      setTimeout(() => {
-        onClose();
-        if (onSuccess) onSuccess();
-      }, 800);
-    } else {
-      setError(res.error || 'حدث خطأ أثناء إنشاء الحساب، يرجى المحاولة برقم هاتف آخر');
+    try {
+      const res = await StorageService.registerStudentAsync({
+        name: name.trim(),
+        phone: regPhone.trim(),
+        parentPhone: parentPhone.trim() || '01000000000',
+        password: regPassword.trim(),
+        grade,
+        governorate
+      });
+      setLoading(false);
+
+      if (res.success && res.student) {
+        setSuccess(`تم إنشاء حسابك بنجاح يا ${res.student.name}! مرحباً بك في منصة ويكيفزياء`);
+        setTimeout(() => {
+          onClose();
+          if (onSuccess) onSuccess();
+        }, 800);
+      } else {
+        setError(res.error || 'حدث خطأ أثناء إنشاء الحساب، يرجى المحاولة برقم هاتف آخر');
+      }
+    } catch {
+      setLoading(false);
+      setError('حدث خطأ أثناء إنشاء الحساب.');
     }
   };
 

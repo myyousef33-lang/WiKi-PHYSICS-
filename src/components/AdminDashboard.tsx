@@ -266,8 +266,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       const formData = new FormData();
       formData.append('file', file);
 
+      const adminToken = StorageService.getAdminToken();
+      const headers: Record<string, string> = {};
+      if (adminToken) {
+        headers['Authorization'] = `Bearer ${adminToken}`;
+      }
+
       const response = await fetch('/api/upload', {
         method: 'POST',
+        headers,
         body: formData,
       });
 
@@ -2110,28 +2117,48 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                     <th className="py-3.5 px-4 font-bold">النسبة</th>
                     <th className="py-3.5 px-4 font-bold">الحالة</th>
                     <th className="py-3.5 px-4 font-bold">التوقيت</th>
+                    <th className="py-3.5 px-4 font-bold text-center">تقرير ولي الأمر</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
-                  {attempts.map(att => (
-                    <tr key={att.id} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="py-3.5 px-4 font-bold text-white">{att.studentName}</td>
-                      <td className="py-3.5 px-4 font-mono text-slate-400" dir="ltr">{att.studentPhone}</td>
-                      <td className="py-3.5 px-4 text-slate-200">{att.examTitle}</td>
-                      <td className="py-3.5 px-4 font-bold text-white">{att.score} / {att.maxScore}</td>
-                      <td className="py-3.5 px-4 font-black">
-                        <span className={att.passed ? 'text-emerald-400' : 'text-rose-400'}>{att.percentage}%</span>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${
-                          att.passed ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
-                        }`}>
-                          {att.passed ? 'ناجح' : 'راسب'}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-400">{new Date(att.submittedAt).toLocaleDateString('ar-EG')}</td>
-                    </tr>
-                  ))}
+                  {attempts.map(att => {
+                    const studentObj = students.find(s => s.id === att.studentId);
+                    const parentPhone = studentObj?.parentPhone || att.studentPhone || '01000000000';
+                    const cleanParentPhone = parentPhone.replace(/[^0-9]/g, '');
+                    const formattedPhone = cleanParentPhone.startsWith('0') ? `20${cleanParentPhone.substring(1)}` : cleanParentPhone;
+                    const reportMsg = `تقرير أداء الطالب في الفيزياء منصة ويكيفزياء:\nاسم الطالب: ${att.studentName}\nالاختبار: ${att.examTitle}\nالدرجة: ${att.score} من ${att.maxScore} (${att.percentage}%)\nالتقييم: ${att.passed ? 'ممتاز واجتاز الاختبار' : 'يحتاج لإعادة المراجعة'}`;
+                    const whatsappLink = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(reportMsg)}`;
+
+                    return (
+                      <tr key={att.id} className="hover:bg-slate-800/40 transition-colors">
+                        <td className="py-3.5 px-4 font-bold text-white">{att.studentName}</td>
+                        <td className="py-3.5 px-4 font-mono text-slate-400" dir="ltr">{att.studentPhone}</td>
+                        <td className="py-3.5 px-4 text-slate-200">{att.examTitle}</td>
+                        <td className="py-3.5 px-4 font-bold text-white">{att.score} / {att.maxScore}</td>
+                        <td className="py-3.5 px-4 font-black">
+                          <span className={att.passed ? 'text-emerald-400' : 'text-rose-400'}>{att.percentage}%</span>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${
+                            att.passed ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+                          }`}>
+                            {att.passed ? 'ناجح' : 'راسب'}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-400">{new Date(att.submittedAt).toLocaleDateString('ar-EG')}</td>
+                        <td className="py-3.5 px-4 text-center">
+                          <a
+                            href={whatsappLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-emerald-500/25 transition-all shadow-sm"
+                          >
+                            <span>📱 إرسال واتساب</span>
+                          </a>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

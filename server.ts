@@ -1,8 +1,10 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import multer from 'multer';
 import { createServer as createViteServer } from 'vite';
+import { GoogleGenAI } from '@google/genai';
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
@@ -10,14 +12,169 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Setup Multer for disk storage
+// Security & Secret Store
+const ADMIN_SECRET = process.env.ADMIN_JWT_SECRET || 'wikifizya_sec_token_' + crypto.randomBytes(16).toString('hex');
+let currentAdminPinHash = crypto.createHash('sha256').update(process.env.ADMIN_PIN || 'WikiPhys@9988#Master').digest('hex');
+
+// In-Memory Rate Limiting Stores
+const loginAttempts = new Map<string, { count: number; lockedUntil: number }>();
+const uploadRateLimits = new Map<string, { count: number; resetTime: number }>();
+
+const checkRateLimit = (ip: string, maxAttempts = 5, lockDurationMs = 5 * 60 * 1000): { allowed: boolean; waitSeconds?: number } => {
+  const now = Date.now();
+  const record = loginAttempts.get(ip);
+  if (!record) return { allowed: true };
+
+  if (record.lockedUntil > now) {
+    return { allowed: false, waitSeconds: Math.ceil((record.lockedUntil - now) / 1000) };
+  }
+
+  if (record.lockedUntil <= now && record.count >= maxAttempts) {
+    loginAttempts.delete(ip);
+    return { allowed: true };
+  }
+
+  return { allowed: true };
+};
+
+const recordFailedAttempt = (ip: string, maxAttempts = 5, lockDurationMs = 5 * 60 * 1000) => {
+  const now = Date.now();
+  const record = loginAttempts.get(ip) || { count: 0, lockedUntil: 0 };
+  record.count += 1;
+  if (record.count >= maxAttempts) {
+    record.lockedUntil = now + lockDurationMs;
+  }
+  loginAttempts.set(ip, record);
+};
+
+const resetLoginAttempts = (ip: string) => {
+  loginAttempts.delete(ip);
+};
+
+// Admin Token Generation & Verification
+const generateAdminToken = (): string => {
+  const payload = {
+    role: 'admin',
+    issuedAt: Date.now(),
+    expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+  };
+  const str = JSON.stringify(payload);
+  const signature = crypto.createHmac('sha256', ADMIN_SECRET).update(str).digest('hex');
+  return Buffer.from(str).toString('base64url') + '.' + signature;
+};
+
+const verifyAdminToken = (token: string): boolean => {
+  try {
+    if (!token) return false;
+    const parts = token.split('.');
+    if (parts.length !== 2) return false;
+    const [payloadB64, signature] = parts;
+    const expectedSig = crypto.createHmac('sha256', ADMIN_SECRET).update(Buffer.from(payloadB64, 'base64url').toString('utf-8')).digest('hex');
+    if (signature !== expectedSig) return false;
+    const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf-8'));
+    if (payload.expiresAt < Date.now()) return false;
+    return payload.role === 'admin';
+  } catch {
+    return false;
+  }
+};
+
+// Middleware to protect admin endpoints
+const requireAdminAuth = (req: express.Request, res: express.Response, next: express.NextFunction): any => {
+  const authHeader = req.headers.authorization;
+  const customHeader = req.headers['x-admin-token'] as string;
+  const token = (authHeader && authHeader.startsWith('Bearer ')) ? authHeader.substring(7) : customHeader;
+
+  if (!token || !verifyAdminToken(token)) {
+    return res.status(401).json({
+      success: false,
+      error: 'غير مصرح لك بالوصول. يرجى تسجيل الدخول كمسؤول في لوحة التحكم.'
+    });
+  }
+  next();
+};
+
+// File Magic Bytes / Header Validation
+const validateFileContent = (filePath: string, originalName: string, reportedMime: string): { isValid: boolean; error?: string } => {
+  try {
+    const ext = path.extname(originalName).toLowerCase();
+    const buffer = Buffer.alloc(32);
+    const fd = fs.openSync(filePath, 'r');
+    fs.readSync(fd, buffer, 0, 32, 0);
+    fs.closeSync(fd);
+
+    // 1. PDF: %PDF
+    if (ext === '.pdf' || reportedMime === 'application/pdf') {
+      const isPdf = buffer.toString('utf-8', 0, 4) === '%PDF';
+      if (!isPdf) return { isValid: false, error: 'الملف ليس ملف PDF صالح' };
+      return { isValid: true };
+    }
+
+    // 2. Images
+    if (['.jpg', '.jpeg'].includes(ext)) {
+      const isJpeg = buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF;
+      if (!isJpeg) return { isValid: false, error: 'صيغة الصورة JPEG غير صالحة' };
+      return { isValid: true };
+    }
+    if (ext === '.png') {
+      const isPng = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47;
+      if (!isPng) return { isValid: false, error: 'صيغة الصورة PNG غير صالحة' };
+      return { isValid: true };
+    }
+    if (ext === '.gif') {
+      const isGif = buffer.toString('utf-8', 0, 3) === 'GIF';
+      if (!isGif) return { isValid: false, error: 'صيغة الصورة GIF غير صالحة' };
+      return { isValid: true };
+    }
+    if (ext === '.webp') {
+      const isWebp = buffer.toString('utf-8', 0, 4) === 'RIFF' && buffer.toString('utf-8', 8, 12) === 'WEBP';
+      if (!isWebp) return { isValid: false, error: 'صيغة الصورة WEBP غير صالحة' };
+      return { isValid: true };
+    }
+
+    // 3. Videos
+    if (['.mp4', '.m4v', '.mov'].includes(ext)) {
+      const isMp4 = buffer.toString('utf-8', 4, 8) === 'ftyp' || buffer.toString('utf-8', 4, 8) === 'moov';
+      if (!isMp4) return { isValid: false, error: 'صيغة الفيديو MP4 غير صالحة' };
+      return { isValid: true };
+    }
+    if (['.webm', '.mkv'].includes(ext)) {
+      const isMatroska = buffer[0] === 0x1A && buffer[1] === 0x45 && buffer[2] === 0xDF && buffer[3] === 0xA3;
+      if (!isMatroska) return { isValid: false, error: 'صيغة الفيديو WebM/MKV غير صالحة' };
+      return { isValid: true };
+    }
+
+    // Allow SVG if text contains <svg
+    if (ext === '.svg') {
+      const content = fs.readFileSync(filePath, 'utf-8');
+      if (!content.includes('<svg') && !content.includes('<?xml')) {
+        return { isValid: false, error: 'ملف SVG غير صالح' };
+      }
+      return { isValid: true };
+    }
+
+    return { isValid: true };
+  } catch (err: any) {
+    return { isValid: false, error: 'فشل في قراءة وتدقيق محتوى الملف: ' + err.message };
+  }
+};
+
+// Setup Multer for disk storage with extension whitelist
+const ALLOWED_EXTENSIONS = new Set([
+  '.mp4', '.webm', '.mkv', '.mov',
+  '.pdf',
+  '.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg'
+]);
+
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
     cb(null, uploadsDir);
   },
   filename: (_req, file, cb) => {
-    // Generate safe clean filename with original extension
-    const ext = path.extname(file.originalname).toLowerCase() || '.bin';
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!ALLOWED_EXTENSIONS.has(ext)) {
+      return cb(new Error('امتداد الملف غير مدعوم لأسباب أمنية'), '');
+    }
     const baseName = path
       .basename(file.originalname, ext)
       .replace(/[^a-zA-Z0-9_-]/g, '_')
@@ -30,9 +187,18 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: {
-    fileSize: 500 * 1024 * 1024, // 500 MB max file size for videos/PDFs/images
+    fileSize: 500 * 1024 * 1024, // 500 MB max
   },
 });
+
+// Lazy Gemini API Client
+let geminiClient: GoogleGenAI | null = null;
+const getGemini = (): GoogleGenAI => {
+  if (!geminiClient) {
+    geminiClient = new GoogleGenAI();
+  }
+  return geminiClient;
+};
 
 async function startServer() {
   const app = express();
@@ -50,14 +216,69 @@ async function startServer() {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  // Direct File Upload API Endpoint (Videos, PDFs, Images)
-  app.post('/api/upload', upload.single('file'), (req, res): any => {
+  // ==========================================
+  // 1. Admin Authentication API
+  // ==========================================
+  app.post('/api/admin/login', (req, res): any => {
+    const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown-ip';
+    const rate = checkRateLimit(clientIp, 5, 5 * 60 * 1000);
+    if (!rate.allowed) {
+      return res.status(429).json({
+        success: false,
+        error: `تم حظر محاولات الدخول مؤقتاً بسبب تكرار المحاولات الخاطئة. يرجى الانتظار ${rate.waitSeconds} ثانية.`
+      });
+    }
+
+    const { pin } = req.body;
+    if (!pin || typeof pin !== 'string') {
+      recordFailedAttempt(clientIp);
+      return res.status(400).json({ success: false, error: 'يرجى إدخال كلمة المرور السرية' });
+    }
+
+    const submittedHash = crypto.createHash('sha256').update(pin.trim()).digest('hex');
+    if (submittedHash === currentAdminPinHash) {
+      resetLoginAttempts(clientIp);
+      const token = generateAdminToken();
+      return res.json({
+        success: true,
+        message: 'تم التحقق من هوية المسؤول بنجاح',
+        token,
+        expiresInSeconds: 86400
+      });
+    }
+
+    recordFailedAttempt(clientIp);
+    return res.status(401).json({
+      success: false,
+      error: 'كلمة المرور غير صحيحة. تم تسجيل المحاولة لأسباب أمنية.'
+    });
+  });
+
+  app.post('/api/admin/change-pin', requireAdminAuth, (req, res): any => {
+    const { newPin } = req.body;
+    if (!newPin || typeof newPin !== 'string' || newPin.trim().length < 6) {
+      return res.status(400).json({ success: false, error: 'كلمة المرور الجديدة يجب ألا تقل عن 6 أحرف/أرقام' });
+    }
+    currentAdminPinHash = crypto.createHash('sha256').update(newPin.trim()).digest('hex');
+    return res.json({ success: true, message: 'تم تحديث كلمة المرور الرئيسية بنجاح' });
+  });
+
+  // ==========================================
+  // 2. Protected Secure File Upload API
+  // ==========================================
+  app.post('/api/upload', requireAdminAuth, upload.single('file'), (req, res): any => {
     try {
       if (!req.file) {
         return res.status(400).json({ success: false, error: 'لم يتم استلام أي ملف للرفع' });
       }
 
       const file = req.file;
+      const validation = validateFileContent(file.path, file.originalname, file.mimetype);
+      if (!validation.isValid) {
+        try { fs.unlinkSync(file.path); } catch (_) {}
+        return res.status(400).json({ success: false, error: validation.error || 'الملف غير صالح أمنياً' });
+      }
+
       const fileUrl = `/uploads/${file.filename}`;
       const sizeFormatted =
         file.size > 1024 * 1024
@@ -79,25 +300,34 @@ async function startServer() {
     }
   });
 
-  // Base64 fallback upload endpoint (if needed)
-  app.post('/api/upload-base64', (req, res): any => {
+  // Base64 upload for admin
+  app.post('/api/upload-base64', requireAdminAuth, (req, res): any => {
     try {
       const { base64Data, fileName, mimeType } = req.body;
       if (!base64Data) {
         return res.status(400).json({ success: false, error: 'بيانات الملف غير متوفرة' });
       }
 
-      // Extract base64 payload
+      const ext = path.extname(fileName || '').toLowerCase() || (mimeType?.includes('video') ? '.mp4' : mimeType?.includes('pdf') ? '.pdf' : '.jpg');
+      if (!ALLOWED_EXTENSIONS.has(ext)) {
+        return res.status(400).json({ success: false, error: 'امتداد الملف غير مدعوم' });
+      }
+
       const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
       const dataBuffer = matches && matches.length === 3
         ? Buffer.from(matches[2], 'base64')
         : Buffer.from(base64Data, 'base64');
 
-      const ext = path.extname(fileName || '').toLowerCase() || (mimeType?.includes('video') ? '.mp4' : mimeType?.includes('pdf') ? '.pdf' : '.jpg');
       const uniqueName = `upload_${Date.now()}_${Math.round(Math.random() * 1e5)}${ext}`;
       const targetPath = path.join(uploadsDir, uniqueName);
 
       fs.writeFileSync(targetPath, dataBuffer);
+
+      const validation = validateFileContent(targetPath, fileName || uniqueName, mimeType || '');
+      if (!validation.isValid) {
+        try { fs.unlinkSync(targetPath); } catch (_) {}
+        return res.status(400).json({ success: false, error: validation.error || 'الملف غير صالح أمنياً' });
+      }
 
       return res.json({
         success: true,
@@ -111,6 +341,161 @@ async function startServer() {
     }
   });
 
+  // ==========================================
+  // 3. Gemini AI Physics Assistant
+  // ==========================================
+  app.post('/api/gemini/physics-assistant', async (req, res): Promise<any> => {
+    try {
+      const { prompt, lessonTitle, courseTitle, imageBase64, chatHistory } = req.body;
+      if (!prompt && !imageBase64) {
+        return res.status(400).json({ success: false, error: 'يرجى كتابة سؤال فيزيائي أو إرفاق صورة للمسألة' });
+      }
+
+      const ai = getGemini();
+
+      const systemInstruction = `
+أنت "مستر فيزياء الذكي AI" - معلم ومساعد شخصي متخصص في مادة الفيزياء لطلاب الثانوية العامة (الصف الأول والثاني والثالث الثانوي) بالمنهج المصري الحديث.
+
+قواعدك الأساسية الصارمة:
+1. أنت تشرح مادة الفيزياء فقط. إذا سألك الطالب في أي موضوع خارج الفيزياء أو الرياضيات المرتبطة بها (مثل لغات أخرى، أو مواضيع عامة)، اعتذر بأدب واشرح له بلباقة أن تخصصك فقط فيزياء الثانوية العامة.
+2. اشرح المسائل خطوة بخطوة باللغة العربية الواضحة:
+   - ابدأ بذكر "المعطيات" (Given).
+   - حدد "المطلوب" (Required).
+   - اكتب "القانون الفيزيائي الأساسي والعلاقات الرياضية" بوضوح مع وحدات القياس (SI Units).
+   - عوض بالأرقام واشرح فكرة الحل الفيزيائية (لماذا استنتجنا هذه الخطوة).
+   - اكتب الناتج النهائي بوحدته الصحيحة.
+3. ركز على مفاهيم المنهج المصري:
+   - التيار الكهربي وقانون أوم، كيرشوف، التأثير المغناطيسي، القوة وعزم الازدواج، الحث الكهرومغناطيسي، فاراداي وقاعدة لينز، الدينامو والمحول والمحرك، دوائر التيار المتردد (R-L-C)، المعاوقة والرنين.
+   - الفيزياء الحديثة: إشعاع الجسم الأسود، بلانك، الانبعاث الحراري والتأثير الكهروضوئي (أينشتاين)، كومتون، دي برولي، الطبيعة المزدوجة، الأطياف الذرية، الليزر، الإلكترونيات الحديثة والوصلة الثنائية والترانزستور والبوابات المنطقية.
+   - فيزياء 1ث و 2ث: الميكانيكا، الحركة، المتجهات، نيوتن، الطاقة، الموائع، الضغط، باسكال، الكثافة، الغازات (بويل، شارل، القانون العام)، الموجات، الصوت والضوء والعدسات والمنشور.
+4. استخدم تنسيق Markdown أنيق، مع خطوط عريضة وقوائم ونقاط، واشرح أي رسم بياني أو دائرة مرسومة في الصورة بدقة متناهية.
+5. شجع الطالب دائماً بكلمات تحفيزية مثل: "يا بطل الفيزياء"، "خطوة ممتازة نحو الـ 60/60".
+`;
+
+      const contents: any[] = [];
+
+      // Include previous conversation history if present
+      if (Array.isArray(chatHistory) && chatHistory.length > 0) {
+        chatHistory.slice(-6).forEach((item: { role: string; text: string }) => {
+          contents.push({
+            role: item.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: item.text }]
+          });
+        });
+      }
+
+      // Context string about the current lesson
+      const contextPrefix = lessonTitle || courseTitle 
+        ? `[سياق الدرس الحالي للطالب: كورس "${courseTitle || 'فيزياء'}" - درس "${lessonTitle || 'محتوى الدرس'}"]\n`
+        : '';
+
+      const currentParts: any[] = [];
+
+      if (imageBase64) {
+        const matches = imageBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        const mime = matches && matches.length === 3 ? matches[1] : 'image/jpeg';
+        const data = matches && matches.length === 3 ? matches[2] : imageBase64;
+        currentParts.push({
+          inlineData: {
+            mimeType: mime,
+            data: data
+          }
+        });
+      }
+
+      currentParts.push({
+        text: `${contextPrefix}${prompt || 'اشرح هذه المسألة الفيزيائية الموضحة بالصورة بالتفصيل والخطوات والقوانين المستخدمة.'}`
+      });
+
+      contents.push({
+        role: 'user',
+        parts: currentParts
+      });
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.7-flash',
+        contents,
+        config: {
+          systemInstruction,
+          temperature: 0.3,
+        }
+      });
+
+      const replyText = response.text || 'عذراً، لم أتمكن من استخراج الإجابة. يرجى المحاولة مجدداً أو صياغة السؤال بشكل أوضح.';
+
+      return res.json({
+        success: true,
+        reply: replyText
+      });
+    } catch (err: any) {
+      console.error('Gemini Assistant Error:', err);
+      return res.status(500).json({
+        success: false,
+        error: err?.message || 'حدث خطأ أثناء التواصل مع المعلم الذكي. يرجى المحاولة مرة أخرى.'
+      });
+    }
+  });
+
+  // ==========================================
+  // 4. Parent WhatsApp Performance Report
+  // ==========================================
+  app.post('/api/parent-report/whatsapp-link', (req, res): any => {
+    try {
+      const {
+        studentName,
+        parentPhone,
+        grade,
+        attendanceRate,
+        completedLessons,
+        totalLessons,
+        examAverage,
+        latestExamScore,
+        teacherNote
+      } = req.body;
+
+      if (!studentName || !parentPhone) {
+        return res.status(400).json({ success: false, error: 'بيانات الطالب أو هاتف ولي الأمر غير مكتملة' });
+      }
+
+      let cleanPhone = parentPhone.replace(/[^0-9]/g, '');
+      if (cleanPhone.startsWith('01')) {
+        cleanPhone = '2' + cleanPhone; // Egypt country code
+      } else if (cleanPhone.startsWith('1')) {
+        cleanPhone = '20' + cleanPhone;
+      }
+
+      const reportMessage = `
+السلام عليكم ورحمة الله وبركاته 🌹
+ولي أمر الطالب المحترم / ولي أمر ${studentName}،
+
+تحية طيبة من منصة *ويكيفزياء (WikiFizya)* ومستر الفيزياء 📚⚡
+
+نشارك مع حضراتكم التقرير الدوري لمستوى والتزام الطالب في مادة الفيزياء (${grade || 'الثانوية العامة'}):
+
+📊 *ملخص الأداء والمتابعة:*
+- 👤 *اسم الطالب:* ${studentName}
+- 🎬 *الدروس المشاهدة والمكتملة:* ${completedLessons || 0} من إجمالي ${totalLessons || 0} درس (${attendanceRate || 0}%)
+- 📝 *متوسط درجات الامتحانات والواجبات:* ${examAverage || 0}%
+${latestExamScore ? `- 🎯 *آخر امتحان تم تسليمه:* ${latestExamScore}` : ''}
+- 💡 *ملاحظة المعلم:* ${teacherNote || 'طالب متميز وملتزم بالحصص والواجبات، نتمنى له دوام التفوق والدرجة النهائية بإذن الله.'}
+
+مع تحيات إدارة منصة ويكيفزياء التعليمية.
+`.trim();
+
+      const encodedMessage = encodeURIComponent(reportMessage);
+      const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+
+      return res.json({
+        success: true,
+        whatsappUrl,
+        messageText: reportMessage
+      });
+    } catch (err: any) {
+      console.error('Parent report generation error:', err);
+      return res.status(500).json({ success: false, error: 'فشل في إنشاء رابط التقرير' });
+    }
+  });
+
   // Vite Middleware for development
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
@@ -120,7 +505,6 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    // Ensure dist static serves public/uploads as well
     app.use('/uploads', express.static(uploadsDir));
     app.use(express.static(distPath));
     app.get('*', (_req, res) => {
@@ -136,3 +520,4 @@ async function startServer() {
 startServer().catch((err) => {
   console.error('Fatal Server Start Error:', err);
 });
+
