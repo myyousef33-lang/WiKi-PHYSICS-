@@ -21,15 +21,19 @@ import {
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { Student, Course, Lesson, ExamAttempt, NotificationItem } from '../types';
 import { ExamCountdownBanner } from './ExamCountdownBanner';
+import { StreakBanner } from './StreakBanner';
+import { Edit3, Layers, User } from 'lucide-react';
 
 interface StudentDashboardProps {
   onNavigate: (view: string, params?: any) => void;
   onOpenActivationModal: () => void;
+  onOpenEditProfileModal?: () => void;
 }
 
 export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   onNavigate,
-  onOpenActivationModal
+  onOpenActivationModal,
+  onOpenEditProfileModal
 }) => {
   const [student, setStudent] = useState<Student | null>(StorageService.getCurrentStudent());
   const [courses, setCourses] = useState<Course[]>([]);
@@ -164,6 +168,66 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         <div className="absolute -left-10 -bottom-10 opacity-5 pointer-events-none select-none text-[160px] font-black text-white font-mono">
           E=mc²
         </div>
+      </div>
+
+      {/* Daily Streak Banner */}
+      <StreakBanner student={student} />
+
+      {/* Interactive Physics & Profile Features Bar */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {onOpenEditProfileModal && (
+          <button
+            onClick={onOpenEditProfileModal}
+            className="rounded-2xl border border-orange-500/30 bg-slate-900/80 p-3.5 text-right flex items-center gap-3 hover:border-orange-500 hover:bg-slate-900 transition-all shadow-md group"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-500/15 border border-orange-500/30 text-orange-400 group-hover:scale-110 transition-transform">
+              <Edit3 className="h-5 w-5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-black text-white">تعديل الملف الشخصي</h4>
+              <p className="text-[10px] text-slate-400">الصورة، الهاتف والباسورد</p>
+            </div>
+          </button>
+        )}
+
+        <button
+          onClick={() => onNavigate('physics-lab')}
+          className="rounded-2xl border border-amber-500/30 bg-slate-900/80 p-3.5 text-right flex items-center gap-3 hover:border-amber-500 hover:bg-slate-900 transition-all shadow-md group"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 group-hover:scale-110 transition-transform">
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <div>
+            <h4 className="text-xs font-black text-white">المعمل التفاعلي 🔬</h4>
+            <p className="text-[10px] text-slate-400">محاكاة التجارب الفيزيائية</p>
+          </div>
+        </button>
+
+        <button
+          onClick={() => onNavigate('flashcards')}
+          className="rounded-2xl border border-blue-500/30 bg-slate-900/80 p-3.5 text-right flex items-center gap-3 hover:border-blue-500 hover:bg-slate-900 transition-all shadow-md group"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-400 group-hover:scale-110 transition-transform">
+            <Layers className="h-5 w-5" />
+          </div>
+          <div>
+            <h4 className="text-xs font-black text-white">بطاقات المراجعة 🎴</h4>
+            <p className="text-[10px] text-slate-400">Flashcards سريعة للفصول</p>
+          </div>
+        </button>
+
+        <button
+          onClick={() => onNavigate('my-results')}
+          className="rounded-2xl border border-emerald-500/30 bg-slate-900/80 p-3.5 text-right flex items-center gap-3 hover:border-emerald-500 hover:bg-slate-900 transition-all shadow-md group"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 group-hover:scale-110 transition-transform">
+            <Award className="h-5 w-5" />
+          </div>
+          <div>
+            <h4 className="text-xs font-black text-white">الشهادات والنتائج 🏆</h4>
+            <p className="text-[10px] text-slate-400">شهادات تفوق قابلة للمشاركة</p>
+          </div>
+        </button>
       </div>
 
       {/* Ministry Exam Countdown Banner */}

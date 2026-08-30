@@ -19,11 +19,17 @@ import { ActivationCodeModal } from './components/ActivationCodeModal';
 import { AuthModal } from './components/AuthModal';
 import { AdminSecretModal } from './components/AdminSecretModal';
 import { NotificationCenterModal } from './components/NotificationCenterModal';
+import { EditProfileModal } from './components/EditProfileModal';
+import { PhysicsSimulationsLab } from './components/PhysicsSimulationsLab';
+import { FlashcardsView } from './components/FlashcardsView';
+import { CertificateModal } from './components/CertificateModal';
 import { StorageService, subscribeToStorage } from './services/storage';
+import { EarnedCertificate, Student } from './types';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<string>('home');
   const [viewParams, setViewParams] = useState<Record<string, any>>({});
+  const [student, setStudent] = useState<Student | null>(StorageService.getCurrentStudent());
   
   // Modals
   const [isActivationModalOpen, setIsActivationModalOpen] = useState(false);
@@ -31,6 +37,16 @@ export default function App() {
   const [authModalInitialMode, setAuthModalInitialMode] = useState<'login' | 'register'>('login');
   const [isAdminSecretOpen, setIsAdminSecretOpen] = useState(false);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+  const [selectedCertificate, setSelectedCertificate] = useState<EarnedCertificate | null>(null);
+
+  useEffect(() => {
+    const updateStudent = () => {
+      setStudent(StorageService.getCurrentStudent());
+    };
+    updateStudent();
+    return subscribeToStorage(updateStudent);
+  }, []);
 
   // Global Keyboard Shortcut for Secret Admin Access & Route-based Hash Check
   useEffect(() => {
@@ -108,6 +124,7 @@ export default function App() {
         onOpenActivationModal={() => setIsActivationModalOpen(true)}
         onOpenAuthModal={() => handleOpenAuth('login')}
         onOpenNotificationModal={() => setIsNotificationModalOpen(true)}
+        onOpenEditProfileModal={() => setIsEditProfileModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -124,7 +141,32 @@ export default function App() {
           <StudentDashboard
             onNavigate={handleNavigate}
             onOpenActivationModal={() => setIsActivationModalOpen(true)}
+            onOpenEditProfileModal={() => setIsEditProfileModalOpen(true)}
           />
+        )}
+
+        {currentView === 'physics-lab' && (
+          <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+            <PhysicsSimulationsLab />
+          </div>
+        )}
+
+        {currentView === 'flashcards' && (
+          <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+            {student ? (
+              <FlashcardsView student={student} />
+            ) : (
+              <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-12 text-center space-y-4">
+                <h3 className="text-xl font-black text-white">يرجى تسجيل الدخول لاستخدام بطاقات المراجعة</h3>
+                <button
+                  onClick={() => handleOpenAuth('login')}
+                  className="rounded-xl bg-orange-500 px-6 py-2.5 text-xs font-bold text-slate-950"
+                >
+                  تسجيل الدخول
+                </button>
+              </div>
+            )}
+          </div>
         )}
 
         {currentView === 'my-courses' && (
@@ -242,6 +284,26 @@ export default function App() {
         isOpen={isNotificationModalOpen}
         onClose={() => setIsNotificationModalOpen(false)}
       />
+
+      {student && (
+        <EditProfileModal
+          student={student}
+          isOpen={isEditProfileModalOpen}
+          onClose={() => setIsEditProfileModalOpen(false)}
+          onUpdateSuccess={() => {
+            setStudent(StorageService.getCurrentStudent());
+          }}
+        />
+      )}
+
+      {student && selectedCertificate && (
+        <CertificateModal
+          student={student}
+          certificate={selectedCertificate}
+          isOpen={!!selectedCertificate}
+          onClose={() => setSelectedCertificate(null)}
+        />
+      )}
 
     </div>
   );

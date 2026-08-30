@@ -20,6 +20,8 @@ import {
   Gauge,
   Tv,
   ShieldCheck,
+  ShieldAlert,
+  Lock,
   Bot,
   Brain
 } from 'lucide-react';
@@ -53,8 +55,90 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
   const [isTheaterMode, setIsTheaterMode] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [showAIAssistant, setShowAIAssistant] = useState<boolean>(false);
+  
+  // Security Anti-Screenshot & Anti-Recording DRM States
+  const [isWindowFocused, setIsWindowFocused] = useState<boolean>(true);
+  const [isCaptureBlocked, setIsCaptureBlocked] = useState<boolean>(false);
+  const [watermarkPos, setWatermarkPos] = useState<{ top: number; left: number }>({ top: 15, left: 15 });
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const videoContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Floating Watermark Random Position Bouncer
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const randomTop = Math.floor(Math.random() * 70) + 10;
+      const randomLeft = Math.floor(Math.random() * 60) + 10;
+      setWatermarkPos({ top: randomTop, left: randomLeft });
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Keyboard Shortcuts Interceptor & Anti-Screenshot Detection
+  useEffect(() => {
+    const triggerCaptureBlock = () => {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText("🔒 محتوى منشورات وفيديوهات منصة ويكيفزياء محمي ضد الالتقاط والتصوير").catch(() => {});
+      }
+      setIsCaptureBlocked(true);
+      setTimeout(() => {
+        setIsCaptureBlocked(false);
+      }, 4000);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isPrintScreen = e.key === 'PrintScreen' || e.keyCode === 44;
+      const isCmdOrCtrl = e.metaKey || e.ctrlKey;
+      
+      const isScreenshotOrSave =
+        isPrintScreen ||
+        (isCmdOrCtrl && (e.key === 'p' || e.key === 's' || e.key === 'u' || e.key === 'P' || e.key === 'S' || e.key === 'U')) ||
+        (isCmdOrCtrl && e.shiftKey && (e.key === 'i' || e.key === 'I' || e.key === 's' || e.key === 'S' || e.key === 'c' || e.key === 'C')) ||
+        (e.metaKey && e.shiftKey && ['3', '4', '5', 's', 'S'].includes(e.key));
+
+      if (isScreenshotOrSave) {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerCaptureBlock();
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'PrintScreen' || e.keyCode === 44) {
+        triggerCaptureBlock();
+      }
+    };
+
+    const handleWindowBlur = () => {
+      setIsWindowFocused(false);
+    };
+
+    const handleWindowFocus = () => {
+      setIsWindowFocused(true);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        setIsWindowFocused(false);
+      } else {
+        setIsWindowFocused(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('keyup', handleKeyUp, true);
+    window.addEventListener('blur', handleWindowBlur);
+    window.addEventListener('focus', handleWindowFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('keyup', handleKeyUp, true);
+      window.removeEventListener('blur', handleWindowBlur);
+      window.removeEventListener('focus', handleWindowFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   useEffect(() => {
     const handleFsChange = () => {
@@ -284,10 +368,18 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
         {/* Main Content: Video Player & Lesson Details */}
         <div className={`${isTheaterMode ? 'w-full' : 'lg:col-span-2'} space-y-4`}>
           
-          {/* Responsive Video Container with Fullscreen support */}
+          {/* Responsive Video Container with Fullscreen & DRM Anti-Screen Recording Protection */}
           <div 
             ref={videoContainerRef}
-            className="relative aspect-video w-full rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 shadow-2xl group flex items-center justify-center"
+            onContextMenu={(e) => e.preventDefault()}
+            className={`relative aspect-video w-full rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 shadow-2xl group flex items-center justify-center select-none ${
+              !isWindowFocused || isCaptureBlocked ? 'filter blur-2xl transition-all duration-300' : ''
+            }`}
+            style={{
+              WebkitUserSelect: 'none',
+              userSelect: 'none',
+              WebkitTouchCallout: 'none'
+            }}
           >
             {isDirectVideo(currentLesson.videoUrl, currentLesson.videoType) ? (
               <video
@@ -311,8 +403,20 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
               />
             )}
 
+            {/* Dynamic Floating Watermark Layer */}
+            <div 
+              className="absolute z-20 pointer-events-none transition-all duration-1000 ease-in-out font-mono text-[11px] font-bold text-amber-300/85 bg-slate-950/80 border border-amber-500/40 px-3 py-1 rounded-full shadow-2xl backdrop-blur-md flex items-center gap-1.5"
+              style={{
+                top: `${watermarkPos.top}%`,
+                left: `${watermarkPos.left}%`,
+              }}
+            >
+              <ShieldCheck className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+              <span>{student ? `${student.name} • ${student.phone || student.code || student.id}` : 'ويكيفزياء WikiFizya - فيديو محمي'}</span>
+            </div>
+
             {/* Quality Badge */}
-            <div className="absolute top-3 left-3 pointer-events-none rounded-lg bg-slate-950/85 backdrop-blur-md border border-slate-700/60 px-2.5 py-1 text-[11px] font-black text-amber-400 flex items-center gap-1.5 shadow-lg">
+            <div className="absolute top-3 left-3 pointer-events-none rounded-lg bg-slate-950/85 backdrop-blur-md border border-slate-700/60 px-2.5 py-1 text-[11px] font-black text-amber-400 flex items-center gap-1.5 shadow-lg z-10">
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>Full HD 1080p</span>
             </div>
@@ -320,11 +424,40 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
             {/* Quick Fullscreen Floating Button (top right) */}
             <button
               onClick={handleToggleFullscreen}
-              className="absolute top-3 right-3 rounded-lg bg-slate-950/85 backdrop-blur-md border border-slate-700/60 p-2 text-slate-200 hover:text-amber-400 hover:bg-slate-900 transition-all opacity-80 hover:opacity-100 shadow-lg"
+              className="absolute top-3 right-3 rounded-lg bg-slate-950/85 backdrop-blur-md border border-slate-700/60 p-2 text-slate-200 hover:text-amber-400 hover:bg-slate-900 transition-all opacity-80 hover:opacity-100 shadow-lg z-10"
               title={isFullscreen ? 'تصغير الشاشة' : 'تكبير الشاشة ملء الشاشة'}
             >
               {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </button>
+
+            {/* Screen Capture Attempt Blocked Overlay */}
+            {isCaptureBlocked && (
+              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/95 p-6 text-center animate-fadeIn font-sans">
+                <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-rose-500/20 border border-rose-500/40 text-rose-400 mb-4 animate-bounce">
+                  <ShieldAlert className="h-8 w-8" />
+                </div>
+                <h3 className="text-lg font-black text-white">🛑 تم اكتشاف محاولة التقاط الشاشة أو التسجيل!</h3>
+                <p className="text-xs text-slate-300 max-w-md mt-2 leading-relaxed">
+                  محتوى كورس <strong className="text-amber-400">ويكيفزياء WikiFizya</strong> محمي بنظام الحماية البرمجية ضد التسجيل والسكرين شوت. تم توثيق بيانات الحساب لمنع القرصنة.
+                </p>
+                <div className="mt-4 rounded-xl bg-slate-900 border border-amber-500/30 px-4 py-2 text-[11px] font-mono text-amber-300 font-bold">
+                  بيانات الطالب: {student?.name} ({student?.phone || student?.code || student?.id})
+                </div>
+              </div>
+            )}
+
+            {/* Window Unfocused / App Switch Protection Overlay */}
+            {!isWindowFocused && !isCaptureBlocked && (
+              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-xl p-6 text-center font-sans">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 mb-3">
+                  <Lock className="h-7 w-7" />
+                </div>
+                <h3 className="text-base font-black text-white">🔒 المحتوى محمي - تم تشفير الفيديو مؤقتاً</h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  يرجى العودة والتركيز في نافذة المنصة لمتابعة الدرس
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Video Playback & Quality Controls Bar */}

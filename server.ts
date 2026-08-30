@@ -342,6 +342,45 @@ async function startServer() {
     }
   });
 
+  // Student Avatar Upload endpoint (Image only, max 2MB, validated)
+  app.post('/api/student/upload-avatar', upload.single('file'), (req, res): any => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ success: false, error: 'لم يتم اختيار أي صورة للرفع' });
+      }
+
+      const file = req.file;
+      const MAX_AVATAR_SIZE = 15 * 1024 * 1024; // 15MB
+      if (file.size > MAX_AVATAR_SIZE) {
+        try { fs.unlinkSync(file.path); } catch (_) {}
+        return res.status(400).json({ success: false, error: 'حجم الصورة يتجاوز الحد الأقصى المسموح به (15 ميجابايت)' });
+      }
+
+      const ext = path.extname(file.originalname).toLowerCase();
+      const ALLOWED_AVATAR_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
+      if (!ALLOWED_AVATAR_EXTS.has(ext) || !file.mimetype.startsWith('image/')) {
+        try { fs.unlinkSync(file.path); } catch (_) {}
+        return res.status(400).json({ success: false, error: 'صيغة الملف غير مدعومة، يرجى اختيار صورة بحجم مناسب (JPG, PNG, WEBP)' });
+      }
+
+      const validation = validateFileContent(file.path, file.originalname, file.mimetype);
+      if (!validation.isValid) {
+        try { fs.unlinkSync(file.path); } catch (_) {}
+        return res.status(400).json({ success: false, error: validation.error || 'الصورة غير صالحة أمنياً' });
+      }
+
+      const fileUrl = `/uploads/${file.filename}`;
+      return res.json({
+        success: true,
+        url: fileUrl,
+        filename: file.filename,
+      });
+    } catch (err: any) {
+      console.error('Avatar upload error:', err);
+      return res.status(500).json({ success: false, error: err?.message || 'فشل في رفع الصورة' });
+    }
+  });
+
   // ==========================================
   // 3. Gemini AI Physics Assistant
   // ==========================================

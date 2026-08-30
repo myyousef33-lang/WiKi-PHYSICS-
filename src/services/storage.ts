@@ -525,6 +525,60 @@ export const StorageService = {
       this.saveStudent(student);
     }
   },
+  checkAndUpdateStudentStreak(studentId: string): { streakDays: number; isNewStreak: boolean } {
+    const student = this.getStudentById(studentId);
+    if (!student) return { streakDays: 0, isNewStreak: false };
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const lastActive = student.lastActiveDate;
+
+    if (lastActive === todayStr) {
+      return { streakDays: student.streakDays || 1, isNewStreak: false };
+    }
+
+    let streak = student.streakDays || 0;
+    let isNewStreak = false;
+
+    if (lastActive) {
+      const lastDate = new Date(lastActive);
+      const todayDate = new Date(todayStr);
+      const diffTime = todayDate.getTime() - lastDate.getTime();
+      const diffDays = Math.round(diffTime / (1000 * 3600 * 24));
+
+      if (diffDays === 1) {
+        streak += 1;
+        isNewStreak = true;
+      } else if (diffDays > 1) {
+        streak = 1;
+        isNewStreak = true;
+      }
+    } else {
+      streak = 1;
+      isNewStreak = true;
+    }
+
+    this.updateStudent(studentId, {
+      streakDays: streak,
+      lastActiveDate: todayStr
+    });
+
+    return { streakDays: streak, isNewStreak };
+  },
+  updateFlashcardProgress(studentId: string, cardId: string, status: 'understood' | 'needs_review'): void {
+    const student = this.getStudentById(studentId);
+    if (!student) return;
+    const progress = { ...(student.flashcardProgress || {}), [cardId]: status };
+    this.updateStudent(studentId, { flashcardProgress: progress });
+  },
+  addEarnedCertificate(studentId: string, cert: any): void {
+    const student = this.getStudentById(studentId);
+    if (!student) return;
+    const certs = [...(student.earnedCertificates || [])];
+    if (!certs.some(c => c.id === cert.id)) {
+      certs.unshift(cert);
+      this.updateStudent(studentId, { earnedCertificates: certs });
+    }
+  },
 
   // === Courses ===
   getCourses(): Course[] {
@@ -1456,7 +1510,7 @@ export const StorageService = {
     const profiles = this.getWeaknessProfiles();
     const conceptMap: Record<string, { conceptName: string; chapterOrUnit: string; frequency: number; studentCount: number; studentIds: Set<string>; suggestedAction: string }> = {};
 
-    Object.values(profiles).forEach(profile => {
+    (Object.values(profiles) as StudentWeaknessProfile[]).forEach((profile) => {
       profile.weakPoints.forEach(wp => {
         const key = `${wp.conceptName}_${wp.chapterOrUnit}`;
         if (!conceptMap[key]) {

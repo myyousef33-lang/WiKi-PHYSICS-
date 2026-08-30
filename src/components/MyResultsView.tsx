@@ -12,7 +12,8 @@ import {
   BarChart3
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
-import { Student, ExamAttempt } from '../types';
+import { Student, ExamAttempt, EarnedCertificate } from '../types';
+import { CertificateModal } from './CertificateModal';
 
 interface MyResultsViewProps {
   onNavigate: (view: string, params?: any) => void;
@@ -23,6 +24,7 @@ export const MyResultsView: React.FC<MyResultsViewProps> = ({ onNavigate }) => {
   const [attempts, setAttempts] = useState<ExamAttempt[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [filter, setFilter] = useState<'all' | 'passed' | 'failed'>('all');
+  const [selectedCert, setSelectedCert] = useState<EarnedCertificate | null>(null);
 
   useEffect(() => {
     const update = () => {
@@ -230,13 +232,32 @@ export const MyResultsView: React.FC<MyResultsViewProps> = ({ onNavigate }) => {
                       </span>
                     </td>
                     <td className="py-4 px-4 text-center">
-                      <button
-                        onClick={() => onNavigate('exam-result', { attemptId: attempt.id })}
-                        className="inline-flex items-center gap-1 rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 text-xs font-bold text-amber-400 hover:bg-amber-500 hover:text-slate-950 transition-all"
-                      >
-                        <span>مراجعة النتيجة</span>
-                        <ChevronLeft className="h-3.5 w-3.5" />
-                      </button>
+                      <div className="flex items-center justify-center gap-2">
+                        {attempt.percentage >= 85 && (
+                          <button
+                            onClick={() => setSelectedCert({
+                              id: `cert-${attempt.id}`,
+                              examOrUnitName: attempt.examTitle,
+                              score: attempt.score,
+                              maxScore: attempt.maxScore,
+                              percentage: attempt.percentage,
+                              date: attempt.submittedAt
+                            })}
+                            className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 border border-amber-400 px-2.5 py-1.5 text-xs font-bold text-slate-950 shadow hover:brightness-110 transition-all"
+                            title="تحميل شهادة التميز والتفوق"
+                          >
+                            <Award className="h-3.5 w-3.5" />
+                            <span>الشهادة 🏆</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => onNavigate('exam-result', { attemptId: attempt.id })}
+                          className="inline-flex items-center gap-1 rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 text-xs font-bold text-amber-400 hover:bg-amber-500 hover:text-slate-950 transition-all"
+                        >
+                          <span>مراجعة النتيجة</span>
+                          <ChevronLeft className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -244,6 +265,15 @@ export const MyResultsView: React.FC<MyResultsViewProps> = ({ onNavigate }) => {
             </table>
           </div>
         </div>
+      )}
+
+      {student && selectedCert && (
+        <CertificateModal
+          student={student}
+          certificate={selectedCert}
+          isOpen={!!selectedCert}
+          onClose={() => setSelectedCert(null)}
+        />
       )}
 
     </div>

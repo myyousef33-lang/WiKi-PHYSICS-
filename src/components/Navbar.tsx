@@ -14,11 +14,15 @@ import {
   PlayCircle,
   Trophy,
   Bot,
-  Brain
+  Brain,
+  Sparkles,
+  Layers,
+  Edit3
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { Student } from '../types';
 import { Logo } from './Logo';
+import { getPresetAvatar } from '../utils/avatars';
 
 interface NavbarProps {
   currentView: string;
@@ -27,6 +31,7 @@ interface NavbarProps {
   onOpenAuthModal: () => void;
   onOpenAdminAuthModal?: () => void;
   onOpenNotificationModal: () => void;
+  onOpenEditProfileModal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -34,7 +39,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onNavigate,
   onOpenActivationModal,
   onOpenAuthModal,
-  onOpenNotificationModal
+  onOpenNotificationModal,
+  onOpenEditProfileModal
 }) => {
   const [student, setStudent] = useState<Student | null>(StorageService.getCurrentStudent());
   const [isAdmin, setIsAdmin] = useState<boolean>(StorageService.isAdminLoggedIn());
@@ -68,6 +74,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'home', label: 'الرئيسية', icon: BookOpen },
     { id: 'dashboard', label: 'لوحة دراستي', icon: GraduationCap, authRequired: true },
     { id: 'my-courses', label: 'كورساتي', icon: PlayCircle, authRequired: true },
+    { id: 'physics-lab', label: 'المعمل التفاعلي 🔬', icon: Sparkles },
+    { id: 'flashcards', label: 'بطاقات المراجعة 🎴', icon: Layers },
     { id: 'courses-catalog', label: 'المناهج والكورسات', icon: BookOpen },
     { id: 'leaderboard', label: 'لوحة الشرف', icon: Trophy },
     { id: 'ai-assistant', label: 'المساعد الذكي ⚛️', icon: Bot },
@@ -75,6 +83,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'pdf-library', label: 'المذكرات', icon: FileText },
     { id: 'my-results', label: 'نتائجي', icon: Award, authRequired: true }
   ];
+
+  const presetAvatar = getPresetAvatar(student?.avatarUrl);
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-md">
@@ -156,17 +166,34 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={() => onNavigate('dashboard')}
                 className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/90 px-3 py-1.5 text-right transition-colors hover:border-amber-500/30"
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/20 text-xs font-black text-amber-400">
-                  {student.name.charAt(0)}
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/20 text-xs font-black text-orange-400 overflow-hidden border border-orange-500/30">
+                  {student.avatarUrl && !student.avatarUrl.startsWith('preset:') ? (
+                    <img src={student.avatarUrl} alt={student.name} className="h-full w-full object-cover" />
+                  ) : presetAvatar ? (
+                    <span>{presetAvatar.name.split(' ')[1] || '⚛️'}</span>
+                  ) : (
+                    <span>{student.name.charAt(0)}</span>
+                  )}
                 </div>
                 <div className="hidden text-right lg:block">
                   <p className="text-xs font-bold text-white truncate max-w-[110px]">{student.name.split(' ')[0]}</p>
-                  <p className="text-[10px] text-amber-400">{student.grade.includes('الثالث') ? '3 ثانوي' : student.grade.includes('الثاني') ? '2 ثانوي' : '1 ثانوي'}</p>
+                  <p className="text-[10px] text-orange-400">{student.grade.includes('الثالث') ? '3 ثانوي' : student.grade.includes('الثاني') ? '2 ثانوي' : '1 ثانوي'}</p>
                 </div>
               </button>
+
+              {onOpenEditProfileModal && (
+                <button
+                  onClick={onOpenEditProfileModal}
+                  className="rounded-xl border border-slate-800 bg-slate-900/60 p-2 text-slate-300 hover:bg-orange-500/20 hover:text-orange-400 hover:border-orange-500/40 transition-colors"
+                  title="تعديل الملف الشخصي"
+                >
+                  <Edit3 className="h-4 w-4" />
+                </button>
+              )}
+
               <button
                 onClick={handleLogout}
-                className="rounded-xl border border-slate-800 bg-slate-900/60 p-2.5 text-slate-400 hover:bg-rose-500/10 hover:text-rose-400 transition-colors"
+                className="rounded-xl border border-slate-800 bg-slate-900/60 p-2 text-slate-400 hover:bg-rose-500/10 hover:text-rose-400 transition-colors"
                 title="تسجيل الخروج"
               >
                 <LogOut className="h-4 w-4" />

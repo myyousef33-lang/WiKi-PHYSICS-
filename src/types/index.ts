@@ -4,6 +4,17 @@ export enum GradeLevel {
   GRADE_12 = 'الصف الثالث الثانوي (ثانوية عامة)'
 }
 
+export interface EarnedCertificate {
+  id: string;
+  title: string;
+  type: 'exam' | 'unit' | 'course';
+  examOrUnitName: string;
+  score: number;
+  maxScore: number;
+  percentage: number;
+  date: string;
+}
+
 export interface Student {
   id: string;
   name: string;
@@ -21,6 +32,11 @@ export interface Student {
   enrolledCourseIds: string[];
   unlockedPdfIds: string[];
   courseExpiryDates?: Record<string, string>; // courseId -> ISO date
+  avatarUrl?: string;
+  streakDays?: number;
+  lastActiveDate?: string;
+  flashcardProgress?: Record<string, 'understood' | 'needs_review'>;
+  earnedCertificates?: EarnedCertificate[];
 }
 
 export interface Course {

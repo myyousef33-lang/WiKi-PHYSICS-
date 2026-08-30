@@ -119,9 +119,23 @@ export const QuizExamView: React.FC<QuizExamViewProps> = ({
       timeTakenSeconds
     });
 
-    // If passed and is lesson quiz, optionally mark lesson completed
-    if (passed && exam.lessonId && exam.courseId) {
-      StorageService.markLessonComplete(student.id, exam.courseId, exam.lessonId, true);
+    // If passed and high percentage (85%+), award certificate & trigger celebration
+    if (passed) {
+      if (percentage >= 85) {
+        StorageService.addEarnedCertificate(student.id, {
+          id: `cert-${attempt.id}`,
+          examOrUnitName: exam.title,
+          score: totalScore,
+          maxScore: maxScore,
+          percentage: percentage,
+          date: new Date().toISOString()
+        });
+      }
+
+      // Mark lesson complete if applicable
+      if (exam.lessonId && (exam.courseId || courseId)) {
+        StorageService.markLessonComplete(student.id, exam.courseId || courseId, exam.lessonId, true);
+      }
     }
 
     onNavigate('exam-result', { attemptId: attempt.id });
