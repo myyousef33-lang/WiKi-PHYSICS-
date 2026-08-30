@@ -142,19 +142,97 @@ const initFirestoreSync = () => {
     try {
       const docRef = doc(db, 'app_data', key);
 
-      // 1. Initial fast pull from Firestore on startup
-      try {
-        const snap = await getDoc(docRef);
-        if (snap.exists()) {
-          const remoteData = snap.data()?.data;
-          if (remoteData !== undefined && remoteData !== null) {
-            const localStr = localStorage.getItem(key);
+      // Helper function to safely reconcile local and remote data
+      const processRemoteData = async (remoteData: any) => {
+        if (remoteData === undefined || remoteData === null) return;
+
+        // If this client wrote locally in the last 12 seconds, local state is authority
+        const lastWrite = lastLocalWriteTime[key] || 0;
+        if (Date.now() - lastWrite < 12000) {
+          return;
+        }
+
+        const localStr = localStorage.getItem(key);
+        let localVal = null;
+        if (localStr) {
+          try {
+            localVal = JSON.parse(localStr);
+          } catch (_) {}
+        }
+
+        // Case A: Both are arrays
+        if (Array.isArray(localVal) && Array.isArray(remoteData)) {
+          // If local has items but remote is empty: push local to Firestore!
+          if (localVal.length > 0 && remoteData.length === 0) {
+            await setDoc(docRef, { data: sanitizeForFirestore(localVal), updatedAt: new Date().toISOString() }).catch(() => {});
+            return;
+          }
+
+          // If local is empty and remote has items: accept remote
+          if ((!localVal || localVal.length === 0) && remoteData.length > 0) {
+            localStorage.setItem(key, JSON.stringify(remoteData));
+            notifyListeners();
+            return;
+          }
+
+          // Merge items by id so neither local nor remote additions are lost
+          const remoteMap = new Map<string, any>();
+          remoteData.forEach(item => {
+            if (item && item.id) remoteMap.set(item.id, item);
+          });
+
+          let merged = false;
+          const mergedList = [...remoteData];
+
+          localVal.forEach(localItem => {
+            if (localItem && localItem.id) {
+              if (!remoteMap.has(localItem.id)) {
+                mergedList.push(localItem);
+                merged = true;
+              }
+            }
+          });
+
+          if (merged) {
+            // Push merged list back to Firestore and save locally
+            localStorage.setItem(key, JSON.stringify(mergedList));
+            notifyListeners();
+            await setDoc(docRef, { data: sanitizeForFirestore(mergedList), updatedAt: new Date().toISOString() }).catch(() => {});
+          } else {
             const remoteStr = JSON.stringify(remoteData);
             if (localStr !== remoteStr) {
               localStorage.setItem(key, remoteStr);
               notifyListeners();
             }
           }
+        } else if (typeof localVal === 'object' && localVal !== null && typeof remoteData === 'object' && remoteData !== null) {
+          // Object merge (e.g. SETTINGS)
+          const localKeys = Object.keys(localVal);
+          const remoteKeys = Object.keys(remoteData);
+          if (localKeys.length > remoteKeys.length) {
+            await setDoc(docRef, { data: sanitizeForFirestore(localVal), updatedAt: new Date().toISOString() }).catch(() => {});
+          } else {
+            const remoteStr = JSON.stringify(remoteData);
+            if (localStr !== remoteStr) {
+              localStorage.setItem(key, remoteStr);
+              notifyListeners();
+            }
+          }
+        } else {
+          const remoteStr = JSON.stringify(remoteData);
+          if (localStr !== remoteStr) {
+            localStorage.setItem(key, remoteStr);
+            notifyListeners();
+          }
+        }
+      };
+
+      // 1. Initial fast pull from Firestore on startup
+      try {
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          const remoteData = snap.data()?.data;
+          await processRemoteData(remoteData);
         } else {
           const localStr = localStorage.getItem(key);
           if (localStr) {
@@ -172,16 +250,14 @@ const initFirestoreSync = () => {
 
       // 2. Real-time active snapshot listener
       onSnapshot(docRef, (snapshot) => {
+        // Ignore uncommitted local snapshot events to avoid race conditions
+        if (snapshot.metadata && snapshot.metadata.hasPendingWrites) {
+          return;
+        }
+
         if (snapshot.exists()) {
           const remoteData = snapshot.data()?.data;
-          if (remoteData !== undefined && remoteData !== null) {
-            const localStr = localStorage.getItem(key);
-            const remoteStr = JSON.stringify(remoteData);
-            if (localStr !== remoteStr) {
-              localStorage.setItem(key, remoteStr);
-              notifyListeners();
-            }
-          }
+          processRemoteData(remoteData).catch(() => {});
         }
       }, (err) => {
         console.warn('Firestore listener warning for', key, err);
@@ -207,6 +283,8 @@ const SEED_SETTINGS: PlatformSettings = {
   ministryExamDate: '2027-06-14T09:00:00.000Z'
 };
 
+const lastLocalWriteTime: Record<string, number> = {};
+
 // Helper functions for safe local persistence
 const getStored = <T>(key: string, defaultVal: T): T => {
   try {
@@ -224,6 +302,7 @@ const getStored = <T>(key: string, defaultVal: T): T => {
 
 const setStored = <T>(key: string, val: T): void => {
   try {
+    lastLocalWriteTime[key] = Date.now();
     localStorage.setItem(key, JSON.stringify(val));
     notifyListeners();
     if (

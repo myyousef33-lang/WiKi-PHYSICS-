@@ -18,61 +18,9 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Public / Student readable curriculum & metadata
-    match /app_data/wikifizya_db_courses_v4 {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    match /app_data/wikifizya_db_settings_v4 {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    match /app_data/wikifizya_db_pdf_categories_v4 {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    match /app_data/wikifizya_db_pdf_files_v4 {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    match /app_data/wikifizya_db_notifications_v4 {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    // Quizzes & Exams: Read for students, write only for Admin
-    match /app_data/wikifizya_db_exams_v4 {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    // Leaderboard & Weekly Challenge: Read public, write admin or authenticated student
-    match /app_data/wikifizya_db_leaderboard_v4 {
-      allow read: if true;
-      allow write: if isAuthenticated() || isAdmin();
-    }
-
-    // Activation Keys: Strictly Admin Only to prevent code harvesting
-    match /app_data/wikifizya_db_activation_keys_v4 {
-      allow read, write: if isAdmin();
-    }
-
-    // Student Accounts Data: Protected access
-    match /app_data/wikifizya_db_students_v4 {
-      allow read, write: if isAuthenticated() || isAdmin();
-    }
-
-    // Progress and Exam Attempts
-    match /app_data/wikifizya_db_lesson_progress_v4 {
-      allow read, write: if isAuthenticated() || isAdmin();
-    }
-
-    match /app_data/wikifizya_db_exam_attempts_v4 {
-      allow read, write: if isAuthenticated() || isAdmin();
+    // Public / Student & Admin application data synchronization
+    match /app_data/{document=**} {
+      allow read, write: if true;
     }
 
     // Student Specific Documents
