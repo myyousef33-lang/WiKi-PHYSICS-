@@ -681,6 +681,9 @@ export const StorageService = {
   },
   setLastViewedLesson(studentId: string, courseId: string, lessonId: string): void {
     const map = getStored<Record<string, { courseId: string; lessonId: string; timestamp: string }>>(STORAGE_KEYS.LAST_VIEWED, {});
+    if (map[studentId] && map[studentId].courseId === courseId && map[studentId].lessonId === lessonId) {
+      return;
+    }
     map[studentId] = {
       courseId,
       lessonId,

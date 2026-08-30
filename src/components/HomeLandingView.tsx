@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { Course, PdfMaterial, Student } from '../types';
+import { ExamCountdownBanner } from './ExamCountdownBanner';
 import teacherPhoto from '../assets/images/teacher.jpg';
 
 interface HomeLandingViewProps {
@@ -179,6 +180,11 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
           </div>
         </div>
       </section>
+
+      {/* EXAM COUNTDOWN BANNER */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <ExamCountdownBanner onNavigate={onNavigate} />
+      </div>
 
       {/* PLATFORM ADVANTAGES */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

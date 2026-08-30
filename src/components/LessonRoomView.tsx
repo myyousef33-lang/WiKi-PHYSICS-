@@ -87,13 +87,18 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
         if (s && targetLesson) {
           const prog = StorageService.getLessonProgress(s.id, targetLesson.id);
           setIsCompleted(!!prog?.isCompleted);
-          StorageService.setLastViewedLesson(s.id, c.id, targetLesson.id);
         }
       }
     };
     update();
     return subscribeToStorage(update);
   }, [courseId, lessonId]);
+
+  useEffect(() => {
+    if (student && course && currentLesson) {
+      StorageService.setLastViewedLesson(student.id, course.id, currentLesson.id);
+    }
+  }, [student?.id, course?.id, currentLesson?.id]);
 
   // Resolve local-media IndexedDB blob or remote URL
   useEffect(() => {

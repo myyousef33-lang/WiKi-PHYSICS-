@@ -90,6 +90,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
   const [showAddCode, setShowAddCode] = useState(false);
   const [showAddChallenge, setShowAddChallenge] = useState(false);
   const [selectedWeaknessStudent, setSelectedWeaknessStudent] = useState<Student | null>(null);
+  const [dateUpdateFeedback, setDateUpdateFeedback] = useState<string | null>(null);
   
   // Leaderboard Bonus Points Modal State
   const [bonusStudentId, setBonusStudentId] = useState<string>('');
@@ -685,6 +686,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
         const updated = { ...settings, ministryExamDate: isoStr };
         setSettings(updated);
         StorageService.saveSettings(updated);
+        setDateUpdateFeedback('تم حفظ وتطبيق موعد امتحان الفيزياء الجديد والعد التنازلي بنجاح! ⏱✨');
+        setTimeout(() => setDateUpdateFeedback(null), 4000);
       }
     } catch (e) {
       console.error('Invalid date string', e);
@@ -888,25 +891,62 @@ ${weakConceptsText}
               </span>
             </div>
 
+            {dateUpdateFeedback && (
+              <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-3.5 text-xs font-black text-emerald-300 flex items-center justify-between shadow-lg animate-in fade-in">
+                <span>{dateUpdateFeedback}</span>
+                <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] text-emerald-200">تم التحديث سحابياً ومحلياً</span>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
               {/* Exam Date Countdown Quick Control */}
-              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 space-y-3">
+              <div className="rounded-2xl border border-amber-500/30 bg-slate-950 p-4 space-y-3 shadow-inner">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                    <Calendar className="h-4 w-4 text-cyan-400" />
-                    موعد الامتحان الرسمي ⏱
+                  <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                    <Calendar className="h-4 w-4 text-amber-400" />
+                    تحديد موعد امتحان الفيزياء ⏱
                   </span>
-                  <span className="text-[10px] text-cyan-400 font-mono">العد التنازلي</span>
+                  <span className="text-[10px] text-amber-400 font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
+                    العد التنازلي للـ 60
+                  </span>
                 </div>
+                
                 <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-slate-400 block">اختر التاريخ والوقت:</label>
                   <input
                     type="datetime-local"
                     value={formatForDatetimeInput(settings.ministryExamDate)}
                     onChange={e => handleExamDateUpdate(e.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-900 p-2 text-xs text-white font-mono cursor-pointer"
+                    className="w-full rounded-xl border border-amber-500/40 bg-slate-900 p-2.5 text-xs text-amber-300 font-mono font-bold cursor-pointer focus:ring-2 focus:ring-amber-400 focus:outline-none"
                   />
-                  <p className="text-[10px] text-slate-400">
-                    الموعد الحالي: <span className="text-amber-400 font-bold">{new Date(settings.ministryExamDate || '2026-06-14T09:00').toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                  
+                  {/* Quick Presets */}
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleExamDateUpdate('2026-06-14T09:00')}
+                      className="rounded-lg bg-amber-500/15 border border-amber-500/30 px-2 py-1 text-[10px] font-bold text-amber-300 hover:bg-amber-500 hover:text-slate-950 transition-colors"
+                    >
+                      14 يونيو 2026
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleExamDateUpdate('2026-06-21T09:00')}
+                      className="rounded-lg bg-slate-800 border border-slate-700 px-2 py-1 text-[10px] font-bold text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                    >
+                      21 يونيو 2026
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleExamDateUpdate('2026-07-01T09:00')}
+                      className="rounded-lg bg-slate-800 border border-slate-700 px-2 py-1 text-[10px] font-bold text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                    >
+                      1 يوليو 2026
+                    </button>
+                  </div>
+
+                  <p className="text-[11px] text-slate-400 border-t border-slate-800/80 pt-1.5 mt-2">
+                    الموعد النشط حالياً: <span className="text-amber-400 font-black">{new Date(settings.ministryExamDate || '2026-06-14T09:00').toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                   </p>
                 </div>
               </div>
