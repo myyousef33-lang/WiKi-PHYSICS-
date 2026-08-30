@@ -59,31 +59,20 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
   // Security Anti-Screenshot & Anti-Recording DRM States
   const [isWindowFocused, setIsWindowFocused] = useState<boolean>(true);
   const [isCaptureBlocked, setIsCaptureBlocked] = useState<boolean>(false);
-  const [watermarkPos, setWatermarkPos] = useState<{ top: number; left: number }>({ top: 15, left: 15 });
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const videoContainerRef = useRef<HTMLDivElement | null>(null);
-
-  // Floating Watermark Random Position Bouncer
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const randomTop = Math.floor(Math.random() * 70) + 10;
-      const randomLeft = Math.floor(Math.random() * 60) + 10;
-      setWatermarkPos({ top: randomTop, left: randomLeft });
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Keyboard Shortcuts Interceptor & Anti-Screenshot Detection
   useEffect(() => {
     const triggerCaptureBlock = () => {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText("🔒 محتوى منشورات وفيديوهات منصة ويكيفزياء محمي ضد الالتقاط والتصوير").catch(() => {});
+        navigator.clipboard.writeText("🔒 محتوى منصة ويكيفزياء محمي ضد الالتقاط والتسجيل").catch(() => {});
       }
       setIsCaptureBlocked(true);
       setTimeout(() => {
         setIsCaptureBlocked(false);
-      }, 4000);
+      }, 3500);
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -327,7 +316,10 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
   };
 
   return (
-    <div className={`mx-auto ${isTheaterMode ? 'max-w-full px-2 sm:px-4' : 'max-w-7xl px-4 sm:px-6 lg:px-8'} py-6 space-y-6 animate-in fade-in duration-300 transition-all`}>
+    <div 
+      onContextMenu={(e) => e.preventDefault()}
+      className={`mx-auto ${isTheaterMode ? 'max-w-full px-2 sm:px-4' : 'max-w-7xl px-4 sm:px-6 lg:px-8'} py-6 space-y-6 animate-in fade-in duration-300 transition-all protected-page select-none`}
+    >
       
       {/* Navigation Breadcrumbs */}
       <div className="flex items-center justify-between gap-4 border-b border-slate-800 pb-4 text-xs">
@@ -403,18 +395,6 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
               />
             )}
 
-            {/* Dynamic Floating Watermark Layer */}
-            <div 
-              className="absolute z-20 pointer-events-none transition-all duration-1000 ease-in-out font-mono text-[11px] font-bold text-amber-300/85 bg-slate-950/80 border border-amber-500/40 px-3 py-1 rounded-full shadow-2xl backdrop-blur-md flex items-center gap-1.5"
-              style={{
-                top: `${watermarkPos.top}%`,
-                left: `${watermarkPos.left}%`,
-              }}
-            >
-              <ShieldCheck className="h-3.5 w-3.5 text-amber-400 shrink-0" />
-              <span>{student ? `${student.name} • ${student.phone || student.code || student.id}` : 'ويكيفزياء WikiFizya - فيديو محمي'}</span>
-            </div>
-
             {/* Quality Badge */}
             <div className="absolute top-3 left-3 pointer-events-none rounded-lg bg-slate-950/85 backdrop-blur-md border border-slate-700/60 px-2.5 py-1 text-[11px] font-black text-amber-400 flex items-center gap-1.5 shadow-lg z-10">
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -436,13 +416,10 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
                 <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-rose-500/20 border border-rose-500/40 text-rose-400 mb-4 animate-bounce">
                   <ShieldAlert className="h-8 w-8" />
                 </div>
-                <h3 className="text-lg font-black text-white">🛑 تم اكتشاف محاولة التقاط الشاشة أو التسجيل!</h3>
+                <h3 className="text-lg font-black text-white">🛑 تصوير الشاشة غير مسموح به!</h3>
                 <p className="text-xs text-slate-300 max-w-md mt-2 leading-relaxed">
-                  محتوى كورس <strong className="text-amber-400">ويكيفزياء WikiFizya</strong> محمي بنظام الحماية البرمجية ضد التسجيل والسكرين شوت. تم توثيق بيانات الحساب لمنع القرصنة.
+                  محتوى المنصة محمي ضد الالتقاط والتصوير لحفظ حقوق النشر والتأليف.
                 </p>
-                <div className="mt-4 rounded-xl bg-slate-900 border border-amber-500/30 px-4 py-2 text-[11px] font-mono text-amber-300 font-bold">
-                  بيانات الطالب: {student?.name} ({student?.phone || student?.code || student?.id})
-                </div>
               </div>
             )}
 
