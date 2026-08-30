@@ -662,10 +662,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
   };
 
   const formatForDatetimeInput = (dateStr?: string) => {
-    if (!dateStr) return '2026-06-14T09:00';
+    if (!dateStr) return '2027-06-14T09:00';
     try {
       const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return '2026-06-14T09:00';
+      if (isNaN(d.getTime())) return '2027-06-14T09:00';
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0');
@@ -673,7 +673,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       const minutes = String(d.getMinutes()).padStart(2, '0');
       return `${year}-${month}-${day}T${hours}:${minutes}`;
     } catch {
-      return '2026-06-14T09:00';
+      return '2027-06-14T09:00';
     }
   };
 
@@ -839,15 +839,15 @@ ${weakConceptsText}
         </div>
       )}
 
-      {/* Categorized Tabs Navigation */}
-      <div className="space-y-3 border-b border-slate-800 pb-5">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Categorized Tabs Navigation - Streamlined Elegant Header */}
+      <div className="space-y-4 border-b border-slate-800 pb-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 p-2 rounded-2xl border border-slate-800 backdrop-blur-md">
           {tabCategories.map((cat, catIdx) => (
-            <div key={catIdx} className="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-3 space-y-2">
-              <span className="text-[11px] font-black text-slate-400 block border-b border-slate-800/60 pb-1.5 px-1">
+            <div key={catIdx} className="flex-1 min-w-[220px] space-y-1.5">
+              <span className="text-[10px] font-black text-slate-400 px-2 uppercase tracking-wider block">
                 {cat.title}
               </span>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-1">
                 {cat.items.map(t => {
                   const Icon = t.icon;
                   const isActive = activeTab === t.id;
@@ -857,11 +857,11 @@ ${weakConceptsText}
                       onClick={() => setActiveTab(t.id as any)}
                       className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
                         isActive 
-                          ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 ring-2 ring-blue-400/80 scale-[1.02]' 
-                          : 'bg-slate-950/80 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-800'
+                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25 ring-2 ring-blue-400 scale-[1.02]' 
+                          : 'bg-slate-950/60 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-800/80'
                       }`}
                     >
-                      <Icon className="h-3.5 w-3.5 shrink-0 text-blue-400" />
+                      <Icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-white' : 'text-blue-400'}`} />
                       <span>{t.label}</span>
                     </button>
                   );
@@ -912,7 +912,7 @@ ${weakConceptsText}
                 </div>
                 
                 <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-slate-400 block">اختر التاريخ والوقت:</label>
+                  <label className="text-[11px] font-bold text-slate-400 block">اختر التاريخ والوقت المستهدف:</label>
                   <input
                     type="datetime-local"
                     value={formatForDatetimeInput(settings.ministryExamDate)}
@@ -920,34 +920,56 @@ ${weakConceptsText}
                     className="w-full rounded-xl border border-amber-500/40 bg-slate-900 p-2.5 text-xs text-amber-300 font-mono font-bold cursor-pointer focus:ring-2 focus:ring-amber-400 focus:outline-none"
                   />
                   
-                  {/* Quick Presets */}
+                  {/* Quick Presets for Future Dates */}
                   <div className="flex flex-wrap gap-1 pt-1">
                     <button
                       type="button"
-                      onClick={() => handleExamDateUpdate('2026-06-14T09:00')}
-                      className="rounded-lg bg-amber-500/15 border border-amber-500/30 px-2 py-1 text-[10px] font-bold text-amber-300 hover:bg-amber-500 hover:text-slate-950 transition-colors"
+                      onClick={() => handleExamDateUpdate('2027-06-14T09:00')}
+                      className="rounded-lg bg-amber-500/20 border border-amber-500/40 px-2 py-1 text-[10px] font-bold text-amber-300 hover:bg-amber-500 hover:text-slate-950 transition-colors"
                     >
-                      14 يونيو 2026
+                      14 يونيو 2027
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleExamDateUpdate('2026-06-21T09:00')}
+                      onClick={() => handleExamDateUpdate('2027-06-21T09:00')}
                       className="rounded-lg bg-slate-800 border border-slate-700 px-2 py-1 text-[10px] font-bold text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
                     >
-                      21 يونيو 2026
+                      21 يونيو 2027
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleExamDateUpdate('2026-07-01T09:00')}
+                      onClick={() => {
+                        const d = new Date();
+                        d.setDate(d.getDate() + 90);
+                        handleExamDateUpdate(d.toISOString().slice(0, 16));
+                      }}
                       className="rounded-lg bg-slate-800 border border-slate-700 px-2 py-1 text-[10px] font-bold text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
                     >
-                      1 يوليو 2026
+                      +90 يوم من اليوم
                     </button>
                   </div>
 
-                  <p className="text-[11px] text-slate-400 border-t border-slate-800/80 pt-1.5 mt-2">
-                    الموعد النشط حالياً: <span className="text-amber-400 font-black">{new Date(settings.ministryExamDate || '2026-06-14T09:00').toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                  </p>
+                  {(() => {
+                    const targetTime = new Date(settings.ministryExamDate || '2027-06-14T09:00').getTime();
+                    const diff = targetTime - Date.now();
+                    if (isNaN(diff) || diff <= 0) {
+                      return (
+                        <p className="text-[11px] text-amber-400 font-bold border-t border-slate-800/80 pt-1.5 mt-2">
+                          ⚠️ الموعد المحدد سابق، تم الاعتماد التلقائي لموعد 14 يونيو 2027.
+                        </p>
+                      );
+                    }
+                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                    return (
+                      <p className="text-[11px] text-emerald-400 font-bold border-t border-slate-800/80 pt-1.5 mt-2 flex items-center justify-between">
+                        <span>الموعد النشط للطلاب:</span>
+                        <span className="font-mono bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded text-emerald-300">
+                          متبقي {days} يوم و {hours} ساعة ⏱
+                        </span>
+                      </p>
+                    );
+                  })()}
                 </div>
               </div>
 

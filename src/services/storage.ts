@@ -204,7 +204,7 @@ const SEED_SETTINGS: PlatformSettings = {
   adminPin: '********',
   maxDevicesPerStudent: 2,
   maintenanceMode: false,
-  ministryExamDate: '2026-06-14T09:00:00.000Z'
+  ministryExamDate: '2027-06-14T09:00:00.000Z'
 };
 
 // Helper functions for safe local persistence

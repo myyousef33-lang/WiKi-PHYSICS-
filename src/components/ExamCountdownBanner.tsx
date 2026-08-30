@@ -16,8 +16,14 @@ export const ExamCountdownBanner: React.FC<ExamCountdownBannerProps> = ({ onNavi
     return unsub;
   }, []);
 
-  const examDateStr = settings.ministryExamDate || '2026-06-14T09:00:00.000Z';
-  const targetDate = new Date(examDateStr).getTime();
+  const rawExamDate = settings.ministryExamDate;
+  let parsedTarget = rawExamDate ? new Date(rawExamDate).getTime() : NaN;
+  
+  // If no valid date or stored date has already passed, fallback to June 14, 2027
+  if (isNaN(parsedTarget) || parsedTarget <= Date.now()) {
+    parsedTarget = new Date('2027-06-14T09:00:00.000Z').getTime();
+  }
+  const targetDate = parsedTarget;
 
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
