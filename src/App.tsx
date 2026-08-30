@@ -23,6 +23,7 @@ import { EditProfileModal } from './components/EditProfileModal';
 import { PhysicsSimulationsLab } from './components/PhysicsSimulationsLab';
 import { FlashcardsView } from './components/FlashcardsView';
 import { CertificateModal } from './components/CertificateModal';
+import { GlobalAntiScreenshotShield } from './components/GlobalAntiScreenshotShield';
 import { StorageService, subscribeToStorage } from './services/storage';
 import { EarnedCertificate, Student } from './types';
 
@@ -115,7 +116,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950">
+    <GlobalAntiScreenshotShield>
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950">
       
       {/* Top Navbar */}
       <Navbar
@@ -305,7 +307,8 @@ export default function App() {
         />
       )}
 
-    </div>
+      </div>
+    </GlobalAntiScreenshotShield>
   );
 }
 
