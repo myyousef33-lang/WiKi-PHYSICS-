@@ -57,7 +57,6 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
   const [showAIAssistant, setShowAIAssistant] = useState<boolean>(false);
   
   // Security Anti-Screenshot & Anti-Recording DRM States
-  const [isWindowFocused, setIsWindowFocused] = useState<boolean>(true);
   const [isCaptureBlocked, setIsCaptureBlocked] = useState<boolean>(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -98,34 +97,12 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
       }
     };
 
-    const handleWindowBlur = () => {
-      setIsWindowFocused(false);
-    };
-
-    const handleWindowFocus = () => {
-      setIsWindowFocused(true);
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        setIsWindowFocused(false);
-      } else {
-        setIsWindowFocused(true);
-      }
-    };
-
     window.addEventListener('keydown', handleKeyDown, true);
     window.addEventListener('keyup', handleKeyUp, true);
-    window.addEventListener('blur', handleWindowBlur);
-    window.addEventListener('focus', handleWindowFocus);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('keyup', handleKeyUp, true);
-      window.removeEventListener('blur', handleWindowBlur);
-      window.removeEventListener('focus', handleWindowFocus);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
@@ -365,7 +342,7 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
             ref={videoContainerRef}
             onContextMenu={(e) => e.preventDefault()}
             className={`relative aspect-video w-full rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 shadow-2xl group flex items-center justify-center select-none ${
-              !isWindowFocused || isCaptureBlocked ? 'filter blur-2xl transition-all duration-300' : ''
+              isCaptureBlocked ? 'filter blur-2xl transition-all duration-300' : ''
             }`}
             style={{
               WebkitUserSelect: 'none',
@@ -419,19 +396,6 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
                 <h3 className="text-lg font-black text-white">🛑 تصوير الشاشة غير مسموح به!</h3>
                 <p className="text-xs text-slate-300 max-w-md mt-2 leading-relaxed">
                   محتوى المنصة محمي ضد الالتقاط والتصوير لحفظ حقوق النشر والتأليف.
-                </p>
-              </div>
-            )}
-
-            {/* Window Unfocused / App Switch Protection Overlay */}
-            {!isWindowFocused && !isCaptureBlocked && (
-              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-xl p-6 text-center font-sans">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 mb-3">
-                  <Lock className="h-7 w-7" />
-                </div>
-                <h3 className="text-base font-black text-white">🔒 المحتوى محمي - تم تشفير الفيديو مؤقتاً</h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  يرجى العودة والتركيز في نافذة المنصة لمتابعة الدرس
                 </p>
               </div>
             )}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, Lock, EyeOff } from 'lucide-react';
+import { ShieldAlert, Lock } from 'lucide-react';
 
 interface GlobalAntiScreenshotShieldProps {
   children: React.ReactNode;
@@ -7,26 +7,22 @@ interface GlobalAntiScreenshotShieldProps {
 
 export const GlobalAntiScreenshotShield: React.FC<GlobalAntiScreenshotShieldProps> = ({ children }) => {
   const [isBlocked, setIsBlocked] = useState(false);
-  const [blockReason, setBlockReason] = useState<'screenshot' | 'blur'>('screenshot');
 
   useEffect(() => {
     let unblockTimer: NodeJS.Timeout;
 
-    const triggerBlock = (reason: 'screenshot' | 'blur') => {
-      setBlockReason(reason);
+    const triggerBlock = () => {
       setIsBlocked(true);
 
-      // Wipe clipboard if possible
+      // Wipe clipboard if printscreen key was pressed
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText('🔒 محتوى منصة ويكيفزياء محمي ضد الالتقاط والتصوير').catch(() => {});
       }
 
-      if (reason === 'screenshot') {
-        clearTimeout(unblockTimer);
-        unblockTimer = setTimeout(() => {
-          setIsBlocked(false);
-        }, 3000);
-      }
+      clearTimeout(unblockTimer);
+      unblockTimer = setTimeout(() => {
+        setIsBlocked(false);
+      }, 3000);
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -47,51 +43,51 @@ export const GlobalAntiScreenshotShield: React.FC<GlobalAntiScreenshotShieldProp
       if (isScreenshotShortcut) {
         e.preventDefault();
         e.stopPropagation();
-        triggerBlock('screenshot');
+        triggerBlock();
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.key === 'PrintScreen' || e.keyCode === 44 || e.code === 'PrintScreen') {
         e.preventDefault();
-        triggerBlock('screenshot');
+        triggerBlock();
       }
     };
 
-    // When OS Screenshot tool or any background app takes focus away from the browser
-    const handleWindowBlur = () => {
-      triggerBlock('blur');
-    };
-
-    const handleWindowFocus = () => {
-      // Unblock 500ms after focus returns so screenshot tool doesn't capture content
-      setTimeout(() => {
-        setIsBlocked(false);
-      }, 500);
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        triggerBlock('blur');
-      } else {
-        setTimeout(() => {
-          setIsBlocked(false);
-        }, 500);
+    const handleTouchStart = (e: TouchEvent) => {
+      // Multi-finger screenshot gesture on Android / iOS (3 or more fingers swipe)
+      if (e.touches && e.touches.length >= 3) {
+        e.preventDefault();
+        triggerBlock();
       }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches && e.touches.length >= 3) {
+        e.preventDefault();
+        triggerBlock();
+      }
+    };
+
+    // Make sure entering/exiting fullscreen clears any blocked state
+    const handleFullscreenChange = () => {
+      setIsBlocked(false);
     };
 
     window.addEventListener('keydown', handleKeyDown, true);
     window.addEventListener('keyup', handleKeyUp, true);
-    window.addEventListener('blur', handleWindowBlur);
-    window.addEventListener('focus', handleWindowFocus);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('touchstart', handleTouchStart, { capture: true, passive: false });
+    window.addEventListener('touchmove', handleTouchMove, { capture: true, passive: false });
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('keyup', handleKeyUp, true);
-      window.removeEventListener('blur', handleWindowBlur);
-      window.removeEventListener('focus', handleWindowFocus);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('touchstart', handleTouchStart, true);
+      window.removeEventListener('touchmove', handleTouchMove, true);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
       clearTimeout(unblockTimer);
     };
   }, []);
@@ -108,7 +104,7 @@ export const GlobalAntiScreenshotShield: React.FC<GlobalAntiScreenshotShieldProp
         WebkitTouchCallout: 'none'
       }}
     >
-      {/* Black Shield Screen Overlay */}
+      {/* Black Shield Screen Overlay when screenshot key is pressed */}
       {isBlocked && (
         <div className="fixed inset-0 z-[999999] flex flex-col items-center justify-center bg-black p-6 text-center animate-fadeIn font-sans">
           <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-rose-500/20 border-2 border-rose-500/50 text-rose-500 mb-6 animate-pulse">
