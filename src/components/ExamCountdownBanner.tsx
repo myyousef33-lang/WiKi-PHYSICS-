@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, Calendar, Sparkles, Target, Zap, ChevronLeft } from 'lucide-react';
-import { StorageService } from '../services/storage';
+import { StorageService, subscribeToStorage } from '../services/storage';
 
 interface ExamCountdownBannerProps {
   onNavigate?: (view: string, params?: any) => void;
@@ -10,7 +10,7 @@ export const ExamCountdownBanner: React.FC<ExamCountdownBannerProps> = ({ onNavi
   const [settings, setSettings] = useState(() => StorageService.getSettings());
 
   useEffect(() => {
-    const unsub = StorageService.subscribeToStorage(() => {
+    const unsub = subscribeToStorage(() => {
       setSettings(StorageService.getSettings());
     });
     return unsub;

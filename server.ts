@@ -347,7 +347,9 @@ async function startServer() {
   // ==========================================
   app.post('/api/gemini/physics-assistant', async (req, res): Promise<any> => {
     try {
-      const { prompt, lessonTitle, courseTitle, imageBase64, chatHistory } = req.body;
+      const { prompt, lessonTitle, courseTitle, imageBase64, chatHistory, history, lessonContext } = req.body;
+      const historyList = chatHistory || history;
+      const resolvedLessonTitle = lessonTitle || lessonContext;
       if (!prompt && !imageBase64) {
         return res.status(400).json({ success: false, error: 'يرجى كتابة سؤال فيزيائي أو إرفاق صورة للمسألة' });
       }
@@ -376,8 +378,8 @@ async function startServer() {
       const contents: any[] = [];
 
       // Include previous conversation history if present
-      if (Array.isArray(chatHistory) && chatHistory.length > 0) {
-        chatHistory.slice(-6).forEach((item: { role: string; text: string }) => {
+      if (Array.isArray(historyList) && historyList.length > 0) {
+        historyList.slice(-6).forEach((item: { role: string; text: string }) => {
           contents.push({
             role: item.role === 'assistant' ? 'model' : 'user',
             parts: [{ text: item.text }]
@@ -386,8 +388,8 @@ async function startServer() {
       }
 
       // Context string about the current lesson
-      const contextPrefix = lessonTitle || courseTitle 
-        ? `[سياق الدرس الحالي للطالب: كورس "${courseTitle || 'فيزياء'}" - درس "${lessonTitle || 'محتوى الدرس'}"]\n`
+      const contextPrefix = resolvedLessonTitle || courseTitle 
+        ? `[سياق الدرس الحالي للطالب: كورس "${courseTitle || 'فيزياء'}" - درس "${resolvedLessonTitle || 'محتوى الدرس'}"]\n`
         : '';
 
       const currentParts: any[] = [];

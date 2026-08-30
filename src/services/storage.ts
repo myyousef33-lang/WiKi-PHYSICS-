@@ -282,6 +282,10 @@ initializeStorage();
 
 // Storage Service API
 export const StorageService = {
+  subscribeToStorage(callback: () => void) {
+    return subscribeToStorage(callback);
+  },
+
   // === Settings ===
   getSettings(): PlatformSettings {
     const stored = getStored(STORAGE_KEYS.SETTINGS, SEED_SETTINGS);

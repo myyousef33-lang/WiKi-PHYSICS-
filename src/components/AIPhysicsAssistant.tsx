@@ -120,8 +120,8 @@ export const AIPhysicsAssistant: React.FC<AIPhysicsAssistantProps> = ({
         body: JSON.stringify({
           prompt: textToSend,
           imageBase64: currentImg || undefined,
-          history: historyPayload,
-          lessonContext: lessonTitle ? `الدرس الحالي: ${lessonTitle}` : undefined
+          chatHistory: historyPayload,
+          lessonTitle: lessonTitle || undefined
         })
       });
 
