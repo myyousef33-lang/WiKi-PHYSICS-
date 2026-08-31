@@ -26,6 +26,7 @@ import { CertificateModal } from './components/CertificateModal';
 import { GlobalAntiScreenshotShield } from './components/GlobalAntiScreenshotShield';
 import { StudentWalletModal } from './components/StudentWalletModal';
 import { StorageService, subscribeToStorage } from './services/storage';
+import { PresenceService } from './services/presence';
 import { EarnedCertificate, Student } from './types';
 
 export default function App() {
@@ -44,6 +45,9 @@ export default function App() {
   const [selectedCertificate, setSelectedCertificate] = useState<EarnedCertificate | null>(null);
 
   useEffect(() => {
+    // Initialize presence heartbeat and listener
+    PresenceService.initPresence();
+
     const updateStudent = () => {
       setStudent(StorageService.getCurrentStudent());
     };
@@ -119,7 +123,7 @@ export default function App() {
 
   return (
     <GlobalAntiScreenshotShield>
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950 overflow-x-hidden max-w-full w-full relative">
+      <div className="min-h-screen bg-[#0C1B33] text-slate-100 flex flex-col font-sans selection:bg-[#FFB020] selection:text-[#0C1B33] overflow-x-hidden max-w-full w-full relative">
       
       {/* Top Navbar */}
       <Navbar
@@ -162,11 +166,11 @@ export default function App() {
             {student ? (
               <FlashcardsView student={student} />
             ) : (
-              <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-12 text-center space-y-4">
+              <div className="rounded-3xl border border-[#1E375E] bg-[#122442]/60 p-12 text-center space-y-4">
                 <h3 className="text-xl font-black text-white">يرجى تسجيل الدخول لاستخدام بطاقات المراجعة</h3>
                 <button
                   onClick={() => handleOpenAuth('login')}
-                  className="rounded-xl bg-orange-500 px-6 py-2.5 text-xs font-bold text-slate-950"
+                  className="rounded-xl bg-[#FFB020] px-6 py-2.5 text-xs font-bold text-[#0C1B33] hover:bg-[#e59e1c] transition-all"
                 >
                   تسجيل الدخول
                 </button>

@@ -298,7 +298,9 @@ const SEED_SETTINGS: PlatformSettings = {
   adminPin: '********',
   maxDevicesPerStudent: 2,
   maintenanceMode: false,
-  ministryExamDate: '2027-06-14T09:00:00.000Z'
+  ministryExamDate: '2027-06-14T09:00:00.000Z',
+  homeIntroVideoUrl: '',
+  homeVideoPlacement: 'below_hero'
 };
 
 const lastLocalWriteTime: Record<string, number> = {};
@@ -651,6 +653,9 @@ export const StorageService = {
   deleteCourse(courseId: string): void {
     const courses = this.getCourses().filter(c => c.id !== courseId);
     setStored(STORAGE_KEYS.COURSES, courses);
+  },
+  reorderCourses(orderedCourses: Course[]): void {
+    setStored(STORAGE_KEYS.COURSES, orderedCourses);
   },
 
   // Unit & Lesson Helpers

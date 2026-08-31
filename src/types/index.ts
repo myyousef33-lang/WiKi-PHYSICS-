@@ -52,6 +52,7 @@ export interface Course {
   isPublished: boolean;
   createdAt: string;
   units: Unit[];
+  order?: number;
 }
 
 export interface Unit {
@@ -219,6 +220,8 @@ export interface PlatformSettings {
   maxDevicesPerStudent: number;
   maintenanceMode: boolean;
   ministryExamDate?: string; // ISO date format, e.g. 2026-06-14
+  homeIntroVideoUrl?: string;
+  homeVideoPlacement?: 'top' | 'below_hero' | 'below_courses' | 'bottom' | 'hidden';
   autoParentReportTemplate?: string;
   enable2FA?: boolean;
   admin2FASecret?: string;

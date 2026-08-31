@@ -117,24 +117,24 @@ export const ActivationCodeModal: React.FC<ActivationCodeModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900 p-6 sm:p-8 shadow-2xl space-y-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071120]/85 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="relative w-full max-w-md rounded-3xl border border-[#1E375E] bg-[#0C1B33] p-6 sm:p-8 shadow-2xl space-y-6">
         
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 left-5 rounded-xl border border-slate-800 bg-slate-800/80 p-2 text-slate-400 hover:text-white"
+          className="absolute top-5 left-5 rounded-xl border border-[#1E375E] bg-[#122442] p-2 text-slate-400 hover:text-white"
         >
           <X className="h-4 w-4" />
         </button>
 
         {/* Modal Header */}
         <div className="text-center space-y-2">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 text-slate-950 shadow-lg shadow-amber-500/25">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFB020] text-[#0C1B33] shadow-lg shadow-[#FFB020]/20">
             <Key className="h-7 w-7" />
           </div>
           <h3 className="text-xl font-black text-white">تفعيل كود الاشتراك</h3>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-300">
             أدخل كود الكورس أو المذكرة لتفعيله فوراً على حسابك
           </p>
 
@@ -145,7 +145,7 @@ export const ActivationCodeModal: React.FC<ActivationCodeModalProps> = ({
               <span>الحساب الحالي: {student.name} ({student.phone})</span>
             </div>
           ) : (
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 px-3 py-1 text-[11px] font-bold text-amber-400 mt-1">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-[#2E86FF]/15 border border-[#2E86FF]/30 px-3 py-1 text-[11px] font-bold text-[#2E86FF] mt-1">
               <Sparkles className="h-3 w-3" />
               <span>تفعيل فوري وسريع لجميع الطلاب</span>
             </div>
@@ -172,7 +172,7 @@ export const ActivationCodeModal: React.FC<ActivationCodeModalProps> = ({
           
           {/* If student is not logged in, ask for quick name & phone for linking */}
           {!student && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-[#122442] border border-[#1E375E]">
               <div className="space-y-1">
                 <label className="text-[11px] font-bold text-slate-300">اسمك ثلاثي</label>
                 <input
@@ -180,7 +180,7 @@ export const ActivationCodeModal: React.FC<ActivationCodeModalProps> = ({
                   value={guestName}
                   onChange={(e) => setGuestName(e.target.value)}
                   placeholder="مثال: يوسف أحمد"
-                  className="w-full text-xs font-medium rounded-xl border border-slate-700 bg-slate-900 py-2 px-3 text-white placeholder:text-slate-600 focus:border-amber-500 focus:outline-none"
+                  className="w-full text-xs font-medium rounded-xl border border-[#1E375E] bg-[#0C1B33] py-2 px-3 text-white placeholder:text-slate-500 focus:border-[#2E86FF] focus:outline-none"
                 />
               </div>
               <div className="space-y-1">
@@ -190,7 +190,7 @@ export const ActivationCodeModal: React.FC<ActivationCodeModalProps> = ({
                   value={guestPhone}
                   onChange={(e) => setGuestPhone(e.target.value)}
                   placeholder="010XXXXXXXX"
-                  className="w-full text-xs font-mono font-medium rounded-xl border border-slate-700 bg-slate-900 py-2 px-3 text-white placeholder:text-slate-600 focus:border-amber-500 focus:outline-none"
+                  className="w-full text-xs font-mono font-medium rounded-xl border border-[#1E375E] bg-[#0C1B33] py-2 px-3 text-white placeholder:text-slate-500 focus:border-[#2E86FF] focus:outline-none"
                 />
               </div>
             </div>
@@ -203,7 +203,7 @@ export const ActivationCodeModal: React.FC<ActivationCodeModalProps> = ({
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
               placeholder="مثال: PHY3-XXXX-YYYY"
-              className="w-full text-center tracking-widest uppercase font-mono text-base font-black rounded-xl border border-slate-700 bg-slate-950 py-3 px-4 text-amber-400 placeholder:text-slate-600 focus:border-amber-500 focus:outline-none"
+              className="w-full text-center tracking-widest uppercase font-mono text-base font-black rounded-xl border border-[#1E375E] bg-[#122442] py-3 px-4 text-[#FFB020] placeholder:text-slate-500 focus:border-[#2E86FF] focus:outline-none"
               autoFocus
             />
           </div>
@@ -211,34 +211,34 @@ export const ActivationCodeModal: React.FC<ActivationCodeModalProps> = ({
           <button
             type="submit"
             disabled={isLoading || !!successMsg}
-            className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-3 text-sm font-black text-slate-950 shadow-lg shadow-amber-500/25 hover:bg-amber-400 transition-all disabled:opacity-50"
+            className="w-full rounded-2xl bg-[#FFB020] py-3 text-sm font-black text-[#0C1B33] shadow-lg shadow-[#FFB020]/20 hover:bg-[#e59e1c] transition-all disabled:opacity-50"
           >
             {isLoading ? 'جاري التحقق من الكود وتفعيله...' : 'تفعيل الكود الآن'}
           </button>
         </form>
 
         {/* Sample Codes for quick testing */}
-        <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3 space-y-1.5 text-[11px] text-slate-400">
-          <span className="font-bold text-amber-400">⚡ أكواد جاهزة للتجربة السريعة:</span>
+        <div className="rounded-xl border border-[#1E375E] bg-[#122442] p-3 space-y-1.5 text-[11px] text-slate-300">
+          <span className="font-bold text-[#FFB020]">أكواد جاهزة للتجربة السريعة:</span>
           <div className="flex flex-wrap gap-1.5 pt-1">
             <button 
               type="button"
               onClick={() => setCode('PHY3-FULL-2025')}
-              className="rounded bg-slate-800 hover:bg-slate-700 px-2 py-0.5 text-slate-200 font-mono text-[10px]"
+              className="rounded bg-[#0C1B33] hover:bg-[#1B355E] px-2 py-0.5 text-[#2E86FF] font-mono text-[10px]"
             >
               PHY3-FULL-2025 (كورس 3 ثانوي)
             </button>
             <button 
               type="button"
               onClick={() => setCode('PHY2-TERM1-GO')}
-              className="rounded bg-slate-800 hover:bg-slate-700 px-2 py-0.5 text-slate-200 font-mono text-[10px]"
+              className="rounded bg-[#0C1B33] hover:bg-[#1B355E] px-2 py-0.5 text-[#2E86FF] font-mono text-[10px]"
             >
               PHY2-TERM1-GO (كورس 2 ثانوي)
             </button>
             <button 
               type="button"
               onClick={() => setCode('PDF-VIP-ELITE')}
-              className="rounded bg-slate-800 hover:bg-slate-700 px-2 py-0.5 text-slate-200 font-mono text-[10px]"
+              className="rounded bg-[#0C1B33] hover:bg-[#1B355E] px-2 py-0.5 text-[#2E86FF] font-mono text-[10px]"
             >
               PDF-VIP-ELITE (مذكرة أسئلة)
             </button>
@@ -246,12 +246,12 @@ export const ActivationCodeModal: React.FC<ActivationCodeModalProps> = ({
         </div>
 
         {/* WhatsApp Support link to purchase codes */}
-        <div className="pt-2 text-center border-t border-slate-800/80">
+        <div className="pt-2 text-center border-t border-[#1E375E]">
           <a
             href={`https://wa.me/${settings.whatsappNumber}?text=أرغب%20في%20شراء%20كود%20تفعيل%20كورس%20الفيزياء`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-emerald-400 transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-slate-300 hover:text-emerald-400 transition-colors"
           >
             <Phone className="h-3.5 w-3.5 text-emerald-400" />
             <span>للحصول على كود جديد، تواصل عبر الواتساب</span>
