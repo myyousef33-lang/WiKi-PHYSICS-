@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { PdfMaterial, Student } from '../types';
+import { PdfViewerModal } from './PdfViewerModal';
+import { downloadPdfFile } from '../utils/pdfHelper';
 
 interface PdfLibraryViewProps {
   onNavigate: (view: string, params?: any) => void;
@@ -194,15 +196,13 @@ export const PdfLibraryView: React.FC<PdfLibraryViewProps> = ({
                         <Eye className="h-4 w-4 text-amber-400" />
                         <span>معاينة وقراءة</span>
                       </button>
-                      <a
-                        href={pdf.url}
-                        target="_blank"
-                        rel="noreferrer"
+                      <button
+                        onClick={() => downloadPdfFile(pdf.url, `${pdf.title}.pdf`)}
                         className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 py-2.5 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 hover:bg-amber-400 transition-all"
                       >
                         <Download className="h-4 w-4" />
                         <span>تحميل الملف</span>
-                      </a>
+                      </button>
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -228,67 +228,15 @@ export const PdfLibraryView: React.FC<PdfLibraryViewProps> = ({
 
       {/* PDF Reader / Preview Modal */}
       {previewPdf && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 sm:p-6 animate-in fade-in duration-200">
-          <div className="relative flex flex-col h-full max-h-[92vh] w-full max-w-5xl rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden">
-            
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-slate-800 p-4 sm:px-6 bg-slate-950/80">
-              <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-amber-500/10 p-2 text-amber-400">
-                  <FileText className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-white text-sm sm:text-base truncate max-w-md">{previewPdf.title}</h3>
-                  <span className="text-[11px] text-slate-400">{previewPdf.category} • {previewPdf.pageCount || 40} صفحة</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <a
-                  href={previewPdf.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-bold text-white hover:bg-slate-700 flex items-center gap-1.5"
-                >
-                  <ExternalLink className="h-3.5 w-3.5 text-amber-400" />
-                  <span>فتح في تبويب جديد</span>
-                </a>
-                <button
-                  onClick={() => setPreviewPdf(null)}
-                  className="rounded-xl border border-slate-800 bg-slate-800 p-2 text-slate-400 hover:text-white"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Embedded PDF iframe / viewer */}
-            <div className="flex-1 bg-slate-950 p-2 overflow-hidden">
-              <iframe
-                src={previewPdf.url.includes('drive.google.com')
-                  ? (previewPdf.url.replace(/\/view(\?.*)?$/, '/preview'))
-                  : `${previewPdf.url}#toolbar=1&navpanes=0`}
-                title={previewPdf.title}
-                className="h-full w-full rounded-xl border border-slate-800 bg-white"
-              />
-            </div>
-
-            {/* Modal Footer */}
-            <div className="border-t border-slate-800 bg-slate-950 p-3 sm:px-6 flex items-center justify-between text-xs text-slate-400">
-              <span>جميع الحقوق محفوظة للمنصة التعليمية Wiki-X فيزياء</span>
-              <a
-                href={previewPdf.url}
-                target="_blank"
-                rel="noreferrer"
-                className="font-bold text-amber-400 hover:underline flex items-center gap-1"
-              >
-                <Download className="h-3.5 w-3.5" />
-                <span>تحميل نسخة PDF</span>
-              </a>
-            </div>
-
-          </div>
-        </div>
+        <PdfViewerModal
+          isOpen={!!previewPdf}
+          onClose={() => setPreviewPdf(null)}
+          title={previewPdf.title}
+          pdfUrl={previewPdf.url}
+          category={previewPdf.category}
+          grade={previewPdf.grade}
+          pageCount={previewPdf.pageCount}
+        />
       )}
 
     </div>

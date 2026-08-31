@@ -29,6 +29,7 @@ import { StorageService, subscribeToStorage } from '../services/storage';
 import { MediaStore } from '../services/mediaStore';
 import { Course, Lesson, Student, QuizExam } from '../types';
 import { AIPhysicsAssistant } from './AIPhysicsAssistant';
+import { PdfViewerModal } from './PdfViewerModal';
 
 interface LessonRoomViewProps {
   courseId: string;
@@ -55,6 +56,7 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
   const [isTheaterMode, setIsTheaterMode] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [showAIAssistant, setShowAIAssistant] = useState<boolean>(false);
+  const [showPdfModal, setShowPdfModal] = useState<boolean>(false);
   
   // Security Anti-Screenshot & Anti-Recording DRM States
   const [isCaptureBlocked, setIsCaptureBlocked] = useState<boolean>(false);
@@ -568,15 +570,14 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
                 </div>
               </div>
 
-              <a
-                href={currentLesson.pdfUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl bg-slate-800 border border-slate-700 px-4 py-2 text-xs font-bold text-white hover:bg-slate-700 transition-colors self-end sm:self-auto"
+              <button
+                type="button"
+                onClick={() => setShowPdfModal(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2.5 text-xs font-bold text-slate-950 hover:brightness-110 shadow-md shadow-amber-500/20 transition-all self-end sm:self-auto"
               >
-                <Download className="h-4 w-4 text-amber-400" />
-                <span>فتح المذكرة</span>
-              </a>
+                <FileText className="h-4 w-4" />
+                <span>معاينة وقراءة المذكرة</span>
+              </button>
             </div>
           )}
 
@@ -676,6 +677,18 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
           currentCourseId={course.id}
           lessonTitle={currentLesson.title}
           onClose={() => setShowAIAssistant(false)}
+        />
+      )}
+
+      {/* Lesson PDF Viewer Modal */}
+      {showPdfModal && currentLesson.pdfUrl && (
+        <PdfViewerModal
+          isOpen={showPdfModal}
+          onClose={() => setShowPdfModal(false)}
+          title={currentLesson.pdfTitle || currentLesson.title || 'مذكرة الدرس'}
+          pdfUrl={currentLesson.pdfUrl}
+          category="مذكرة الدرس"
+          grade={course.grade}
         />
       )}
 
