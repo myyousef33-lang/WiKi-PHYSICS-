@@ -18,7 +18,8 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { StorageService, subscribeToStorage } from '../services/storage';
-import { Course, Student, Unit, Lesson, QuizExam } from '../types';
+import { Course, Student, Unit, Lesson, QuizExam, PdfMaterial } from '../types';
+import { downloadPdfFile } from '../utils/pdfHelper';
 
 interface CourseDetailsViewProps {
   courseId: string;
@@ -337,6 +338,78 @@ export const CourseDetailsView: React.FC<CourseDetailsViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* Course PDFs Section */}
+      {(() => {
+        const coursePdfs = StorageService.getPdfs().filter(p => p.associatedCourseId === course.id);
+        if (coursePdfs.length === 0) return null;
+
+        return (
+          <div className="space-y-4 pt-4 border-t border-slate-800">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="rounded-xl bg-amber-500/15 p-2 text-amber-400">
+                  <FileText className="h-6 w-6" />
+                </div>
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-black text-white">مذكرات وملازم الكورس (PDF)</h2>
+                  <p className="text-xs text-slate-400">ملازم الشرح وبنوك الأسئلة التابعة لهذا الكورس (تفتح تلقائياً للمشتركين)</p>
+                </div>
+              </div>
+              <span className="rounded-full bg-amber-500/20 px-3 py-1 text-xs font-bold text-amber-300">
+                {coursePdfs.length} ملازم
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {coursePdfs.map(pdf => {
+                const isFreePdf = pdf.isFree || !pdf.isLocked || pdf.price === 0;
+                const isUnlocked = isEnrolled || isFreePdf || (student && student.unlockedPdfIds?.includes(pdf.id));
+
+                return (
+                  <div key={pdf.id} className="rounded-2xl border border-amber-500/20 bg-slate-900/80 p-5 space-y-3 flex flex-col justify-between hover:border-amber-500/40 transition-all">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="rounded bg-amber-500/10 text-amber-400 text-[10px] font-bold px-2 py-0.5">
+                          {pdf.category}
+                        </span>
+                        <span className="text-xs text-slate-400">{pdf.pageCount || 30} صفحة</span>
+                      </div>
+                      <h3 className="font-bold text-white text-base leading-snug">{pdf.title}</h3>
+                      {pdf.description && <p className="text-xs text-slate-400 line-clamp-2">{pdf.description}</p>}
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-2">
+                      {isUnlocked ? (
+                        <button
+                          onClick={() => downloadPdfFile(pdf.url, `${pdf.title}.pdf`)}
+                          className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-slate-950 py-2.5 text-xs font-bold hover:bg-amber-400 transition-colors shadow-md shadow-amber-500/20"
+                        >
+                          <FileText className="h-4 w-4" />
+                          <span>تحميل / قراءة المذكرة</span>
+                        </button>
+                      ) : (
+                        <div className="flex items-center justify-between w-full text-xs">
+                          <span className="text-slate-400 flex items-center gap-1">
+                            <Lock className="h-3.5 w-3.5 text-amber-500" />
+                            متاحة مجاناً للمشتركين
+                          </span>
+                          <button
+                            onClick={student ? onOpenActivationModal : onOpenAuthModal}
+                            className="rounded-xl bg-purple-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-purple-500"
+                          >
+                            تفعيل الكورس
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Course Curriculum Tree */}
       <div className="space-y-6">

@@ -119,7 +119,7 @@ export default function App() {
 
   return (
     <GlobalAntiScreenshotShield>
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950">
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950 overflow-x-hidden max-w-full w-full relative">
       
       {/* Top Navbar */}
       <Navbar
@@ -133,7 +133,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1">
+      <main className="flex-1 w-full max-w-full overflow-x-hidden">
         {currentView === 'home' && (
           <HomeLandingView
             onNavigate={handleNavigate}

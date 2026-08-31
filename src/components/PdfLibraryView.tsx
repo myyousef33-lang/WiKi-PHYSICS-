@@ -45,6 +45,8 @@ export const PdfLibraryView: React.FC<PdfLibraryViewProps> = ({
     return subscribeToStorage(update);
   }, []);
 
+  const [accessFilter, setAccessFilter] = useState<string>('all'); // 'all', 'free', 'paid'
+
   const categories = [
     { id: 'all', label: 'جميع المذكرات' },
     { id: 'مذكرات الشرح', label: 'مذكرات الشرح والتبسيط' },
@@ -60,9 +62,16 @@ export const PdfLibraryView: React.FC<PdfLibraryViewProps> = ({
     { id: 'الصف الأول الثانوي', label: '1 ثانوي' }
   ];
 
+  const courses = StorageService.getCourses();
+
   const filteredMaterials = materials.filter(m => {
     if (selectedCategory !== 'all' && m.category !== selectedCategory) return false;
     if (selectedGrade !== 'all' && m.grade !== selectedGrade) return false;
+    
+    const isFree = m.isFree || !m.isLocked || m.price === 0;
+    if (accessFilter === 'free' && !isFree) return false;
+    if (accessFilter === 'paid' && isFree) return false;
+
     if (searchQuery.trim() && !m.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
@@ -86,16 +95,50 @@ export const PdfLibraryView: React.FC<PdfLibraryViewProps> = ({
 
       {/* Filters & Search */}
       <div className="space-y-4">
+        {/* Access Type Filter Pills (Free / Paid / All) */}
+        <div className="flex items-center justify-center gap-2">
+          <button
+            onClick={() => setAccessFilter('all')}
+            className={`rounded-xl px-4 py-2 text-xs font-bold transition-all ${
+              accessFilter === 'all'
+                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                : 'border border-slate-800 bg-slate-900/80 text-slate-400 hover:text-white'
+            }`}
+          >
+            جميع المذكرات
+          </button>
+          <button
+            onClick={() => setAccessFilter('free')}
+            className={`rounded-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-1.5 ${
+              accessFilter === 'free'
+                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                : 'border border-emerald-500/30 bg-emerald-950/20 text-emerald-400 hover:bg-emerald-950/40'
+            }`}
+          >
+            <span>🟢 مذكرات مجانية</span>
+          </button>
+          <button
+            onClick={() => setAccessFilter('paid')}
+            className={`rounded-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-1.5 ${
+              accessFilter === 'paid'
+                ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20'
+                : 'border border-purple-500/30 bg-purple-950/20 text-purple-300 hover:bg-purple-950/40'
+            }`}
+          >
+            <span>💳 مذكرات مدفوعة</span>
+          </button>
+        </div>
+
         {/* Category Pills */}
         <div className="flex flex-wrap items-center justify-center gap-2">
           {categories.map(c => (
             <button
               key={c.id}
               onClick={() => setSelectedCategory(c.id)}
-              className={`rounded-xl px-4 py-2 text-xs font-bold transition-all ${
+              className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${
                 selectedCategory === c.id
-                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 scale-105'
-                  : 'border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-white'
+                  ? 'bg-slate-800 text-amber-400 border border-amber-500/30'
+                  : 'border border-slate-800/80 bg-slate-900/60 text-slate-400 hover:text-slate-200'
               }`}
             >
               {c.label}
@@ -142,7 +185,12 @@ export const PdfLibraryView: React.FC<PdfLibraryViewProps> = ({
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filteredMaterials.map((pdf) => {
-            const isUnlocked = !pdf.isLocked || (student && student.unlockedPdfIds?.includes(pdf.id));
+            const isFreePdf = pdf.isFree || !pdf.isLocked || pdf.price === 0;
+            const isEnrolledInCourse = pdf.associatedCourseId && student?.enrolledCourseIds?.includes(pdf.associatedCourseId);
+            const isUnlockedByCode = student && student.unlockedPdfIds?.includes(pdf.id);
+            const isUnlocked = isFreePdf || isEnrolledInCourse || isUnlockedByCode;
+
+            const linkedCourse = courses.find(c => c.id === pdf.associatedCourseId);
 
             return (
               <div
@@ -151,13 +199,20 @@ export const PdfLibraryView: React.FC<PdfLibraryViewProps> = ({
               >
                 <div className="space-y-3">
                   {/* Top Badge Row */}
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between flex-wrap gap-1">
                     <span className="rounded-md bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-400">
                       {pdf.category}
                     </span>
-                    <span className="text-[10px] text-slate-400 font-bold">
-                      {pdf.grade.includes('الثالث') ? '3 ثانوي' : pdf.grade.includes('الثاني') ? '2 ثانوي' : '1 ثانوي'}
-                    </span>
+                    
+                    {isFreePdf ? (
+                      <span className="rounded-md bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
+                        🟢 مجانية
+                      </span>
+                    ) : (
+                      <span className="rounded-md bg-purple-500/10 border border-purple-500/30 px-2 py-0.5 text-[10px] font-bold text-purple-300">
+                        💳 {pdf.price || 50} ج.م
+                      </span>
+                    )}
                   </div>
 
                   {/* Title & Icon */}
@@ -176,6 +231,14 @@ export const PdfLibraryView: React.FC<PdfLibraryViewProps> = ({
                       )}
                     </div>
                   </div>
+
+                  {/* Linked Course info if present */}
+                  {linkedCourse && (
+                    <div className="rounded-xl bg-slate-950/80 border border-amber-500/20 p-2 text-xs flex items-center justify-between">
+                      <span className="text-slate-400 text-[10px]">الكورس التابع:</span>
+                      <span className="font-bold text-amber-300 text-[11px]">📚 {linkedCourse.title}</span>
+                    </div>
+                  )}
 
                   {/* Metadata Row */}
                   <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800/80">
@@ -211,12 +274,13 @@ export const PdfLibraryView: React.FC<PdfLibraryViewProps> = ({
                         className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 py-2.5 text-xs font-bold text-white shadow-md shadow-purple-500/20 hover:bg-purple-500 transition-all"
                       >
                         <Key className="h-4 w-4" />
-                        <span>تفعيل المذكرة بالكود</span>
+                        <span>تفعيل بالكود ({pdf.price || 50} ج.م)</span>
                       </button>
-                      <p className="text-[10px] text-center text-slate-400 flex items-center justify-center gap-1">
-                        <Lock className="h-3 w-3" />
-                        <span>مذكرة محمية تتطلب كود الاشتراك</span>
-                      </p>
+                      {linkedCourse && (
+                        <p className="text-[10px] text-center text-amber-400 font-medium">
+                          💡 متاحة مجاناً لجميع المشتركين في كورس "{linkedCourse.title}"
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>

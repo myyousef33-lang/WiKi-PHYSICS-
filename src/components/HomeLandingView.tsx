@@ -50,7 +50,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
   }, []);
 
   return (
-    <div className="space-y-20 animate-in fade-in duration-300">
+    <div className="space-y-20 animate-in fade-in duration-300 overflow-x-hidden max-w-full">
       
       {/* HERO SECTION */}
       <section className="relative overflow-hidden pt-8 pb-16 lg:py-24">

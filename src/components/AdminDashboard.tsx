@@ -126,6 +126,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
   const [showAddCourse, setShowAddCourse] = useState(false);
   const [showAddExam, setShowAddExam] = useState(false);
   const [editingExam, setEditingExam] = useState<QuizExam | null>(null);
+  const [editingPdf, setEditingPdf] = useState<PdfMaterial | null>(null);
   const [showAddCode, setShowAddCode] = useState(false);
   const [showAddChallenge, setShowAddChallenge] = useState(false);
   const [selectedWeaknessStudent, setSelectedWeaknessStudent] = useState<Student | null>(null);
@@ -271,7 +272,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
     pageCount: 35,
     fileSize: '6.4 MB',
-    isLocked: true
+    isFree: false,
+    isLocked: true,
+    price: 50,
+    associatedCourseId: ''
   });
 
   // Notification Form
@@ -876,15 +880,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     e.preventDefault();
     if (!pdfForm.title) return;
 
+    const isFree = pdfForm.isFree;
     StorageService.createPdf({
       title: pdfForm.title,
       description: pdfForm.description,
       grade: pdfForm.grade,
       category: pdfForm.category,
       url: pdfForm.url,
+      fileUrl: pdfForm.url,
       pageCount: Number(pdfForm.pageCount) || 30,
       fileSize: pdfForm.fileSize || '5 MB',
-      isLocked: pdfForm.isLocked
+      isFree: isFree,
+      isLocked: isFree ? false : pdfForm.isLocked,
+      price: isFree ? 0 : (Number(pdfForm.price) || 0),
+      associatedCourseId: pdfForm.associatedCourseId || undefined
     });
 
     setShowAddPdf(false);
@@ -896,8 +905,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
       pageCount: 35,
       fileSize: '6.4 MB',
-      isLocked: true
+      isFree: false,
+      isLocked: true,
+      price: 50,
+      associatedCourseId: ''
     });
+  };
+
+  // Update PDF
+  const handleUpdatePdf = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPdf || !editingPdf.title) return;
+
+    const isFree = editingPdf.isFree ?? (!editingPdf.isLocked || editingPdf.price === 0);
+    const updatedPdf: PdfMaterial = {
+      ...editingPdf,
+      isFree: isFree,
+      isLocked: isFree ? false : editingPdf.isLocked,
+      price: isFree ? 0 : (Number(editingPdf.price) || 0),
+      fileUrl: editingPdf.url || editingPdf.fileUrl
+    };
+
+    StorageService.savePdfFile(updatedPdf);
+    setEditingPdf(null);
   };
 
   // Send Notification Broadcast
@@ -3361,7 +3391,10 @@ ${weakConceptsText}
           {/* Add PDF Modal */}
           {showAddPdf && (
             <div className="rounded-3xl border border-amber-500/30 bg-slate-900 p-6 space-y-4">
-              <h3 className="font-bold text-base text-white">إضافة مذكرة أو بنك أسئلة جديد</h3>
+              <h3 className="font-bold text-base text-white flex items-center gap-2">
+                <FileText className="h-5 w-5 text-amber-400" />
+                <span>إضافة مذكرة أو بنك أسئلة جديد</span>
+              </h3>
               <form onSubmit={handleCreatePdf} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1 sm:col-span-2">
@@ -3444,7 +3477,7 @@ ${weakConceptsText}
                             url: pdfForm.url,
                             pageCount: Number(pdfForm.pageCount) || 1,
                             fileSize: pdfForm.fileSize,
-                            isLocked: pdfForm.isLocked
+                            isLocked: !pdfForm.isFree
                           })}
                           className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 text-[10px] font-bold transition-colors"
                         >
@@ -3453,6 +3486,7 @@ ${weakConceptsText}
                       </div>
                     )}
                   </div>
+
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-300">المرحلة الدراسية</label>
                     <select
@@ -3467,17 +3501,72 @@ ${weakConceptsText}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 pt-2">
-                  <input
-                    type="checkbox"
-                    id="isLockedCheck"
-                    checked={pdfForm.isLocked}
-                    onChange={e => setPdfForm({ ...pdfForm, isLocked: e.target.checked })}
-                    className="h-4 w-4 rounded border-slate-700 bg-slate-950 text-amber-500"
-                  />
-                  <label htmlFor="isLockedCheck" className="text-xs font-bold text-slate-300">
-                    مذكرة محمية تتطلب كود تفعيل خاص لفتحها
-                  </label>
+                {/* Free vs Paid Access Selection */}
+                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 space-y-3">
+                  <label className="text-xs font-bold text-amber-300 block">تحديد نوع الوصول للمذكرة 🔐</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setPdfForm({ ...pdfForm, isFree: true, isLocked: false, price: 0 })}
+                      className={`p-3 rounded-xl border text-right transition-all ${
+                        pdfForm.isFree
+                          ? 'border-emerald-500 bg-emerald-950/40 text-emerald-300 ring-2 ring-emerald-500/30 font-bold'
+                          : 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="text-xs flex items-center gap-1.5">
+                        <span>🟢 مذكرة مجانية</span>
+                      </div>
+                      <p className="text-[11px] opacity-80 mt-1">متاحة للقراءة والتحميل المباشر لجميع الطلاب بدون رسوم أو أكواد.</p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPdfForm({ ...pdfForm, isFree: false, isLocked: true })}
+                      className={`p-3 rounded-xl border text-right transition-all ${
+                        !pdfForm.isFree
+                          ? 'border-amber-500 bg-amber-950/40 text-amber-300 ring-2 ring-amber-500/30 font-bold'
+                          : 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="text-xs flex items-center gap-1.5">
+                        <span>💳 مذكرة مدفوعة / محمية</span>
+                      </div>
+                      <p className="text-[11px] opacity-80 mt-1">تتطلب الشراء/كود تفعيل أو تكون مجانية للمشتركين في كورس معين.</p>
+                    </button>
+                  </div>
+
+                  {!pdfForm.isFree && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-800">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-300">سعر المذكرة (ج.م)</label>
+                        <input
+                          type="number"
+                          value={pdfForm.price}
+                          onChange={e => setPdfForm({ ...pdfForm, price: Number(e.target.value) })}
+                          className="w-full rounded-xl border border-slate-700 bg-slate-900 p-2.5 text-xs text-white"
+                          placeholder="50"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-amber-300">ربط بكورس معين (اختياري) 📚</label>
+                        <select
+                          value={pdfForm.associatedCourseId}
+                          onChange={e => setPdfForm({ ...pdfForm, associatedCourseId: e.target.value })}
+                          className="w-full rounded-xl border border-amber-500/30 bg-slate-900 p-2.5 text-xs text-white"
+                        >
+                          <option value="">عام (غير مرتبطة بكورس معين)</option>
+                          {courses.map(c => (
+                            <option key={c.id} value={c.id}>
+                              {c.title} ({c.grade})
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-[10px] text-slate-400">ستظهر تلقائياً داخل كورس الطالب المشترك وتفتح له بدون أكواد.</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
@@ -3490,7 +3579,7 @@ ${weakConceptsText}
                   </button>
                   <button
                     type="submit"
-                    className="rounded-xl bg-amber-500 px-6 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400"
+                    className="rounded-xl bg-amber-500 px-6 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 shadow-md shadow-amber-500/20"
                   >
                     حفظ المذكرة
                   </button>
@@ -3501,62 +3590,283 @@ ${weakConceptsText}
 
           {/* PDFs Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {pdfs.map(pdf => (
-              <div key={pdf.id} className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-3 flex flex-col justify-between hover:border-slate-700 transition-all shadow-lg">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="rounded bg-amber-500/10 text-amber-400 text-[10px] font-bold px-2 py-0.5">
-                      {pdf.category}
-                    </span>
-                    <span className="text-xs text-slate-400">{pdf.pageCount} صفحة</span>
+            {pdfs.map(pdf => {
+              const isFreePdf = pdf.isFree || !pdf.isLocked || pdf.price === 0;
+              const linkedCourse = courses.find(c => c.id === pdf.associatedCourseId);
+
+              return (
+                <div key={pdf.id} className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-3 flex flex-col justify-between hover:border-slate-700 transition-all shadow-lg">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="rounded bg-amber-500/10 text-amber-400 text-[10px] font-bold px-2 py-0.5">
+                        {pdf.category}
+                      </span>
+                      <span className="text-xs text-slate-400">{pdf.pageCount} صفحة</span>
+                    </div>
+
+                    <h3 className="font-bold text-white text-base leading-snug">{pdf.title}</h3>
+                    
+                    {pdf.description && (
+                      <p className="text-xs text-slate-400 line-clamp-2">{pdf.description}</p>
+                    )}
+
+                    {/* Linked Course & Access Status Badges */}
+                    <div className="rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-xs space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400 text-[11px]">حالة الوصول:</span>
+                        {isFreePdf ? (
+                          <span className="font-bold text-emerald-400">🟢 مجانية للجميع</span>
+                        ) : (
+                          <span className="font-bold text-amber-400">💳 مدفوعة ({pdf.price || 50} ج.م)</span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between border-t border-slate-900 pt-1">
+                        <span className="text-slate-400 text-[11px]">الكورس المرتبط:</span>
+                        {linkedCourse ? (
+                          <span className="font-bold text-amber-300 truncate max-w-[140px]" title={linkedCourse.title}>
+                            📚 {linkedCourse.title}
+                          </span>
+                        ) : (
+                          <span className="text-slate-500 text-[11px]">🌐 عام (غير مرتبط)</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <h3 className="font-bold text-white text-base leading-snug">{pdf.title}</h3>
-                  {pdf.description && (
-                    <p className="text-xs text-slate-400 line-clamp-2">{pdf.description}</p>
-                  )}
+
+                  <div className="space-y-2.5 pt-2 border-t border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingPdf(pdf)}
+                        className="flex-1 rounded-xl bg-amber-500/10 border border-amber-500/30 py-2 text-xs font-bold text-amber-300 hover:bg-amber-500/20 flex items-center justify-center gap-1 transition-colors"
+                        title="تعديل المذكرة والوصول"
+                      >
+                        <Edit3 className="h-3.5 w-3.5" />
+                        <span>تعديل والوصول</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setAdminPreviewPdf(pdf)}
+                        className="p-2 rounded-xl border border-blue-500/30 bg-blue-950/40 text-blue-300 hover:bg-blue-600 hover:text-white transition-all"
+                        title="معاينة الملف"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => downloadPdfFile(pdf.url, pdf.title)}
+                        className="p-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                        title="تحميل المذكرة للجهاز"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm(`هل أنت متأكد من حذف مذكرة "${pdf.title}"؟`)) {
+                            StorageService.deletePdf(pdf.id);
+                          }
+                        }}
+                        className="p-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-colors"
+                        title="حذف المذكرة"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
-
-                <div className="space-y-2.5 pt-2 border-t border-slate-800">
-                  <div className="flex items-center justify-between text-xs text-slate-400">
-                    <span>{pdf.isLocked ? '🔒 يتطلب كود تفعيل' : '🔓 متاح مجاناً'}</span>
-                    <span>{pdf.fileSize || '5 MB'}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setAdminPreviewPdf(pdf)}
-                      className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-blue-500/30 bg-blue-950/40 py-2 text-center text-xs font-bold text-blue-300 hover:bg-blue-600 hover:text-white transition-all shadow-sm"
-                    >
-                      <Eye className="h-3.5 w-3.5" />
-                      <span>معاينة الملف</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => downloadPdfFile(pdf.url, pdf.title)}
-                      className="p-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
-                      title="تحميل المذكرة للجهاز"
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (confirm(`هل أنت متأكد من حذف مذكرة "${pdf.title}"؟`)) {
-                          StorageService.deletePdf(pdf.id);
-                        }
-                      }}
-                      className="p-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-colors"
-                      title="حذف المذكرة"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
+
+          {/* Edit PDF Modal */}
+          {editingPdf && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-200">
+              <div className="relative w-full max-w-3xl rounded-3xl border border-amber-500/40 bg-slate-900 p-6 space-y-5 max-h-[90vh] overflow-y-auto shadow-2xl">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <h3 className="font-bold text-base text-white flex items-center gap-2">
+                    <Edit3 className="h-5 w-5 text-amber-400" />
+                    <span>تعديل بيانات المذكرة وخيارات الوصول ✏️</span>
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setEditingPdf(null)}
+                    className="rounded-xl border border-slate-700 bg-slate-800 p-1.5 text-slate-400 hover:text-white"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleUpdatePdf} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="text-xs font-bold text-slate-300">عنوان المذكرة</label>
+                      <input
+                        type="text"
+                        value={editingPdf.title}
+                        onChange={e => setEditingPdf({ ...editingPdf, title: e.target.value })}
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-300">التصنيف</label>
+                      <select
+                        value={editingPdf.category}
+                        onChange={e => setEditingPdf({ ...editingPdf, category: e.target.value })}
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                      >
+                        <option value="مذكرات الشرح">مذكرات الشرح</option>
+                        <option value="بنك الأسئلة والتمارين">بنك الأسئلة والتمارين</option>
+                        <option value="المراجعات النهائية">المراجعات النهائية</option>
+                        <option value="ملخص القوانين والخرائط الذهنية">ملخص القوانين والخرائط</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-2 sm:col-span-2">
+                      <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
+                        <span>ملف المذكرة (PDF)</span>
+                        <span className="text-[10px] text-amber-400 font-normal">رابط أو رفع ملف جديد</span>
+                      </label>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <input
+                          type="text"
+                          value={editingPdf.url || editingPdf.fileUrl || ''}
+                          onChange={e => setEditingPdf({ ...editingPdf, url: e.target.value, fileUrl: e.target.value })}
+                          className="flex-1 rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                          required
+                        />
+                        <label className="flex items-center justify-center gap-1.5 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-750 px-4 py-2.5 text-xs font-bold text-amber-400 cursor-pointer shrink-0 transition-colors">
+                          <Upload className="h-4 w-4" />
+                          <span>تغيير الملف</span>
+                          <input
+                            type="file"
+                            accept="application/pdf"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                handleFileUpload(file, 'pdf', (dataUrl, fileName, fileSize) => {
+                                  setEditingPdf({ 
+                                    ...editingPdf, 
+                                    url: dataUrl,
+                                    fileUrl: dataUrl,
+                                    fileSize: fileSize || editingPdf.fileSize
+                                  });
+                                });
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-300">المرحلة الدراسية</label>
+                      <select
+                        value={editingPdf.grade}
+                        onChange={e => setEditingPdf({ ...editingPdf, grade: e.target.value })}
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                      >
+                        <option value={GradeLevel.GRADE_12}>الصف الثالث الثانوي</option>
+                        <option value={GradeLevel.GRADE_11}>الصف الثاني الثانوي</option>
+                        <option value={GradeLevel.GRADE_10}>الصف الأول الثانوي</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Free vs Paid Option */}
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 space-y-3">
+                    <label className="text-xs font-bold text-amber-300 block">نوع الوصول والصلاحية للمذكرة 🔐</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setEditingPdf({ ...editingPdf, isFree: true, isLocked: false, price: 0 })}
+                        className={`p-3 rounded-xl border text-right transition-all ${
+                          (editingPdf.isFree || (!editingPdf.isLocked && editingPdf.price === 0))
+                            ? 'border-emerald-500 bg-emerald-950/40 text-emerald-300 ring-2 ring-emerald-500/30 font-bold'
+                            : 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="text-xs flex items-center gap-1.5">
+                          <span>🟢 مذكرة مجانية</span>
+                        </div>
+                        <p className="text-[11px] opacity-80 mt-1">متاحة للقراءة والتحميل المباشر لجميع الطلاب بدون رسوم.</p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setEditingPdf({ ...editingPdf, isFree: false, isLocked: true })}
+                        className={`p-3 rounded-xl border text-right transition-all ${
+                          (!editingPdf.isFree && (editingPdf.isLocked || (editingPdf.price || 0) > 0))
+                            ? 'border-amber-500 bg-amber-950/40 text-amber-300 ring-2 ring-amber-500/30 font-bold'
+                            : 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="text-xs flex items-center gap-1.5">
+                          <span>💳 مذكرة مدفوعة / محمية</span>
+                        </div>
+                        <p className="text-[11px] opacity-80 mt-1">تتطلب كود تفعيل/شراء أو تكون مفعّلة لمشتركي كورس معين.</p>
+                      </button>
+                    </div>
+
+                    {(!editingPdf.isFree && (editingPdf.isLocked || (editingPdf.price || 0) > 0)) && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-800">
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-300">سعر المذكرة (ج.م)</label>
+                          <input
+                            type="number"
+                            value={editingPdf.price || 50}
+                            onChange={e => setEditingPdf({ ...editingPdf, price: Number(e.target.value) })}
+                            className="w-full rounded-xl border border-slate-700 bg-slate-900 p-2.5 text-xs text-white"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-amber-300">ربط بكورس معين 📚</label>
+                          <select
+                            value={editingPdf.associatedCourseId || ''}
+                            onChange={e => setEditingPdf({ ...editingPdf, associatedCourseId: e.target.value || undefined })}
+                            className="w-full rounded-xl border border-amber-500/30 bg-slate-900 p-2.5 text-xs text-white"
+                          >
+                            <option value="">عام (غير مرتبطة بكورس معين)</option>
+                            {courses.map(c => (
+                              <option key={c.id} value={c.id}>
+                                {c.title} ({c.grade})
+                              </option>
+                            ))}
+                          </select>
+                          <p className="text-[10px] text-slate-400">ستظهر تلقائياً داخل كورس الطالب المشترك وتفتح له بدون أكواد.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => setEditingPdf(null)}
+                      className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-bold text-slate-300 hover:bg-slate-700"
+                    >
+                      إلغاء
+                    </button>
+                    <button
+                      type="submit"
+                      className="rounded-xl bg-amber-500 px-6 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 shadow-md shadow-amber-500/20"
+                    >
+                      تحديث خيارات المذكرة
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

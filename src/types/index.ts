@@ -185,6 +185,7 @@ export interface PdfMaterial {
   fileSize?: string;
   downloadCount?: number;
   isLocked: boolean;
+  isFree?: boolean;
   price?: number;
   associatedCourseId?: string;
   createdAt: string;
