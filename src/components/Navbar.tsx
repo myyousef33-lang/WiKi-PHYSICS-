@@ -17,7 +17,8 @@ import {
   Brain,
   Sparkles,
   Layers,
-  Edit3
+  Edit3,
+  Wallet
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { Student } from '../types';
@@ -32,6 +33,7 @@ interface NavbarProps {
   onOpenAdminAuthModal?: () => void;
   onOpenNotificationModal: () => void;
   onOpenEditProfileModal?: () => void;
+  onOpenWalletModal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -40,7 +42,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenActivationModal,
   onOpenAuthModal,
   onOpenNotificationModal,
-  onOpenEditProfileModal
+  onOpenEditProfileModal,
+  onOpenWalletModal
 }) => {
   const [student, setStudent] = useState<Student | null>(StorageService.getCurrentStudent());
   const [isAdmin, setIsAdmin] = useState<boolean>(StorageService.isAdminLoggedIn());
@@ -125,6 +128,19 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Actions (Code Activation, Notifications, Auth, Admin if logged in) */}
         <div className="flex items-center gap-2.5">
           
+          {/* Student Wallet Button (If Logged In) */}
+          {student && onOpenWalletModal && (
+            <button
+              onClick={onOpenWalletModal}
+              className="flex items-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-400 hover:bg-amber-500/20 hover:border-amber-500/50 transition-all shadow-sm"
+              title="رصيد المحفظة وشحن الحساب"
+            >
+              <Wallet className="h-4 w-4 shrink-0 text-amber-400" />
+              <span className="font-mono font-black">{student.walletBalance || 0}</span>
+              <span className="text-[10px]">ج.م</span>
+            </button>
+          )}
+
           {/* Activation Key Button */}
           <button
             onClick={onOpenActivationModal}
@@ -248,12 +264,30 @@ export const Navbar: React.FC<NavbarProps> = ({
               );
             })}
 
+            {student && onOpenWalletModal && (
+              <button
+                onClick={() => {
+                  onOpenWalletModal();
+                  setMobileMenuOpen(false);
+                }}
+                className="flex w-full items-center justify-between rounded-lg bg-amber-500/10 px-4 py-3 text-sm font-bold text-amber-400 hover:bg-amber-500/20"
+              >
+                <div className="flex items-center gap-3">
+                  <Wallet className="h-5 w-5 text-amber-400" />
+                  <span>محفظة الطالب والشحن</span>
+                </div>
+                <span className="font-mono bg-amber-500/20 px-2.5 py-0.5 rounded-full text-xs">
+                  {student.walletBalance || 0} ج.م
+                </span>
+              </button>
+            )}
+
             <button
               onClick={() => {
                 onOpenActivationModal();
                 setMobileMenuOpen(false);
               }}
-              className="flex w-full items-center gap-3 rounded-lg bg-amber-500/10 px-4 py-3 text-sm font-bold text-amber-400 hover:bg-amber-500/20"
+              className="flex w-full items-center gap-3 rounded-lg bg-slate-900 px-4 py-3 text-sm font-bold text-slate-200 hover:bg-slate-800"
             >
               <Key className="h-5 w-5 text-amber-400" />
               <span>تفعيل كود كورس أو مذكرة</span>

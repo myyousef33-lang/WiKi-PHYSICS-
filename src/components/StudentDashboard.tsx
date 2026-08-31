@@ -16,10 +16,14 @@ import {
   Brain,
   Trophy,
   Bot,
-  MessageSquare
+  MessageSquare,
+  Wallet,
+  Compass,
+  ArrowRight,
+  FileText
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
-import { Student, Course, Lesson, ExamAttempt, NotificationItem } from '../types';
+import { Student, Course, Lesson, ExamAttempt, NotificationItem, SmartStudyRecommendation } from '../types';
 import { ExamCountdownBanner } from './ExamCountdownBanner';
 import { StreakBanner } from './StreakBanner';
 import { Edit3, Layers, User } from 'lucide-react';
@@ -28,17 +32,20 @@ interface StudentDashboardProps {
   onNavigate: (view: string, params?: any) => void;
   onOpenActivationModal: () => void;
   onOpenEditProfileModal?: () => void;
+  onOpenWalletModal?: () => void;
 }
 
 export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   onNavigate,
   onOpenActivationModal,
-  onOpenEditProfileModal
+  onOpenEditProfileModal,
+  onOpenWalletModal
 }) => {
   const [student, setStudent] = useState<Student | null>(StorageService.getCurrentStudent());
   const [courses, setCourses] = useState<Course[]>([]);
   const [attempts, setAttempts] = useState<ExamAttempt[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [recommendations, setRecommendations] = useState<SmartStudyRecommendation[]>([]);
   const [lastViewed, setLastViewed] = useState<{ course?: Course; lesson?: Lesson } | null>(null);
 
   useEffect(() => {
@@ -58,6 +65,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
       const allNotifs = StorageService.getNotifications();
       setNotifications(allNotifs.slice(0, 3));
 
+      // Fetch dynamic Smart Recommendations
+      const smartRecs = StorageService.getStudentRecommendations(currentStudent.id);
+      setRecommendations(smartRecs);
+
       // Resolve Last Viewed Lesson
       const lastViewedInfo = StorageService.getLastViewedLesson(currentStudent.id);
       if (lastViewedInfo) {
@@ -70,7 +81,6 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         if (foundCourse && foundLesson) {
           setLastViewed({ course: foundCourse, lesson: foundLesson });
         } else if (studentCourses.length > 0) {
-          // fallback to first course's first lesson
           const firstCourse = studentCourses[0];
           const firstLesson = firstCourse.units?.[0]?.lessons?.[0];
           if (firstLesson) {
@@ -174,7 +184,27 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
       <StreakBanner student={student} />
 
       {/* Interactive Physics & Profile Features Bar */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {onOpenWalletModal && (
+          <button
+            onClick={onOpenWalletModal}
+            className="rounded-2xl border border-amber-500/40 bg-gradient-to-br from-amber-500/10 via-slate-900 to-slate-900 p-3.5 text-right flex items-center gap-3 hover:border-amber-500 hover:bg-slate-900 transition-all shadow-md group col-span-2 sm:col-span-1"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 group-hover:scale-110 transition-transform">
+              <Wallet className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <h4 className="text-xs font-black text-white">المحفظة</h4>
+                <span className="text-[10px] font-bold text-amber-400 font-mono">
+                  {student.walletBalance || 0} ج.م
+                </span>
+              </div>
+              <p className="text-[10px] text-amber-400/80">شحن الرصيد والاشتراكات</p>
+            </div>
+          </button>
+        )}
+
         {onOpenEditProfileModal && (
           <button
             onClick={onOpenEditProfileModal}
@@ -184,8 +214,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
               <Edit3 className="h-5 w-5" />
             </div>
             <div>
-              <h4 className="text-xs font-black text-white">تعديل الملف الشخصي</h4>
-              <p className="text-[10px] text-slate-400">الصورة، الهاتف والباسورد</p>
+              <h4 className="text-xs font-black text-white">الملف الشخصي</h4>
+              <p className="text-[10px] text-slate-400">الصورة والباسورد</p>
             </div>
           </button>
         )}
@@ -199,7 +229,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           </div>
           <div>
             <h4 className="text-xs font-black text-white">المعمل التفاعلي 🔬</h4>
-            <p className="text-[10px] text-slate-400">محاكاة التجارب الفيزيائية</p>
+            <p className="text-[10px] text-slate-400">محاكاة التجارب</p>
           </div>
         </button>
 
@@ -212,7 +242,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           </div>
           <div>
             <h4 className="text-xs font-black text-white">بطاقات المراجعة 🎴</h4>
-            <p className="text-[10px] text-slate-400">Flashcards سريعة للفصول</p>
+            <p className="text-[10px] text-slate-400">Flashcards سريعة</p>
           </div>
         </button>
 
@@ -225,10 +255,89 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           </div>
           <div>
             <h4 className="text-xs font-black text-white">الشهادات والنتائج 🏆</h4>
-            <p className="text-[10px] text-slate-400">شهادات تفوق قابلة للمشاركة</p>
+            <p className="text-[10px] text-slate-400">شهادات تفوق</p>
           </div>
         </button>
       </div>
+
+      {/* Smart Study Path Section (مسار المذاكرة الذكي الموصى به) */}
+      {recommendations.length > 0 && (
+        <div className="rounded-3xl border border-amber-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/20 p-6 space-y-4 shadow-xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400">
+                <Compass className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-white flex items-center gap-2">
+                  مسار المذاكرة الذكي المقترح 🎯
+                  <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                    مخصص لك
+                  </span>
+                </h3>
+                <p className="text-[11px] text-slate-400">خطوات مدروسة لعلاج نقاط الضعف ورفع درجاتك استناداً لنتائجك الأخيرة</p>
+              </div>
+            </div>
+            <button
+              onClick={() => onNavigate('weakness-profile')}
+              className="text-xs font-bold text-amber-400 hover:underline flex items-center gap-1"
+            >
+              <span>تقرير التشخيص الكامل</span>
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {recommendations.slice(0, 3).map((rec) => (
+              <div
+                key={rec.id}
+                className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 space-y-3 flex flex-col justify-between hover:border-amber-500/40 transition-colors"
+              >
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                      rec.priority === 'high'
+                        ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+                        : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                    }`}>
+                      {rec.priority === 'high' ? 'أولوية قصوى' : 'موصى به'}
+                    </span>
+                  </div>
+                  <h4 className="text-xs font-black text-white line-clamp-1">{rec.title}</h4>
+                  <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">{rec.reason}</p>
+                </div>
+
+                <div className="pt-2 border-t border-slate-900 flex items-center justify-between">
+                  {rec.recommendedLessonId ? (
+                    <button
+                      onClick={() => onNavigate('courses-catalog')}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500/15 border border-amber-500/30 py-2 text-xs font-bold text-amber-300 hover:bg-amber-500 hover:text-slate-950 transition-all"
+                    >
+                      <PlayCircle className="h-3.5 w-3.5" />
+                      <span>مشاهدة الدرس العلاجي</span>
+                    </button>
+                  ) : rec.recommendedPdfId ? (
+                    <button
+                      onClick={() => onNavigate('pdf-library')}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-blue-500/15 border border-blue-500/30 py-2 text-xs font-bold text-blue-300 hover:bg-blue-500 hover:text-white transition-all"
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      <span>فتح المذكرة الموصى بها</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => onNavigate('weakness-profile')}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-slate-800 py-2 text-xs font-bold text-slate-300 hover:bg-slate-700 transition-colors"
+                    >
+                      <span>عرض خطة العلاج</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Ministry Exam Countdown Banner */}
       <ExamCountdownBanner onNavigate={onNavigate} />

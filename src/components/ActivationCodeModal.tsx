@@ -51,7 +51,7 @@ export const ActivationCodeModal: React.FC<ActivationCodeModalProps> = ({
         activeStudent = existing;
         StorageService.setCurrentStudent(existing);
       } else {
-        const regRes = StorageService.registerStudent({
+        const regRes = await StorageService.registerStudent({
           name: cleanName,
           phone: cleanPhone,
           parentPhone: '01000000000',

@@ -24,6 +24,7 @@ import { PhysicsSimulationsLab } from './components/PhysicsSimulationsLab';
 import { FlashcardsView } from './components/FlashcardsView';
 import { CertificateModal } from './components/CertificateModal';
 import { GlobalAntiScreenshotShield } from './components/GlobalAntiScreenshotShield';
+import { StudentWalletModal } from './components/StudentWalletModal';
 import { StorageService, subscribeToStorage } from './services/storage';
 import { EarnedCertificate, Student } from './types';
 
@@ -39,6 +40,7 @@ export default function App() {
   const [isAdminSecretOpen, setIsAdminSecretOpen] = useState(false);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [selectedCertificate, setSelectedCertificate] = useState<EarnedCertificate | null>(null);
 
   useEffect(() => {
@@ -127,6 +129,7 @@ export default function App() {
         onOpenAuthModal={() => handleOpenAuth('login')}
         onOpenNotificationModal={() => setIsNotificationModalOpen(true)}
         onOpenEditProfileModal={() => setIsEditProfileModalOpen(true)}
+        onOpenWalletModal={() => setIsWalletModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -144,6 +147,7 @@ export default function App() {
             onNavigate={handleNavigate}
             onOpenActivationModal={() => setIsActivationModalOpen(true)}
             onOpenEditProfileModal={() => setIsEditProfileModalOpen(true)}
+            onOpenWalletModal={() => setIsWalletModalOpen(true)}
           />
         )}
 
@@ -285,6 +289,15 @@ export default function App() {
       <NotificationCenterModal
         isOpen={isNotificationModalOpen}
         onClose={() => setIsNotificationModalOpen(false)}
+      />
+
+      {/* Student Wallet & Payment Modal */}
+      <StudentWalletModal
+        isOpen={isWalletModalOpen}
+        onClose={() => setIsWalletModalOpen(false)}
+        onSuccess={() => {
+          setStudent(StorageService.getCurrentStudent());
+        }}
       />
 
       {student && (

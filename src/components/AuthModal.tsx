@@ -112,7 +112,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  const handleQuickDemoSwitch = (studentId: string) => {
+  const handleQuickDemoSwitch = async (studentId: string) => {
     const s = StorageService.getStudentById(studentId);
     if (s) {
       StorageService.setCurrentStudent(s);
@@ -123,7 +123,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       }, 500);
     } else {
       // If demo student doesn't exist, create one
-      const res = StorageService.registerStudent({
+      const res = await StorageService.registerStudent({
         name: 'أحمد محمود (طالب تجريبي)',
         phone: '01012345678',
         parentPhone: '01112345678',

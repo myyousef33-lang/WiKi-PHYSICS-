@@ -65,8 +65,8 @@ export async function resolvePdfUrl(rawUrl?: string): Promise<string> {
     }
   }
 
-  // 3. Check for Data URI (convert to Blob URL so browsers don't block in iframe)
-  if (url.startsWith('data:application/pdf') || url.startsWith('data:binary/octet-stream')) {
+  // 3. Check for Data URI (convert to Blob URL so browsers don't block in iframe/object)
+  if (url.startsWith('data:') && (url.includes('pdf') || url.includes('octet-stream'))) {
     try {
       const blob = base64ToBlob(url, 'application/pdf');
       const blobUrl = URL.createObjectURL(blob);
@@ -84,7 +84,7 @@ export async function resolvePdfUrl(rawUrl?: string): Promise<string> {
     return `https://drive.google.com/file/d/${driveId}/preview`;
   }
 
-  // 5. Standard remote URL
+  // 5. Standard remote or local server URL (/uploads/...)
   return url;
 }
 

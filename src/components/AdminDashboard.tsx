@@ -55,12 +55,19 @@ import {
   ArrowUp,
   ArrowDown,
   Sliders,
-  GripVertical
+  GripVertical,
+  Wallet,
+  MessageSquare,
+  FileSpreadsheet
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { MediaStore } from '../services/mediaStore';
 import { Logo } from './Logo';
 import { PdfViewerModal } from './PdfViewerModal';
+import { AdminWalletTab } from './AdminWalletTab';
+import { AdminAuditLogTab } from './AdminAuditLogTab';
+import { AdminCommentsTab } from './AdminCommentsTab';
+import { AdminReportsExportTab } from './AdminReportsExportTab';
 import { downloadPdfFile, resolvePdfUrl } from '../utils/pdfHelper';
 import { 
   Student, 
@@ -84,7 +91,25 @@ interface AdminDashboardProps {
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'courses' | 'exams' | 'students' | 'codes' | 'pdfs' | 'results' | 'challenges' | 'leaderboard-admin' | 'weakness-admin' | 'ai-admin' | 'notifs' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<
+    | 'overview'
+    | 'courses'
+    | 'exams'
+    | 'students'
+    | 'codes'
+    | 'pdfs'
+    | 'results'
+    | 'challenges'
+    | 'leaderboard-admin'
+    | 'weakness-admin'
+    | 'ai-admin'
+    | 'notifs'
+    | 'settings'
+    | 'wallet-admin'
+    | 'audit-admin'
+    | 'comments-admin'
+    | 'reports-export'
+  >('overview');
   
   // Data State
   const [students, setStudents] = useState<Student[]>([]);
@@ -439,7 +464,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     setTimeout(() => setCopiedCodeId(null), 2500);
   };
 
-  // Dynamic Real Statistics Engine for Overview Charts & Analytics
+  // Dynamic Real Statistics Engine for Overview Charts & Analytics (100% Real Live Data)
   const dynamicStats = (() => {
     const now = new Date();
     interface DataPoint {
@@ -452,6 +477,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       studentCount: number;
     }
     const points: DataPoint[] = [];
+
+    // Real metric totals across collections
+    const totalStudentsCount = students.length;
+    const totalAttemptsCount = attempts.length;
+    const totalCoursesCount = courses.length;
+    const totalExamsCount = exams.length;
+    const totalPdfsCount = pdfs.length;
+    const totalCodesCount = codes.length;
+    const usedCodesCount = codes.filter(c => c.isUsed).length;
+
+    // Real average score across all attempts
+    const overallAvgScore = attempts.length > 0
+      ? Math.round(attempts.reduce((acc, a) => acc + (a.percentage || (a.maxScore > 0 ? (a.score / a.maxScore) * 100 : 0) || 0), 0) / attempts.length)
+      : 0;
+
+    // Real pass rate (>50%)
+    const passedAttempts = attempts.filter(a => {
+      const pct = a.percentage || (a.maxScore > 0 ? (a.score / a.maxScore) * 100 : 0);
+      return pct >= 50;
+    });
+    const passRate = attempts.length > 0 ? Math.round((passedAttempts.length / attempts.length) * 100) : 0;
+
+    // Total questions solved in real attempts
+    const totalQuestionsAnswered = attempts.reduce((acc, a) => acc + (a.answers?.length || 0), 0);
 
     if (chartPeriod === 'week') {
       const dayNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
@@ -466,18 +515,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
 
         const realCount = dayAttempts.length + dayStudents.length + dayCodes.length;
         const avgScore = dayAttempts.length > 0
-          ? Math.round(dayAttempts.reduce((acc, a) => acc + (a.percentage || 0), 0) / dayAttempts.length)
-          : 85;
-
-        // Baseline organic simulation weighted with real registered data
-        const baseline = Math.round(Math.max(12, students.length * 3 + (i * 7) % 23 + (attempts.length > 0 ? attempts.length * 2 : 15)));
-        const finalCount = realCount > 0 ? realCount : baseline;
+          ? Math.round(dayAttempts.reduce((acc, a) => acc + (a.percentage || (a.maxScore > 0 ? (a.score / a.maxScore) * 100 : 0) || 0), 0) / dayAttempts.length)
+          : 0;
 
         points.push({
           label: dayName,
           fullLabel: `${dayName} (${d.toLocaleDateString('ar-EG', { month: 'numeric', day: 'numeric' })})`,
           rawCount: realCount,
-          displayValue: finalCount,
+          displayValue: realCount,
           avgScore,
           examCount: dayAttempts.length,
           studentCount: dayStudents.length
@@ -494,20 +539,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
 
         const intervalAttempts = attempts.filter(a => a.submittedAt && a.submittedAt.slice(0, 10) >= startDay && a.submittedAt.slice(0, 10) <= endDay);
         const intervalStudents = students.filter(s => s.registeredAt && s.registeredAt.slice(0, 10) >= startDay && s.registeredAt.slice(0, 10) <= endDay);
-        const realCount = intervalAttempts.length + intervalStudents.length;
+        const intervalCodes = codes.filter(c => c.usedAt && c.usedAt.slice(0, 10) >= startDay && c.usedAt.slice(0, 10) <= endDay);
+        const realCount = intervalAttempts.length + intervalStudents.length + intervalCodes.length;
 
         const avgScore = intervalAttempts.length > 0
-          ? Math.round(intervalAttempts.reduce((acc, a) => acc + (a.percentage || 0), 0) / intervalAttempts.length)
-          : 82;
-
-        const baseline = Math.round(Math.max(45, (students.length + courses.length) * 8 + ((5 - i) * 35)));
-        const finalCount = realCount > 0 ? realCount : baseline;
+          ? Math.round(intervalAttempts.reduce((acc, a) => acc + (a.percentage || (a.maxScore > 0 ? (a.score / a.maxScore) * 100 : 0) || 0), 0) / intervalAttempts.length)
+          : 0;
 
         points.push({
           label,
           fullLabel: `الفترة حتى ${label}`,
           rawCount: realCount,
-          displayValue: finalCount,
+          displayValue: realCount,
           avgScore,
           examCount: intervalAttempts.length,
           studentCount: intervalStudents.length
@@ -522,20 +565,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
 
         const monthAttempts = attempts.filter(a => a.submittedAt && a.submittedAt.startsWith(yearMonth));
         const monthStudents = students.filter(s => s.registeredAt && s.registeredAt.startsWith(yearMonth));
-        const realCount = monthAttempts.length + monthStudents.length;
+        const monthCodes = codes.filter(c => c.usedAt && c.usedAt.startsWith(yearMonth));
+        const realCount = monthAttempts.length + monthStudents.length + monthCodes.length;
 
         const avgScore = monthAttempts.length > 0
-          ? Math.round(monthAttempts.reduce((acc, a) => acc + (a.percentage || 0), 0) / monthAttempts.length)
-          : 88;
-
-        const baseline = Math.round(Math.max(120, students.length * 25 + ((5 - i) * 110) + 150));
-        const finalCount = realCount > 0 ? realCount : baseline;
+          ? Math.round(monthAttempts.reduce((acc, a) => acc + (a.percentage || (a.maxScore > 0 ? (a.score / a.maxScore) * 100 : 0) || 0), 0) / monthAttempts.length)
+          : 0;
 
         points.push({
           label,
           fullLabel: `${label} ${d.getFullYear()}`,
           rawCount: realCount,
-          displayValue: finalCount,
+          displayValue: realCount,
           avgScore,
           examCount: monthAttempts.length,
           studentCount: monthStudents.length
@@ -544,7 +585,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     }
 
     // Dynamic SVG Coordinates calculation
-    const maxVal = Math.max(...points.map(p => p.displayValue), 10);
+    const rawMax = Math.max(...points.map(p => p.displayValue), 0);
+    const maxVal = rawMax === 0 ? 10 : Math.ceil(rawMax * 1.25);
     const minVal = 0;
     const yRange = 110; // from Y=35 to Y=145
     const minY = 35;
@@ -574,8 +616,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     const totalRealAttempts = attempts.length;
     const totalRealStudents = students.length;
 
-    // Calculate real monthly growth rate based on attempts & students
-    const growthPercent = Math.min(95, Math.max(12, Math.round(14 + (students.length * 1.5) + (attempts.length * 0.8))));
+    // Real growth calculation comparing recent half vs previous half of points
+    const mid = Math.floor(points.length / 2);
+    const prevHalf = points.slice(0, mid).reduce((acc, p) => acc + p.displayValue, 0);
+    const recentHalf = points.slice(mid).reduce((acc, p) => acc + p.displayValue, 0);
+    const realGrowthPercent = prevHalf > 0 
+      ? Math.round(((recentHalf - prevHalf) / prevHalf) * 100)
+      : (recentHalf > 0 ? 100 : 0);
 
     return {
       points: svgPoints,
@@ -585,7 +632,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       totalInteractions,
       totalRealAttempts,
       totalRealStudents,
-      growthPercent
+      overallAvgScore,
+      passRate,
+      totalQuestionsAnswered,
+      totalCoursesCount,
+      totalExamsCount,
+      totalPdfsCount,
+      totalCodesCount,
+      usedCodesCount,
+      growthPercent: realGrowthPercent
     };
   })();
 
@@ -896,20 +951,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     }
   };
 
+  const pendingDepositsCount = StorageService.getWalletTransactions().filter(t => t.type === 'deposit' && t.status === 'pending').length;
+  const commentsCount = StorageService.getLessonComments().length;
+
   const tabCategories = [
     {
       title: '📊 لوحة القيادة والمتابعة',
       items: [
         { id: 'overview', label: 'الرئيسية والإحصائيات', icon: BarChart3, badge: null },
+        { id: 'wallet-admin', label: 'المحفظة وبوابات الدفع 💰', icon: Wallet, badge: pendingDepositsCount > 0 ? pendingDepositsCount : null },
+        { id: 'reports-export', label: 'تصدير التقارير (Excel) 📑', icon: FileSpreadsheet, badge: null },
         { id: 'results', label: 'نتائج وتقارير الطلاب', icon: Award, badge: attempts.length > 0 ? attempts.length : null },
+        { id: 'audit-admin', label: 'سجل نشاط الإدارة 🛡️', icon: ShieldCheck, badge: null },
         { id: 'notifs', label: 'مركز الإشعارات', icon: Bell, badge: notifs.length > 0 ? notifs.length : null },
         { id: 'settings', label: 'إعدادات المنصة', icon: Settings, badge: null }
       ]
     },
     {
-      title: '📚 المحتوى والملازم',
+      title: '📚 المحتوى والملازم والتعليقات',
       items: [
         { id: 'courses', label: 'الكورسات والدروس', icon: BookOpen, badge: courses.length },
+        { id: 'comments-admin', label: 'استفسارات الطلاب 💬', icon: MessageSquare, badge: commentsCount > 0 ? commentsCount : null },
         { id: 'exams', label: 'بنك الأسئلة والامتحانات', icon: HelpCircle, badge: exams.length },
         { id: 'pdfs', label: 'المذكرات والملازم PDF', icon: FileText, badge: pdfs.length }
       ]
@@ -992,16 +1054,16 @@ ${weakConceptsText}
       </div>
 
       {/* 1. TOP EXECUTIVE HEADER BAR */}
-      <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-[#070b16]/90 backdrop-blur-2xl">
-        <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-3">
-          <div className="flex items-center justify-between gap-2 sm:gap-4">
+      <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-2xl">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3.5">
+          <div className="flex items-center justify-between gap-3 sm:gap-6">
             
-            {/* Right in RTL: Mobile Hamburger + Brand / User */}
-            <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+            {/* Right in RTL: Mobile Hamburger + Brand Logo */}
+            <div className="flex items-center gap-3 sm:gap-5 min-w-0">
               {/* Mobile Menu Toggle Button */}
               <button
                 onClick={() => setIsMobileDrawerOpen(true)}
-                className="lg:hidden flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="lg:hidden flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500"
                 aria-label="فتح القائمة الرئيسية"
               >
                 <Menu className="h-5 w-5" />
@@ -1009,59 +1071,59 @@ ${weakConceptsText}
 
               {/* Brand Logo & Platform Title */}
               <div 
-                className="flex items-center gap-2.5 cursor-pointer select-none group"
+                className="flex items-center gap-3 cursor-pointer select-none group transition-transform hover:scale-[1.01]"
                 onClick={() => setActiveTab('overview')}
-                title="العودة إلى النظرة العامة"
+                title="العودة إلى النظرة العامة للوحة التحكم"
               >
-                <Logo size="sm" showSubtitle={false} />
-                <div className="hidden sm:flex flex-col">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full">
-                      الإدارة التنفيذية
-                    </span>
-                  </div>
-                </div>
+                <Logo size="md" showSubtitle={true} />
+                <span className="hidden xl:inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/30 px-2.5 py-1 rounded-xl shadow-sm">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  لوحة الإدارة التنفيذية
+                </span>
               </div>
             </div>
 
-            {/* User Greeting Box on Desktop (Matching Screenshot) */}
-            <div className="hidden md:flex items-center gap-3 rounded-2xl border border-slate-800/80 bg-slate-900/60 px-3.5 py-1.5 backdrop-blur-md">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/20 to-blue-500/20 border border-amber-500/30 text-amber-300 font-black text-xs shadow-inner">
-                Admin
+            {/* Admin Session Badge on Desktop */}
+            <div className="hidden lg:flex items-center gap-3 rounded-2xl border border-slate-800/90 bg-slate-900/70 px-4 py-2 backdrop-blur-md shadow-sm">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/20 via-amber-600/15 to-blue-500/20 border border-amber-500/40 text-amber-400 font-black text-xs shadow-inner">
+                ADMIN
               </div>
               <div className="text-right">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-white">👋 مرحباً بك، Super Admin</span>
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" title="متصل" />
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-white">المسؤول العام (Super Admin)</span>
+                  <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                  </span>
                 </div>
-                <p className="text-[10px] text-slate-400">إدارة منصة {settings.platformName || 'ويكيفزياء'} التعليمية</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">منصة {settings.platformName || 'ويكيفزياء'} للفيزياء الحديثة</p>
               </div>
             </div>
 
             {/* Left in RTL: Action Buttons (Firestore Sync, Student View, Logout) */}
-            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
               <button
                 onClick={handleForceSyncCloud}
                 disabled={isSyncingCloud}
-                className="flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-950/40 px-2.5 sm:px-3 py-2 text-xs font-bold text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/60 transition-all shadow-sm shadow-emerald-500/10 disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-950/40 px-3 py-2 text-xs font-bold text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/60 transition-all shadow-sm shadow-emerald-500/10 disabled:opacity-50"
                 title="مزامنة فورية لكل البيانات مع قاعدة بيانات Firebase Firestore"
               >
                 <RefreshCw className={`h-3.5 w-3.5 shrink-0 ${isSyncingCloud ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">{isSyncingCloud ? 'جارٍ الحفظ...' : 'مزامنة السحابة (Firestore)'}</span>
+                <span className="hidden sm:inline">{isSyncingCloud ? 'جارٍ المزامنة...' : 'مزامنة السحابة'}</span>
               </button>
 
               <button
                 onClick={() => onNavigate('dashboard')}
-                className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900/90 px-2.5 sm:px-3 py-2 text-xs font-bold text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
+                className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/90 px-3 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700 hover:text-white transition-colors"
                 title="معاينة الواجهة كما يراها الطالب"
               >
-                <Eye className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+                <Eye className="h-3.5 w-3.5 text-amber-400 shrink-0" />
                 <span className="hidden sm:inline">معاينة كطالب</span>
               </button>
 
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-1.5 rounded-xl border border-rose-500/40 bg-rose-950/30 px-2.5 sm:px-3 py-2 text-xs font-bold text-rose-400 hover:bg-rose-500/20 hover:border-rose-500/60 transition-colors"
+                className="flex items-center gap-1.5 rounded-xl border border-rose-500/40 bg-rose-950/30 px-3 py-2 text-xs font-bold text-rose-400 hover:bg-rose-500/20 hover:border-rose-500/60 transition-colors"
                 title="تسجيل الخروج من لوحة التحكم"
               >
                 <LogOut className="h-3.5 w-3.5 shrink-0" />
@@ -1652,16 +1714,39 @@ ${weakConceptsText}
                               )}
                             </div>
 
-                            <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between">
-                              <div>
-                                <span className="text-[10px] text-slate-400 block">إجمالي التفاعلات والمحاولات</span>
-                                <span className="text-sm sm:text-base font-black text-white font-mono">
-                                  {dynamicStats.totalInteractions.toLocaleString('ar-EG')}
+                            <div className="mt-3 pt-3 border-t border-slate-800/80 space-y-2">
+                              <div className="grid grid-cols-3 gap-2 text-center">
+                                <div className="p-2 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                                  <span className="text-[10px] text-slate-400 block">متوسط الدرجات</span>
+                                  <span className="text-xs sm:text-sm font-black text-amber-400 font-mono">
+                                    {dynamicStats.overallAvgScore}%
+                                  </span>
+                                </div>
+                                <div className="p-2 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                                  <span className="text-[10px] text-slate-400 block">نسبة النجاح</span>
+                                  <span className="text-xs sm:text-sm font-black text-emerald-400 font-mono">
+                                    {dynamicStats.passRate}%
+                                  </span>
+                                </div>
+                                <div className="p-2 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                                  <span className="text-[10px] text-slate-400 block">حلول مصححة</span>
+                                  <span className="text-xs sm:text-sm font-black text-cyan-400 font-mono">
+                                    {dynamicStats.totalRealAttempts.toLocaleString('ar-EG')}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between pt-1">
+                                <div>
+                                  <span className="text-[10px] text-slate-400 block">إجمالي التفاعلات والمحاولات</span>
+                                  <span className="text-sm sm:text-base font-black text-white font-mono">
+                                    {dynamicStats.totalInteractions.toLocaleString('ar-EG')}
+                                  </span>
+                                </div>
+                                <span className="text-xs font-bold text-emerald-400">
+                                  {dynamicStats.growthPercent >= 0 ? `↑ ${dynamicStats.growthPercent}% نمو` : `${dynamicStats.growthPercent}%`}
                                 </span>
                               </div>
-                              <span className="text-xs font-bold text-emerald-400">
-                                ↑ {dynamicStats.growthPercent}% نمو عن الشهر الماضي
-                              </span>
                             </div>
                           </div>
 
@@ -4076,6 +4161,22 @@ ${weakConceptsText}
         </div>
       )}
 
+      {activeTab === 'wallet-admin' && (
+        <AdminWalletTab />
+      )}
+
+      {activeTab === 'audit-admin' && (
+        <AdminAuditLogTab />
+      )}
+
+      {activeTab === 'comments-admin' && (
+        <AdminCommentsTab />
+      )}
+
+      {activeTab === 'reports-export' && (
+        <AdminReportsExportTab />
+      )}
+
           </main>
         </div>
       </div>
@@ -4368,8 +4469,11 @@ ${weakConceptsText}
       {/* Universal PDF Viewer Modal for Admin */}
       {adminPreviewPdf && (
         <PdfViewerModal
+          isOpen={true}
           pdfUrl={adminPreviewPdf.url}
           title={adminPreviewPdf.title}
+          category={adminPreviewPdf.category}
+          grade={adminPreviewPdf.grade}
           pageCount={adminPreviewPdf.pageCount}
           onClose={() => setAdminPreviewPdf(null)}
         />

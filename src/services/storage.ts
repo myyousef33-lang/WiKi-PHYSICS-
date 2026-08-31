@@ -17,7 +17,12 @@ import {
   WeeklyChallenge,
   LeaderboardEntry,
   StudentBadge,
-  AIChatMessage
+  AIChatMessage,
+  PaymentMethod,
+  WalletTransaction,
+  AdminAuditLogEntry,
+  LessonComment,
+  SmartStudyRecommendation
 } from '../types';
 import { db, doc, getDoc, setDoc, onSnapshot } from './firebase';
 
@@ -39,7 +44,12 @@ const STORAGE_KEYS = {
   WEAKNESS_PROFILES: 'wikifizya_db_weakness_v4',
   LEADERBOARD: 'wikifizya_db_leaderboard_v4',
   WEEKLY_CHALLENGES: 'wikifizya_db_weekly_challenges_v4',
-  AI_CHAT_HISTORY: 'wikifizya_db_ai_chat_history_v4'
+  AI_CHAT_HISTORY: 'wikifizya_db_ai_chat_history_v4',
+  PAYMENT_METHODS: 'wikifizya_db_payment_methods_v4',
+  WALLET_TRANSACTIONS: 'wikifizya_db_wallet_transactions_v4',
+  AUDIT_LOGS: 'wikifizya_db_audit_logs_v4',
+  LESSON_COMMENTS: 'wikifizya_db_lesson_comments_v4',
+  STUDY_RECOMMENDATIONS: 'wikifizya_db_study_recommendations_v4'
 };
 
 // Cryptographic Password Hashing (SHA-256 with Salt)
@@ -59,8 +69,9 @@ export const hashPassword = async (password: string): Promise<string> => {
 };
 
 export const verifyPassword = async (inputPassword: string, storedHashOrPlain?: string): Promise<boolean> => {
-  if (!storedHashOrPlain || storedHashOrPlain.trim() === '') return true;
+  if (!storedHashOrPlain || storedHashOrPlain.trim() === '') return false;
   const cleanInput = (inputPassword || '').trim();
+  if (!cleanInput) return false;
   
   if (storedHashOrPlain.startsWith('sha256_')) {
     const inputHash = await hashPassword(cleanInput);
@@ -112,7 +123,12 @@ const syncKeys = [
   STORAGE_KEYS.PROGRESS,
   STORAGE_KEYS.ATTEMPTS,
   STORAGE_KEYS.LEADERBOARD,
-  STORAGE_KEYS.WEEKLY_CHALLENGES
+  STORAGE_KEYS.WEEKLY_CHALLENGES,
+  STORAGE_KEYS.PAYMENT_METHODS,
+  STORAGE_KEYS.WALLET_TRANSACTIONS,
+  STORAGE_KEYS.AUDIT_LOGS,
+  STORAGE_KEYS.LESSON_COMMENTS,
+  STORAGE_KEYS.STUDY_RECOMMENDATIONS
 ];
 
 // Firebase Firestore Cloud Sync Helpers
@@ -390,7 +406,7 @@ export const StorageService = {
   getStudents(): Student[] {
     return getStored<Student[]>(STORAGE_KEYS.STUDENTS, []);
   },
-  async loginStudentAsync(phone: string, password?: string): Promise<{ success: boolean; student?: Student; error?: string }> {
+  async loginStudent(phone: string, password?: string): Promise<{ success: boolean; student?: Student; error?: string }> {
     const cleanPhone = phone.trim();
     const cleanPass = (password || '').trim();
     const students = this.getStudents();
@@ -424,45 +440,10 @@ export const StorageService = {
     this.setCurrentStudent(found);
     return { success: true, student: found };
   },
-  loginStudent(phone: string, password?: string): { success: boolean; student?: Student; error?: string } {
-    const cleanPhone = phone.trim();
-    const cleanPass = (password || '').trim();
-    const students = this.getStudents();
-    const found = students.find(s => s.phone === cleanPhone);
-    if (!found) {
-      return { success: false, error: 'رقم الهاتف غير مسجل. يرجى الضغط على إنشاء حساب جديد والتسجيل.' };
-    }
-    if (found.isBlocked) {
-      return { success: false, error: 'هذا الحساب محظور مؤقتًا. يرجى التواصل مع الإدارة.' };
-    }
-
-    // Synchronous check & schedule background upgrade
-    if (found.password && found.password.trim().length > 0) {
-      if (!cleanPass) {
-        return { success: false, error: 'يرجى إدخال كلمة المرور لتسجيل الدخول.' };
-      }
-      if (found.password.startsWith('sha256_')) {
-        // Will verify on async flow, allow sync if hash matches or kick off async upgrade
-      } else if (found.password.trim() !== cleanPass) {
-        return { success: false, error: 'كلمة المرور غير صحيحة، يرجى التأكد وإعادة المحاولة.' };
-      }
-    }
-
-    found.lastActiveAt = new Date().toISOString();
-    this.saveStudent(found);
-    this.setCurrentStudent(found);
-    
-    // Hash in background if plain
-    if (cleanPass && (!found.password || !found.password.startsWith('sha256_'))) {
-      hashPassword(cleanPass).then(h => {
-        found.password = h;
-        this.saveStudent(found);
-      });
-    }
-
-    return { success: true, student: found };
+  async loginStudentAsync(phone: string, password?: string): Promise<{ success: boolean; student?: Student; error?: string }> {
+    return this.loginStudent(phone, password);
   },
-  async registerStudentAsync(data: {
+  async registerStudent(data: {
     name: string;
     phone: string;
     parentPhone: string;
@@ -488,6 +469,7 @@ export const StorageService = {
       password: hashedPassword,
       grade: data.grade,
       governorate: data.governorate,
+      walletBalance: 0,
       registeredAt: new Date().toISOString(),
       lastActiveAt: new Date().toISOString(),
       isBlocked: false,
@@ -503,51 +485,15 @@ export const StorageService = {
     this.setCurrentStudent(newStudent);
     return { success: true, student: newStudent };
   },
-  registerStudent(data: {
+  async registerStudentAsync(data: {
     name: string;
     phone: string;
     parentPhone: string;
     password?: string;
     grade: string;
     governorate: string;
-  }): { success: boolean; student?: Student; error?: string } {
-    const students = this.getStudents();
-    const cleanPhone = data.phone.trim();
-    const cleanPass = (data.password || '').trim();
-
-    if (students.some(s => s.phone === cleanPhone)) {
-      return { success: false, error: 'رقم الهاتف مسجل بالفعل مسبقاً، يمكنك تسجيل الدخول به مباشرة مع كلمة المرور.' };
-    }
-
-    const newStudent: Student = {
-      id: 'std-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
-      name: data.name.trim(),
-      phone: cleanPhone,
-      parentPhone: data.parentPhone.trim(),
-      password: cleanPass,
-      grade: data.grade,
-      governorate: data.governorate,
-      registeredAt: new Date().toISOString(),
-      lastActiveAt: new Date().toISOString(),
-      isBlocked: false,
-      registeredDevices: ['dev-current-' + Date.now()],
-      maxDevicesAllowed: this.getSettings().maxDevicesPerStudent || 2,
-      enrolledCourseIds: [],
-      unlockedPdfIds: [],
-      courseExpiryDates: {}
-    };
-
-    if (cleanPass) {
-      hashPassword(cleanPass).then(h => {
-        newStudent.password = h;
-        this.saveStudent(newStudent);
-      });
-    }
-
-    students.push(newStudent);
-    setStored(STORAGE_KEYS.STUDENTS, students);
-    this.setCurrentStudent(newStudent);
-    return { success: true, student: newStudent };
+  }): Promise<{ success: boolean; student?: Student; error?: string }> {
+    return this.registerStudent(data);
   },
   logoutStudent(): void {
     this.setCurrentStudent(null);
@@ -1120,8 +1066,8 @@ export const StorageService = {
     return { success: true, message: 'تم تفعيل الكود بنجاح!' };
   },
 
-  // Async version with live Firestore direct fallback query
-  async redeemCodeAsync(rawCode: string, studentId: string): Promise<{ success: boolean; message: string; targetType?: 'course' | 'pdf'; targetId?: string; itemTitle?: string }> {
+  // Async code activation with live fallback
+  async redeemCode(rawCode: string, studentId: string): Promise<{ success: boolean; message: string; targetType?: 'course' | 'pdf'; targetId?: string; itemTitle?: string }> {
     // 1. Try local activation first
     let res = this.activateKey(studentId, rawCode);
     if (res.success) {
@@ -1144,11 +1090,9 @@ export const StorageService = {
       if (snap.exists()) {
         const remoteData = snap.data()?.data;
         if (Array.isArray(remoteData) && remoteData.length > 0) {
-          // Update local storage with remote keys
           localStorage.setItem(STORAGE_KEYS.KEYS, JSON.stringify(remoteData));
           notifyListeners();
           
-          // Retry activation
           res = this.activateKey(studentId, rawCode);
           const keys = this.getKeys();
           const norm = this.normalizeActivationCode(rawCode);
@@ -1163,7 +1107,7 @@ export const StorageService = {
         }
       }
     } catch (e) {
-      console.warn('Firestore direct keys query failed:', e);
+      console.warn('Direct keys query note:', e);
     }
 
     return {
@@ -1174,18 +1118,8 @@ export const StorageService = {
     };
   },
 
-  redeemCode(rawCode: string, studentId: string): { success: boolean; message: string; targetType?: 'course' | 'pdf'; targetId?: string; itemTitle?: string } {
-    const res = this.activateKey(studentId, rawCode);
-    const keys = this.getKeys();
-    const norm = this.normalizeActivationCode(rawCode);
-    const key = keys.find(k => this.normalizeActivationCode(k.code) === norm || k.code.trim().toUpperCase() === rawCode.trim().toUpperCase());
-    return {
-      success: res.success,
-      message: res.message,
-      targetType: res.type,
-      targetId: key?.targetId,
-      itemTitle: res.itemTitle
-    };
+  async redeemCodeAsync(rawCode: string, studentId: string): Promise<{ success: boolean; message: string; targetType?: 'course' | 'pdf'; targetId?: string; itemTitle?: string }> {
+    return this.redeemCode(rawCode, studentId);
   },
 
   // === PDF Library ===
@@ -1310,15 +1244,6 @@ export const StorageService = {
       return { success: false, error: 'يرجى إدخال رمز الدخول السري.' };
     }
 
-    const savedPin = this.getSettings().adminPin;
-    const isValidLocalPin = (
-      trimmed === savedPin ||
-      trimmed === 'WikiPhys@9988#Master' ||
-      trimmed === 'WikiAdmin2025' ||
-      trimmed === '123456' ||
-      trimmed === 'admin'
-    );
-
     try {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
@@ -1331,25 +1256,22 @@ export const StorageService = {
         const data = await res.json();
         if (res.ok && data.success && data.token) {
           this.setAdminLoggedIn(true, data.token);
+          this.addAuditLog({
+            action: 'تسجيل دخول لوحة الإدارة',
+            category: 'security',
+            description: 'تم تسجيل دخول المسؤول بنجاح عبر خادم التوثيق المركزي.',
+            adminIdentifier: 'المسؤول'
+          });
           return { success: true };
         } else if (data.error) {
           return { success: false, error: data.error };
         }
       }
 
-      // If backend responded with non-JSON (like 404 HTML on static host), use local validation
-      if (isValidLocalPin) {
-        this.setAdminLoggedIn(true, 'local-dev-token-' + Date.now());
-        return { success: true };
-      }
       return { success: false, error: 'رمز الدخول السري غير صحيح.' };
     } catch (e) {
-      console.warn('Backend login fallback:', e);
-      if (isValidLocalPin) {
-        this.setAdminLoggedIn(true, 'local-dev-token-' + Date.now());
-        return { success: true };
-      }
-      return { success: false, error: 'رمز الدخول السري غير صحيح.' };
+      console.error('Admin backend login error:', e);
+      return { success: false, error: 'تعذر التحقق من رمز الدخول السري. يرجى التأكد من اتصال الخادم.' };
     }
   },
   logoutAdmin(): void {
@@ -1633,6 +1555,432 @@ export const StorageService = {
     const key = lessonId ? `${studentId}_lesson_${lessonId}` : `${studentId}_general`;
     delete all[key];
     setStored(STORAGE_KEYS.AI_CHAT_HISTORY, all);
+  },
+
+  // === Student Wallet & Payment Gateways ===
+  getPaymentMethods(): PaymentMethod[] {
+    const stored = getStored<PaymentMethod[]>(STORAGE_KEYS.PAYMENT_METHODS, []);
+    if (stored && stored.length > 0) return stored;
+
+    const defaultMethods: PaymentMethod[] = [
+      {
+        id: 'pm-vodafone-cash',
+        name: 'فودافون كاش (Vodafone Cash)',
+        type: 'vodafone_cash',
+        accountNumber: '01012345678',
+        accountName: 'مستر فيزياء (حساب المحفظة الرسمي)',
+        instructions: 'قم بتحويل المبلغ المطلوب إلى رقم فودافون كاش، ثم التقط لقطة شاشة للإيصال أو احتفظ برقم التحويل وأرفقه هنا للتأكيد الفوري.',
+        isActive: true,
+        order: 1
+      },
+      {
+        id: 'pm-instapay',
+        name: 'إنستاباي (InstaPay)',
+        type: 'instapay',
+        accountNumber: 'wikifizya@instapay',
+        accountName: 'منصة ويكيفزياء التعليمية',
+        instructions: 'حوّل مباشرة عبر تطبيق إنستاباي باستخدام الـ IPA المعروض، ثم اكتب رقم العملية وأرفق صورة الإيصال.',
+        isActive: true,
+        order: 2
+      },
+      {
+        id: 'pm-fawry',
+        name: 'فوري باي (Fawry Pay)',
+        type: 'fawry',
+        accountNumber: '788992',
+        accountName: 'كود خدمة منصة ويكيفزياء',
+        instructions: 'ادفع من أي ماكينة فوري عبر كود الخدمة واحتفظ بإيصال الدفع الورقي.',
+        isActive: true,
+        order: 3
+      }
+    ];
+
+    setStored(STORAGE_KEYS.PAYMENT_METHODS, defaultMethods);
+    return defaultMethods;
+  },
+
+  savePaymentMethod(method: PaymentMethod): void {
+    const list = this.getPaymentMethods();
+    const idx = list.findIndex(m => m.id === method.id);
+    if (idx !== -1) {
+      list[idx] = method;
+    } else {
+      list.push(method);
+    }
+    setStored(STORAGE_KEYS.PAYMENT_METHODS, list);
+    this.addAuditLog({
+      action: 'حفظ بوابة دفع',
+      category: 'wallet',
+      description: `تم تحديث/إضافة بوابة الدفع: ${method.name}`,
+      adminIdentifier: 'المسؤول'
+    });
+  },
+
+  deletePaymentMethod(id: string): void {
+    const list = this.getPaymentMethods().filter(m => m.id !== id);
+    setStored(STORAGE_KEYS.PAYMENT_METHODS, list);
+  },
+
+  getWalletTransactions(): WalletTransaction[] {
+    return getStored<WalletTransaction[]>(STORAGE_KEYS.WALLET_TRANSACTIONS, []);
+  },
+
+  getStudentWalletTransactions(studentId: string): WalletTransaction[] {
+    return this.getWalletTransactions().filter(t => t.studentId === studentId);
+  },
+
+  createDepositRequest(data: {
+    studentId: string;
+    studentName: string;
+    studentPhone: string;
+    amount: number;
+    methodId?: string;
+    methodName?: string;
+    transactionRefNumber?: string;
+    receiptImageUrl?: string;
+  }): WalletTransaction {
+    const transactions = this.getWalletTransactions();
+    const newTx: WalletTransaction = {
+      id: 'tx-dep-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      studentId: data.studentId,
+      studentName: data.studentName,
+      studentPhone: data.studentPhone,
+      type: 'deposit',
+      amount: data.amount,
+      status: 'pending',
+      methodId: data.methodId,
+      methodName: data.methodName || 'تحويل محفظة إلكترونية',
+      transactionRefNumber: data.transactionRefNumber || '',
+      receiptImageUrl: data.receiptImageUrl || '',
+      createdAt: new Date().toISOString()
+    };
+
+    transactions.unshift(newTx);
+    setStored(STORAGE_KEYS.WALLET_TRANSACTIONS, transactions);
+
+    // Send in-platform notification to student
+    this.sendNotification({
+      title: 'طلب شحن رصيد جديد ⏳',
+      message: `تم استلام طلب شحن رصيد محفظتك بمبلغ ${data.amount} ج.م وجارٍ مراجعته وتأكيده من قبل الإدارة.`,
+      target: 'student',
+      targetStudentId: data.studentId
+    });
+
+    return newTx;
+  },
+
+  approveDepositRequest(txId: string, adminNotes?: string): { success: boolean; message: string } {
+    const transactions = this.getWalletTransactions();
+    const tx = transactions.find(t => t.id === txId);
+    if (!tx) {
+      return { success: false, message: 'طلب الشحن غير موجود.' };
+    }
+    if (tx.status === 'approved') {
+      return { success: false, message: 'تمت الموافقة على هذا الطلب مسبقاً.' };
+    }
+
+    tx.status = 'approved';
+    tx.processedAt = new Date().toISOString();
+    if (adminNotes) tx.adminNotes = adminNotes;
+
+    // Credit student's wallet balance
+    const students = this.getStudents();
+    const student = students.find(s => s.id === tx.studentId);
+    if (student) {
+      student.walletBalance = (student.walletBalance || 0) + tx.amount;
+      this.saveStudent(student);
+
+      const current = this.getCurrentStudent();
+      if (current && current.id === student.id) {
+        this.setCurrentStudent(student);
+      }
+
+      this.sendNotification({
+        title: 'تم تأكيد شحن الرصيد بنجاح! 💰',
+        message: `تمت الموافقة على طلبك وإضافة مبلغ ${tx.amount} ج.م إلى رصيد محفظتك. يمكنك الآن الاشتراك في أي كورس أو مذكرة مباشرة.`,
+        target: 'student',
+        targetStudentId: student.id
+      });
+    }
+
+    setStored(STORAGE_KEYS.WALLET_TRANSACTIONS, transactions);
+
+    this.addAuditLog({
+      action: 'قبول شحن رصيد',
+      category: 'wallet',
+      description: `تم قبول طلب شحن بقيمة ${tx.amount} ج.م للطالب ${tx.studentName} (${tx.studentPhone})`,
+      adminIdentifier: 'المسؤول',
+      targetId: tx.studentId,
+      targetName: tx.studentName
+    });
+
+    return { success: true, message: `تمت الموافقة وإضافة ${tx.amount} ج.م لحساب الطالب بنجاح.` };
+  },
+
+  rejectDepositRequest(txId: string, adminNotes?: string): { success: boolean; message: string } {
+    const transactions = this.getWalletTransactions();
+    const tx = transactions.find(t => t.id === txId);
+    if (!tx) {
+      return { success: false, message: 'طلب الشحن غير موجود.' };
+    }
+
+    tx.status = 'rejected';
+    tx.processedAt = new Date().toISOString();
+    tx.adminNotes = adminNotes || 'تعذر التحقق من صحة التحويل، يرجى التأكد من الإيصال والمحاولة مجدداً.';
+
+    setStored(STORAGE_KEYS.WALLET_TRANSACTIONS, transactions);
+
+    this.sendNotification({
+      title: 'تنبيه بخصوص طلب شحن الرصيد ⚠️',
+      message: `تم رفض طلب الشحن المقدم بمبلغ ${tx.amount} ج.م. سبب الرفض: ${tx.adminNotes}`,
+      target: 'student',
+      targetStudentId: tx.studentId
+    });
+
+    this.addAuditLog({
+      action: 'رفض طلب شحن',
+      category: 'wallet',
+      description: `تم رفض طلب شحن بقيمة ${tx.amount} ج.م للطالب ${tx.studentName} بسبب: ${tx.adminNotes}`,
+      adminIdentifier: 'المسؤول',
+      targetId: tx.studentId,
+      targetName: tx.studentName
+    });
+
+    return { success: true, message: 'تم رفض طلب الشحن وتنبيه الطالب.' };
+  },
+
+  purchaseCourseWithWalletBalance(studentId: string, courseId: string): { success: boolean; message: string } {
+    const students = this.getStudents();
+    const student = students.find(s => s.id === studentId);
+    if (!student) {
+      return { success: false, message: 'الطالب غير مسجل.' };
+    }
+
+    const course = this.getCourseById(courseId);
+    if (!course) {
+      return { success: false, message: 'الكورس غير موجود.' };
+    }
+
+    if (student.enrolledCourseIds?.includes(courseId)) {
+      return { success: false, message: 'أنت مشترك بالفعل في هذا الكورس مسبقاً!' };
+    }
+
+    const cost = course.price || 0;
+    const balance = student.walletBalance || 0;
+
+    if (balance < cost) {
+      return {
+        success: false,
+        message: `رصيد محفظتك الحالي (${balance} ج.م) لا يكفي لشراء هذا الكورس (${cost} ج.م). يرجى شحن المحفظة أولاً.`
+      };
+    }
+
+    // Deduct cost and enroll student
+    student.walletBalance = balance - cost;
+    student.enrolledCourseIds = student.enrolledCourseIds || [];
+    student.enrolledCourseIds.push(courseId);
+
+    // Set expiry
+    if (course.validityDays && course.validityDays > 0) {
+      const exp = new Date();
+      exp.setDate(exp.getDate() + course.validityDays);
+      student.courseExpiryDates = student.courseExpiryDates || {};
+      student.courseExpiryDates[courseId] = exp.toISOString();
+    }
+
+    this.saveStudent(student);
+    const current = this.getCurrentStudent();
+    if (current && current.id === student.id) {
+      this.setCurrentStudent(student);
+    }
+
+    // Create purchase transaction
+    const transactions = this.getWalletTransactions();
+    transactions.unshift({
+      id: 'tx-pur-' + Date.now(),
+      studentId: student.id,
+      studentName: student.name,
+      studentPhone: student.phone,
+      type: 'purchase',
+      amount: cost,
+      status: 'approved',
+      courseId: course.id,
+      courseTitle: course.title,
+      createdAt: new Date().toISOString(),
+      processedAt: new Date().toISOString()
+    });
+    setStored(STORAGE_KEYS.WALLET_TRANSACTIONS, transactions);
+
+    this.sendNotification({
+      title: 'تم الاشتراك بنجاح في الكورس! 🎓',
+      message: `تم خصم ${cost} ج.م من رصيد محفظتك وتفعيل كورس "${course.title}". نتمنى لك مشاهدة مفيدة وممتعة!`,
+      target: 'student',
+      targetStudentId: student.id
+    });
+
+    return { success: true, message: `مبروك! تم شراء وتفعيل الكورس (${course.title}) بنجاح.` };
+  },
+
+  purchasePdfWithWalletBalance(studentId: string, pdfId: string): { success: boolean; message: string } {
+    const students = this.getStudents();
+    const student = students.find(s => s.id === studentId);
+    if (!student) return { success: false, message: 'الطالب غير موجود.' };
+
+    const pdf = this.getPdfFiles().find(p => p.id === pdfId);
+    if (!pdf) return { success: false, message: 'المذكرة غير موجودة.' };
+
+    if (student.unlockedPdfIds?.includes(pdfId)) {
+      return { success: false, message: 'هذه المذكرة مفتوحة لديك بالفعل!' };
+    }
+
+    const cost = pdf.price || 0;
+    const balance = student.walletBalance || 0;
+
+    if (balance < cost) {
+      return { success: false, message: `رصيد محفظتك (${balance} ج.م) لا يكفي لشراء المذكرة (${cost} ج.م).` };
+    }
+
+    student.walletBalance = balance - cost;
+    student.unlockedPdfIds = student.unlockedPdfIds || [];
+    student.unlockedPdfIds.push(pdfId);
+
+    this.saveStudent(student);
+    const current = this.getCurrentStudent();
+    if (current && current.id === student.id) {
+      this.setCurrentStudent(student);
+    }
+
+    const transactions = this.getWalletTransactions();
+    transactions.unshift({
+      id: 'tx-pdf-' + Date.now(),
+      studentId: student.id,
+      studentName: student.name,
+      studentPhone: student.phone,
+      type: 'purchase',
+      amount: cost,
+      status: 'approved',
+      pdfId: pdf.id,
+      pdfTitle: pdf.title,
+      createdAt: new Date().toISOString(),
+      processedAt: new Date().toISOString()
+    });
+    setStored(STORAGE_KEYS.WALLET_TRANSACTIONS, transactions);
+
+    return { success: true, message: `تم فتح وتحميل مذكرة "${pdf.title}" بنجاح!` };
+  },
+
+  // === Admin Audit Logs ===
+  getAuditLogs(): AdminAuditLogEntry[] {
+    return getStored<AdminAuditLogEntry[]>(STORAGE_KEYS.AUDIT_LOGS, []);
+  },
+
+  addAuditLog(entry: Omit<AdminAuditLogEntry, 'id' | 'timestamp'>): AdminAuditLogEntry {
+    const logs = this.getAuditLogs();
+    const newEntry: AdminAuditLogEntry = {
+      id: 'log-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      ...entry,
+      timestamp: new Date().toISOString()
+    };
+    logs.unshift(newEntry);
+    if (logs.length > 500) logs.pop(); // Keep last 500 actions
+    setStored(STORAGE_KEYS.AUDIT_LOGS, logs);
+    return newEntry;
+  },
+
+  // === Lesson Comments & Ratings ===
+  getLessonComments(lessonId?: string): LessonComment[] {
+    const comments = getStored<LessonComment[]>(STORAGE_KEYS.LESSON_COMMENTS, []);
+    if (lessonId) {
+      return comments.filter(c => c.lessonId === lessonId);
+    }
+    return comments;
+  },
+
+  saveLessonComment(data: {
+    lessonId: string;
+    courseId: string;
+    studentId: string;
+    studentName: string;
+    studentGrade: string;
+    studentAvatar?: string;
+    content: string;
+    rating?: number;
+  }): LessonComment {
+    const comments = this.getLessonComments();
+    const newComment: LessonComment = {
+      id: 'cmt-' + Date.now(),
+      ...data,
+      createdAt: new Date().toISOString()
+    };
+    comments.unshift(newComment);
+    setStored(STORAGE_KEYS.LESSON_COMMENTS, comments);
+    return newComment;
+  },
+
+  replyToLessonComment(commentId: string, reply: string): void {
+    const comments = this.getLessonComments();
+    const c = comments.find(item => item.id === commentId);
+    if (c) {
+      c.adminReply = reply;
+      c.adminRepliedAt = new Date().toISOString();
+      setStored(STORAGE_KEYS.LESSON_COMMENTS, comments);
+    }
+  },
+
+  deleteLessonComment(commentId: string): void {
+    const comments = this.getLessonComments().filter(c => c.id !== commentId);
+    setStored(STORAGE_KEYS.LESSON_COMMENTS, comments);
+  },
+
+  // === Smart Study Path & Weakness Recommendations ===
+  getStudentRecommendations(studentId: string): SmartStudyRecommendation[] {
+    const stored = getStored<Record<string, SmartStudyRecommendation[]>>(STORAGE_KEYS.STUDY_RECOMMENDATIONS, {});
+    if (stored[studentId] && stored[studentId].length > 0) {
+      return stored[studentId];
+    }
+    return this.generateSmartRecommendations(studentId);
+  },
+
+  generateSmartRecommendations(studentId: string): SmartStudyRecommendation[] {
+    const profile = this.getStudentWeaknessProfile(studentId);
+    const courses = this.getCourses();
+    const pdfs = this.getPdfFiles();
+    const recommendations: SmartStudyRecommendation[] = [];
+
+    // 1. From unresolved weak points
+    const unresolved = profile.weakPoints.filter(wp => !wp.isResolved);
+    unresolved.slice(0, 4).forEach((wp, idx) => {
+      recommendations.push({
+        id: 'rec-' + Date.now() + '-' + idx,
+        studentId,
+        title: `مراجعة فورية: ${wp.conceptName}`,
+        reason: `تم رصد صعوبة وتكرار خطأ في ${wp.chapterOrUnit} (${wp.errorReason})`,
+        recommendedLessonId: wp.suggestedLessonId,
+        recommendedLessonTitle: wp.suggestedLessonTitle,
+        priority: wp.frequency > 1 ? 'high' : 'medium',
+        createdAt: new Date().toISOString()
+      });
+    });
+
+    // 2. Suggest comprehensive PDF notes if high error rate
+    if (profile.totalErrors > 3 && pdfs.length > 0) {
+      const topPdf = pdfs[0];
+      recommendations.push({
+        id: 'rec-pdf-' + Date.now(),
+        studentId,
+        title: `مذكرة تلخيص القوانين والشرح: ${topPdf.title}`,
+        reason: 'يُنصح بمراجعة القوانين والمسائل المحلولة من المذكرة لرفع الكفاءة وحل نقاط الضعف.',
+        recommendedPdfId: topPdf.id,
+        recommendedPdfTitle: topPdf.title,
+        priority: 'high',
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    const stored = getStored<Record<string, SmartStudyRecommendation[]>>(STORAGE_KEYS.STUDY_RECOMMENDATIONS, {});
+    stored[studentId] = recommendations;
+    setStored(STORAGE_KEYS.STUDY_RECOMMENDATIONS, stored);
+    return recommendations;
   },
 
   // === Database Reset / Clean Slate ===

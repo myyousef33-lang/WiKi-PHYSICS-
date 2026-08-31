@@ -17,7 +17,7 @@ import {
 import { resolvePdfUrl, downloadPdfFile } from '../utils/pdfHelper';
 
 interface PdfViewerModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
   title: string;
   pdfUrl: string;
@@ -27,7 +27,7 @@ interface PdfViewerModalProps {
 }
 
 export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
-  isOpen,
+  isOpen = true,
   onClose,
   title,
   pdfUrl,
@@ -84,14 +84,14 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
     }
   };
 
-  // Compose the iframe embed source with viewer parameters
+  // Compose the iframe/object embed source with viewer parameters
   const getEmbedSource = () => {
     if (!resolvedUrl) return '';
     if (resolvedUrl.includes('drive.google.com')) {
       return resolvedUrl;
     }
-    // Append standard pdf parameters if normal URL
-    if (resolvedUrl.startsWith('blob:') || resolvedUrl.startsWith('http')) {
+    // Append standard pdf parameters if normal URL or relative uploads URL
+    if (resolvedUrl.startsWith('blob:') || resolvedUrl.startsWith('http') || resolvedUrl.startsWith('/')) {
       return `${resolvedUrl}#toolbar=1&navpanes=0&scrollbar=1&view=FitH`;
     }
     return resolvedUrl;
@@ -240,12 +240,18 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
                 transformOrigin: 'top center'
               }}
             >
-              <iframe
-                src={getEmbedSource()}
-                title={title}
-                className="w-full h-full border-0 bg-white"
-                allow="fullscreen"
-              />
+              <object
+                data={getEmbedSource()}
+                type="application/pdf"
+                className="w-full h-full"
+              >
+                <iframe
+                  src={getEmbedSource()}
+                  title={title}
+                  className="w-full h-full border-0 bg-white"
+                  allow="fullscreen"
+                />
+              </object>
             </div>
           )}
 

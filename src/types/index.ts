@@ -37,6 +37,7 @@ export interface Student {
   lastActiveDate?: string;
   flashcardProgress?: Record<string, 'understood' | 'needs_review'>;
   earnedCertificates?: EarnedCertificate[];
+  walletBalance?: number;
 }
 
 export interface Course {
@@ -218,6 +219,93 @@ export interface PlatformSettings {
   maintenanceMode: boolean;
   ministryExamDate?: string; // ISO date format, e.g. 2026-06-14
   autoParentReportTemplate?: string;
+  enable2FA?: boolean;
+  admin2FASecret?: string;
+  vodafoneCashNumber?: string;
+  instapayUsername?: string;
+  fawryServiceCode?: string;
+}
+
+export type PaymentMethodType = 'vodafone_cash' | 'instapay' | 'fawry' | 'orange_cash' | 'etisalat_cash' | 'we_pay' | 'paymob' | 'custom';
+
+export interface PaymentMethod {
+  id: string;
+  name: string;
+  type: PaymentMethodType;
+  accountNumber: string;
+  accountName?: string;
+  instructions?: string;
+  qrCodeUrl?: string;
+  paymentLink?: string;
+  isActive: boolean;
+  order: number;
+}
+
+export type WalletTransactionType = 'deposit' | 'purchase' | 'refund';
+export type WalletTransactionStatus = 'pending' | 'approved' | 'rejected';
+
+export interface WalletTransaction {
+  id: string;
+  studentId: string;
+  studentName: string;
+  studentPhone: string;
+  type: WalletTransactionType;
+  amount: number;
+  status: WalletTransactionStatus;
+  methodId?: string;
+  methodName?: string;
+  transactionRefNumber?: string; // رقم الحوالة / العملية
+  receiptImageUrl?: string;
+  courseId?: string;
+  courseTitle?: string;
+  pdfId?: string;
+  pdfTitle?: string;
+  adminNotes?: string;
+  createdAt: string;
+  processedAt?: string;
+}
+
+export interface AdminAuditLogEntry {
+  id: string;
+  action: string;
+  category: 'course' | 'exam' | 'student' | 'wallet' | 'pdf' | 'security' | 'settings' | 'notification';
+  description: string;
+  adminIdentifier: string;
+  targetId?: string;
+  targetName?: string;
+  metadata?: Record<string, any>;
+  timestamp: string;
+}
+
+export interface LessonComment {
+  id: string;
+  lessonId: string;
+  courseId: string;
+  studentId: string;
+  studentName: string;
+  studentGrade: string;
+  studentAvatar?: string;
+  content: string;
+  rating?: number; // 1-5 stars
+  adminReply?: string;
+  adminRepliedAt?: string;
+  createdAt: string;
+}
+
+export interface SmartStudyRecommendation {
+  id: string;
+  studentId: string;
+  title: string;
+  reason: string;
+  recommendedCourseId?: string;
+  recommendedCourseTitle?: string;
+  recommendedLessonId?: string;
+  recommendedLessonTitle?: string;
+  recommendedPdfId?: string;
+  recommendedPdfTitle?: string;
+  targetExamScore?: number;
+  priority: 'high' | 'medium' | 'low';
+  createdAt: string;
 }
 
 export interface WeaknessPoint {
