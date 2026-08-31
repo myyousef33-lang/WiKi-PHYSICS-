@@ -125,6 +125,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
   // Modals / Sub-forms
   const [showAddCourse, setShowAddCourse] = useState(false);
   const [showAddExam, setShowAddExam] = useState(false);
+  const [editingExam, setEditingExam] = useState<QuizExam | null>(null);
   const [showAddCode, setShowAddCode] = useState(false);
   const [showAddChallenge, setShowAddChallenge] = useState(false);
   const [selectedWeaknessStudent, setSelectedWeaknessStudent] = useState<Student | null>(null);
@@ -815,6 +816,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
         }
       ]
     });
+  };
+
+  // Update & Link Exam to Course
+  const handleUpdateExam = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingExam || !editingExam.title) return;
+
+    StorageService.saveExam(editingExam);
+    setEditingExam(null);
   };
 
   // Generate Codes in Bulk
@@ -2485,6 +2495,39 @@ ${weakConceptsText}
                   </div>
                 </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-amber-300">تحديد الكورس التابع له هذا الامتحان 📚</label>
+                    <select
+                      value={examForm.courseId}
+                      onChange={e => setExamForm({ ...examForm, courseId: e.target.value })}
+                      className="w-full rounded-xl border border-amber-500/40 bg-slate-950 p-2.5 text-xs text-white"
+                    >
+                      <option value="">عام (غير مرتبط بكورس معين)</option>
+                      {courses.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.title} ({c.grade})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[11px] text-slate-400">سوف ينزل هذا الامتحان مباشرة وتلقائياً في صفحة الكورس للطلاب المشتركين فيه.</p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-300">الصف الدراسي المستهدف 🎓</label>
+                    <select
+                      value={examForm.grade}
+                      onChange={e => setExamForm({ ...examForm, grade: e.target.value })}
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                    >
+                      <option value="الكل">جميع الصفوف</option>
+                      <option value={GradeLevel.GRADE_12}>الصف الثالث الثانوي (ثانوية عامة)</option>
+                      <option value={GradeLevel.GRADE_11}>الصف الثاني الثانوي</option>
+                      <option value={GradeLevel.GRADE_10}>الصف الأول الثانوي</option>
+                    </select>
+                  </div>
+                </div>
+
                 {/* Manual Question Creator Section */}
                 <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 space-y-4">
                   <div className="flex items-center justify-between border-b border-slate-800 pb-2">
@@ -2763,41 +2806,185 @@ ${weakConceptsText}
 
           {/* Exams Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {exams.map(ex => (
-              <div key={ex.id} className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="rounded bg-purple-500/20 text-purple-400 text-[10px] font-bold px-2 py-0.5">
-                    {ex.type === 'quiz' ? 'كويز' : 'امتحان شامل'}
-                  </span>
-                  <span className="text-xs text-slate-400">⏱ {ex.durationMinutes} دقيقة</span>
+            {exams.map(ex => {
+              const linkedCourse = courses.find(c => c.id === ex.courseId);
+              return (
+                <div key={ex.id} className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className="rounded bg-purple-500/20 text-purple-400 text-[10px] font-bold px-2 py-0.5">
+                      {ex.type === 'quiz' ? 'كويز' : 'امتحان شامل'}
+                    </span>
+                    <span className="text-xs text-slate-400">⏱ {ex.durationMinutes} دقيقة</span>
+                  </div>
+                  
+                  <h3 className="font-bold text-white text-base leading-snug">{ex.title}</h3>
+
+                  {/* Linked Course Badge */}
+                  <div className="rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-xs flex items-center justify-between">
+                    <span className="text-slate-400 text-[11px]">الكورس التابع له:</span>
+                    {linkedCourse ? (
+                      <span className="font-bold text-amber-300 truncate max-w-[160px]" title={linkedCourse.title}>
+                        📚 {linkedCourse.title}
+                      </span>
+                    ) : (
+                      <span className="text-slate-500 text-[11px]">🌐 عام (غير مرتبط)</span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-slate-400 pt-1 border-t border-slate-800">
+                    <span>عدد الأسئلة: <strong className="text-white">{ex.questions?.length || 0}</strong></span>
+                    <span>النجاح: <strong className="text-emerald-400">{ex.passingPercentage}%</strong></span>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      onClick={() => setEditingExam(ex)}
+                      className="flex-1 rounded-xl bg-amber-500/10 border border-amber-500/30 py-2 text-xs font-bold text-amber-300 hover:bg-amber-500/20 flex items-center justify-center gap-1 transition-colors"
+                      title="تعديل بيانات الامتحان وربط الكورس"
+                    >
+                      <Edit3 className="h-3.5 w-3.5" />
+                      <span>تعديل وربط الكورس</span>
+                    </button>
+                    <button
+                      onClick={() => onNavigate('exam-runner', { examId: ex.id })}
+                      className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-bold text-white hover:bg-slate-700"
+                      title="معاينة تجربة الامتحان"
+                    >
+                      معاينة
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`هل أنت متأكد من حذف امتحان "${ex.title}"؟`)) {
+                          StorageService.deleteExam(ex.id);
+                        }
+                      }}
+                      className="p-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
+                      title="حذف الامتحان"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
-                <h3 className="font-bold text-white text-base">{ex.title}</h3>
-                <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800">
-                  <span>عدد الأسئلة: {ex.questions?.length || 0}</span>
-                  <span>النجاح: {ex.passingPercentage}%</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => onNavigate('exam-runner', { examId: ex.id })}
-                    className="flex-1 rounded-xl border border-slate-700 bg-slate-800 py-2 text-xs font-bold text-white hover:bg-slate-700"
-                  >
-                    معاينة تجربة الامتحان
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (confirm(`هل أنت متأكد من حذف امتحان "${ex.title}"؟`)) {
-                        StorageService.deleteExam(ex.id);
-                      }
-                    }}
-                    className="p-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
-                    title="حذف الامتحان"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
+
+          {/* Edit & Link Exam Modal */}
+          {editingExam && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-200">
+              <div className="relative w-full max-w-3xl rounded-3xl border border-amber-500/40 bg-slate-900 p-6 space-y-5 max-h-[90vh] overflow-y-auto shadow-2xl">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <h3 className="font-bold text-base text-white flex items-center gap-2">
+                    <Edit3 className="h-5 w-5 text-amber-400" />
+                    <span>تعديل بيانات الامتحان وربط الكورس 📚</span>
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setEditingExam(null)}
+                    className="rounded-xl border border-slate-700 bg-slate-800 p-1.5 text-slate-400 hover:text-white"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleUpdateExam} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="text-xs font-bold text-slate-300">عنوان الامتحان</label>
+                      <input
+                        type="text"
+                        value={editingExam.title}
+                        onChange={e => setEditingExam({ ...editingExam, title: e.target.value })}
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-300">النوع</label>
+                      <select
+                        value={editingExam.type}
+                        onChange={e => setEditingExam({ ...editingExam, type: e.target.value as any })}
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                      >
+                        <option value="quiz">كويز قصير</option>
+                        <option value="exam">امتحان شامل</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-amber-300">تحديد / تغيير الكورس التابع له هذا الامتحان 📚</label>
+                      <select
+                        value={editingExam.courseId || ''}
+                        onChange={e => setEditingExam({ ...editingExam, courseId: e.target.value || undefined })}
+                        className="w-full rounded-xl border border-amber-500/40 bg-slate-950 p-2.5 text-xs text-white font-bold"
+                      >
+                        <option value="">عام (غير مرتبط بكورس معين)</option>
+                        {courses.map(c => (
+                          <option key={c.id} value={c.id}>
+                            {c.title} ({c.grade})
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[11px] text-amber-400/90">سوف يظهر هذا الامتحان فوراً وبشكل تلقائي داخل صفحة الكورس المحدد لدى الطلاب المشتركين.</p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-300">الصف الدراسي المستهدف 🎓</label>
+                      <select
+                        value={editingExam.grade || 'الكل'}
+                        onChange={e => setEditingExam({ ...editingExam, grade: e.target.value })}
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                      >
+                        <option value="الكل">جميع الصفوف</option>
+                        <option value={GradeLevel.GRADE_12}>الصف الثالث الثانوي (ثانوية عامة)</option>
+                        <option value={GradeLevel.GRADE_11}>الصف الثاني الثانوي</option>
+                        <option value={GradeLevel.GRADE_10}>الصف الأول الثانوي</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-300">مدة الاختبار (بالدقائق)</label>
+                      <input
+                        type="number"
+                        value={editingExam.durationMinutes}
+                        onChange={e => setEditingExam({ ...editingExam, durationMinutes: Number(e.target.value) })}
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-300">نسبة النجاح المطلوب (٪)</label>
+                      <input
+                        type="number"
+                        value={editingExam.passingPercentage}
+                        onChange={e => setEditingExam({ ...editingExam, passingPercentage: Number(e.target.value) })}
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => setEditingExam(null)}
+                      className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-bold text-slate-300 hover:bg-slate-700"
+                    >
+                      إلغاء
+                    </button>
+                    <button
+                      type="submit"
+                      className="rounded-xl bg-amber-500 px-6 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 shadow-md shadow-amber-500/20"
+                    >
+                      حفظ التعديلات وتحديث الكورس
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

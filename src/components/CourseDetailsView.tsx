@@ -98,6 +98,11 @@ export const CourseDetailsView: React.FC<CourseDetailsViewProps> = ({
   const studentProg = student ? StorageService.getStudentProgressList(student.id) : [];
   const completedLessonIds = new Set(studentProg.filter(p => p.isCompleted && p.courseId === course.id).map(p => p.lessonId));
 
+  const courseExams = exams.filter(e => 
+    e.courseId === course.id || 
+    course.units?.some(u => u.unitExamId === e.id || u.id === e.unitId || u.lessons?.some(l => l.quizId === e.id || l.id === e.lessonId))
+  );
+
   const toggleUnit = (unitId: string) => {
     setOpenUnits(prev => ({ ...prev, [unitId]: !prev[unitId] }));
   };
@@ -238,6 +243,99 @@ export const CourseDetailsView: React.FC<CourseDetailsViewProps> = ({
           </div>
 
         </div>
+      </div>
+
+      {/* Course Exams & Quizzes Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="rounded-xl bg-purple-500/15 p-2 text-purple-400">
+              <Award className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-black text-white">امتحانات واختبارات هذا الكورس</h2>
+              <p className="text-xs text-slate-400">كويزات الفصول والامتحانات الشاملة التابعة لهذا الكورس (تحدث تلقائياً)</p>
+            </div>
+          </div>
+          <span className="rounded-full bg-purple-500/20 px-3 py-1 text-xs font-bold text-purple-300">
+            {courseExams.length} اختبارات
+          </span>
+        </div>
+
+        {courseExams.length === 0 ? (
+          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-6 text-center text-slate-400 text-xs">
+            لا توجد امتحانات مخصصة مباشرة لهذا الكورس حالياً. سيتم إظهار أي امتحان يضيفه المحاضر فوراً هنا.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {courseExams.map(ex => {
+              const studentAttempts = student ? StorageService.getStudentAttempts(student.id) : [];
+              const attempt = studentAttempts.find(a => a.examId === ex.id);
+
+              return (
+                <div 
+                  key={ex.id}
+                  className="rounded-2xl border border-purple-500/30 bg-slate-900/80 p-5 space-y-3 relative overflow-hidden backdrop-blur-sm hover:border-purple-500/50 transition-all"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="rounded bg-purple-500/20 text-purple-300 text-[10px] font-bold px-2.5 py-1 flex items-center gap-1">
+                      <Sparkles className="h-3 w-3 text-purple-400" />
+                      {ex.type === 'quiz' ? 'كويز تقييمي' : 'امتحان شامل'}
+                    </span>
+                    <span className="text-xs text-slate-400 flex items-center gap-1 font-mono">
+                      <Clock className="h-3.5 w-3.5 text-amber-400" />
+                      {ex.durationMinutes} دقيقة
+                    </span>
+                  </div>
+
+                  <h3 className="font-bold text-white text-base leading-snug">{ex.title}</h3>
+
+                  <div className="flex flex-wrap items-center justify-between text-xs text-slate-300 pt-2 border-t border-slate-800">
+                    <span>عدد الأسئلة: <strong className="text-amber-400">{ex.questions?.length || 0}</strong> سؤال</span>
+                    <span>درجة النجاح: <strong className="text-emerald-400">{ex.passingPercentage}%</strong></span>
+                  </div>
+
+                  {attempt ? (
+                    <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-2">
+                      <div className="text-xs">
+                        <span className="text-slate-400">نتيجة المحاولة: </span>
+                        <span className={`font-bold font-mono ${attempt.passed ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {attempt.score} / {attempt.maxScore || 50} ({attempt.percentage}%) {attempt.passed ? '✅ ناجح' : '❌ راسب'}
+                        </span>
+                      </div>
+                      {isEnrolled && (
+                        <button
+                          onClick={() => onNavigate('exam-runner', { examId: ex.id, courseId: course.id })}
+                          className="rounded-xl border border-purple-500/40 bg-purple-500/10 px-3 py-1.5 text-xs font-bold text-purple-300 hover:bg-purple-500 hover:text-white transition-all"
+                        >
+                          إعادة الامتحان
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
+                      <span className="text-[11px] text-slate-400">لم يتم خوض الامتحان بعد</span>
+                      {isEnrolled ? (
+                        <button
+                          onClick={() => onNavigate('exam-runner', { examId: ex.id, courseId: course.id })}
+                          className="rounded-xl bg-purple-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-purple-500/20 hover:bg-purple-500 transition-all flex items-center gap-1.5"
+                        >
+                          <PlayCircle className="h-4 w-4" />
+                          <span>بدء الامتحان الآن</span>
+                        </button>
+                      ) : (
+                        <span className="text-xs text-slate-400 flex items-center gap-1 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
+                          <Lock className="h-3.5 w-3.5 text-slate-500" />
+                          متاح بعد الاشتراك
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Course Curriculum Tree */}
