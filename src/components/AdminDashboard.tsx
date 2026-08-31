@@ -696,36 +696,36 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
 
   const tabCategories = [
     {
-      title: '📊 الرئيسية والإداريات',
+      title: '📊 لوحة القيادة والمتابعة',
       items: [
-        { id: 'overview', label: 'الإحصائيات العامة', icon: BarChart3 },
-        { id: 'results', label: 'نتائج وتقارير الطلاب', icon: Award },
-        { id: 'notifs', label: 'إرسال الإشعارات', icon: Bell },
-        { id: 'settings', label: 'إعدادات المنصة', icon: Settings }
+        { id: 'overview', label: 'الرئيسية والإحصائيات', icon: BarChart3, badge: null },
+        { id: 'results', label: 'نتائج وتقارير الطلاب', icon: Award, badge: attempts.length > 0 ? attempts.length : null },
+        { id: 'notifs', label: 'مركز الإشعارات', icon: Bell, badge: notifs.length > 0 ? notifs.length : null },
+        { id: 'settings', label: 'إعدادات المنصة', icon: Settings, badge: null }
       ]
     },
     {
-      title: '📚 إدارة المحتوى والملازم',
+      title: '📚 المحتوى والملازم',
       items: [
-        { id: 'courses', label: 'الكورسات والدروس', icon: BookOpen },
-        { id: 'exams', label: 'بنك الأسئلة والامتحانات', icon: HelpCircle },
-        { id: 'pdfs', label: 'المذكرات والملازم PDF', icon: FileText }
+        { id: 'courses', label: 'الكورسات والدروس', icon: BookOpen, badge: courses.length },
+        { id: 'exams', label: 'بنك الأسئلة والامتحانات', icon: HelpCircle, badge: exams.length },
+        { id: 'pdfs', label: 'المذكرات والملازم PDF', icon: FileText, badge: pdfs.length }
       ]
     },
     {
-      title: '👥 الطلاب والاشتراكات',
+      title: '👥 شؤون الطلاب والاشتراكات',
       items: [
-        { id: 'students', label: 'إدارة الطلاب والأجهزة', icon: Users },
-        { id: 'codes', label: 'توليد أكواد التفعيل', icon: Key }
+        { id: 'students', label: 'سجل الطلاب والأجهزة', icon: Users, badge: students.length },
+        { id: 'codes', label: 'أكواد التفعيل والشحن', icon: Key, badge: codes.filter(c => !c.isUsed).length }
       ]
     },
     {
-      title: '⚛️ المسابقات والشرف والـ AI',
+      title: '⚛️ المسابقات والذكاء الاصطناعي',
       items: [
-        { id: 'challenges', label: 'تحديات الأسبوع والمسابقات', icon: Trophy },
-        { id: 'leaderboard-admin', label: 'لوحة الشرف وتكريم الأوائل 🥇', icon: Award },
-        { id: 'weakness-admin', label: 'تشخيص نقاط الضعف 🧠', icon: Brain },
-        { id: 'ai-admin', label: 'المساعد الذكي AI ⚛️', icon: Bot }
+        { id: 'challenges', label: 'تحديات الأسبوع والمسابقات', icon: Trophy, badge: challenges.length },
+        { id: 'leaderboard-admin', label: 'لوحة الشرف وتكريم الأوائل', icon: Award, badge: StorageService.getLeaderboard().length },
+        { id: 'weakness-admin', label: 'تشخيص نقاط الضعف 🧠', icon: Brain, badge: null },
+        { id: 'ai-admin', label: 'المساعد الذكي AI ⚛️', icon: Bot, badge: 'نشط' }
       ]
     }
   ];
@@ -770,359 +770,716 @@ ${weakConceptsText}
     s.phone.includes(studentSearch)
   );
 
+  const currentTabInfo = tabCategories.flatMap(c => c.items).find(i => i.id === activeTab);
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8 animate-in fade-in duration-300">
+    <div className="min-h-screen bg-slate-950 text-slate-100 pb-16 animate-in fade-in duration-300">
       
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 shadow-lg shadow-blue-500/20 text-white font-black text-xl">
-            Ψ
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-black text-white">لوحة تحكم إدارة المنصة</h1>
-              <span className="rounded bg-blue-500/20 text-blue-400 px-2 py-0.5 text-xs font-bold">Admin Panel</span>
-            </div>
-            <p className="text-xs text-slate-400">إدارة شاملة للكورسات، الطلاب، الامتحانات، وأكواد التفعيل</p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            onClick={handleForceSyncCloud}
-            disabled={isSyncingCloud}
-            className="flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-2 text-xs font-bold text-emerald-400 hover:bg-emerald-500/20 transition-all disabled:opacity-50"
-            title="مزامنة فورية لكل البيانات مع قاعدة بيانات Firebase Firestore"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isSyncingCloud ? 'animate-spin' : ''}`} />
-            <span>{isSyncingCloud ? 'جارٍ المزامنة السحابية...' : 'مزامنة سحابية الآن (Firestore)'}</span>
-          </button>
-          <button
-            onClick={() => onNavigate('dashboard')}
-            className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-bold text-white hover:bg-slate-700"
-          >
-            معاينة حساب الطالب
-          </button>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-xs font-bold text-rose-400 hover:bg-rose-500/20"
-          >
-            <LogOut className="h-4 w-4" />
-            <span>تسجيل خروج الإدارة</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Cloud Sync Feedback Banner */}
-      {syncFeedback && (
-        <div className="flex items-center justify-between gap-2 rounded-2xl border border-emerald-500/40 bg-emerald-950/40 p-3.5 text-xs text-emerald-300 animate-in fade-in slide-in-from-top-2">
-          <div className="flex items-center gap-2">
-            <Cloud className="h-4 w-4 text-emerald-400" />
-            <span className="font-bold">{syncFeedback}</span>
-          </div>
-          <span className="text-[10px] text-emerald-400/80 font-mono">Firebase Firestore Cloud Active</span>
-        </div>
-      )}
-
-      {/* Active File Upload Progress Banner */}
-      {isUploadingFile && (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-blue-500/40 bg-blue-950/50 p-4 text-xs text-blue-200 animate-pulse">
-          <div className="flex items-center gap-3">
-            <RefreshCw className="h-5 w-5 animate-spin text-blue-400" />
-            <div>
-              <p className="font-bold text-white text-sm">{uploadProgressText || 'جارٍ رفع الملف من جهازك إلى السيرفر...'}</p>
-              <p className="text-[11px] text-blue-300">يتم حفظ الملف ومعالجته ليعمل بسرعة فائقة لدى جميع الطلاب</p>
-            </div>
-          </div>
-          <span className="rounded-full bg-blue-500/20 px-3 py-1 text-[10px] font-bold text-blue-300">جاري الرفع...</span>
-        </div>
-      )}
-
-      {/* Categorized Tabs Navigation - Streamlined Elegant Header */}
-      <div className="space-y-4 border-b border-slate-800 pb-5">
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 p-2 rounded-2xl border border-slate-800 backdrop-blur-md">
-          {tabCategories.map((cat, catIdx) => (
-            <div key={catIdx} className="flex-1 min-w-[220px] space-y-1.5">
-              <span className="text-[10px] font-black text-slate-400 px-2 uppercase tracking-wider block">
-                {cat.title}
-              </span>
-              <div className="flex flex-wrap gap-1">
-                {cat.items.map(t => {
-                  const Icon = t.icon;
-                  const isActive = activeTab === t.id;
-                  return (
-                    <button
-                      key={t.id}
-                      onClick={() => setActiveTab(t.id as any)}
-                      className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
-                        isActive 
-                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25 ring-2 ring-blue-400 scale-[1.02]' 
-                          : 'bg-slate-950/60 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-800/80'
-                      }`}
-                    >
-                      <Icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-white' : 'text-blue-400'}`} />
-                      <span>{t.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* TAB 1: OVERVIEW */}
-      {activeTab === 'overview' && (
-        <div className="space-y-8">
-
-          {/* Quick Special Controls Highlights */}
-          <div className="rounded-3xl border border-blue-500/30 bg-gradient-to-r from-slate-900 via-slate-950 to-slate-900 p-6 space-y-4 shadow-xl">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
-              <div>
-                <h3 className="font-black text-white text-base flex items-center gap-2">
-                  <Zap className="h-5 w-5 text-amber-400 animate-bounce" />
-                  <span>مركز تحكم ميزات المنصة والعد التنازلي والمسابقات</span>
-                </h3>
-                <p className="text-xs text-slate-400">إدارة سريعة مباشرة لموعد الامتحان الرسمي، التحديات الأسبوعية، ولوحة الشرف والـ AI</p>
-              </div>
-              <span className="rounded-full bg-amber-500/10 border border-amber-500/30 px-3 py-1 text-[11px] font-bold text-amber-400 w-fit">
-                تحكم مباشر بدون تنقل
-              </span>
-            </div>
-
-            {dateUpdateFeedback && (
-              <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-3.5 text-xs font-black text-emerald-300 flex items-center justify-between shadow-lg animate-in fade-in">
-                <span>{dateUpdateFeedback}</span>
-                <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] text-emerald-200">تم التحديث سحابياً ومحلياً</span>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-              {/* Exam Date Countdown Quick Control */}
-              <div className="rounded-2xl border border-amber-500/30 bg-slate-950 p-4 space-y-3 shadow-inner">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                    <Calendar className="h-4 w-4 text-amber-400" />
-                    تحديد موعد امتحان الفيزياء ⏱
-                  </span>
-                  <span className="text-[10px] text-amber-400 font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
-                    العد التنازلي للـ 60
-                  </span>
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-slate-400 block">اختر التاريخ والوقت المستهدف:</label>
-                  <input
-                    type="datetime-local"
-                    value={formatForDatetimeInput(settings.ministryExamDate)}
-                    onChange={e => handleExamDateUpdate(e.target.value)}
-                    className="w-full rounded-xl border border-amber-500/40 bg-slate-900 p-2.5 text-xs text-amber-300 font-mono font-bold cursor-pointer focus:ring-2 focus:ring-amber-400 focus:outline-none"
-                  />
-                  
-                  {/* Quick Presets for Future Dates */}
-                  <div className="flex flex-wrap gap-1 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => handleExamDateUpdate('2027-06-14T09:00')}
-                      className="rounded-lg bg-amber-500/20 border border-amber-500/40 px-2 py-1 text-[10px] font-bold text-amber-300 hover:bg-amber-500 hover:text-slate-950 transition-colors"
-                    >
-                      14 يونيو 2027
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleExamDateUpdate('2027-06-21T09:00')}
-                      className="rounded-lg bg-slate-800 border border-slate-700 px-2 py-1 text-[10px] font-bold text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
-                    >
-                      21 يونيو 2027
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const d = new Date();
-                        d.setDate(d.getDate() + 90);
-                        handleExamDateUpdate(d.toISOString().slice(0, 16));
-                      }}
-                      className="rounded-lg bg-slate-800 border border-slate-700 px-2 py-1 text-[10px] font-bold text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
-                    >
-                      +90 يوم من اليوم
-                    </button>
-                  </div>
-
-                  {(() => {
-                    const targetTime = new Date(settings.ministryExamDate || '2027-06-14T09:00').getTime();
-                    const diff = targetTime - Date.now();
-                    if (isNaN(diff) || diff <= 0) {
-                      return (
-                        <p className="text-[11px] text-amber-400 font-bold border-t border-slate-800/80 pt-1.5 mt-2">
-                          ⚠️ الموعد المحدد سابق، تم الاعتماد التلقائي لموعد 14 يونيو 2027.
-                        </p>
-                      );
-                    }
-                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-                    return (
-                      <p className="text-[11px] text-emerald-400 font-bold border-t border-slate-800/80 pt-1.5 mt-2 flex items-center justify-between">
-                        <span>الموعد النشط للطلاب:</span>
-                        <span className="font-mono bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded text-emerald-300">
-                          متبقي {days} يوم و {hours} ساعة ⏱
-                        </span>
-                      </p>
-                    );
-                  })()}
-                </div>
-              </div>
-
-              {/* Weekly Challenges Quick Control */}
-              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 space-y-3 flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                    <Trophy className="h-4 w-4 text-amber-400" />
-                    تحديات الأسبوع والمسابقات 🏆
-                  </span>
-                  <span className="text-[10px] text-amber-400 font-bold">{StorageService.getWeeklyChallenges().length} مسابقة</span>
-                </div>
-                <p className="text-xs text-slate-400">نشر مسابقة جديدة أسبوعية للفيزياء لمنح أوسمة ونقاط تميز إضافية.</p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => { setActiveTab('challenges'); setShowAddChallenge(true); }}
-                    className="w-full rounded-xl bg-amber-500 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 flex items-center justify-center gap-1"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>إضافة مسابقة جديدة</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('challenges')}
-                    className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-bold text-white hover:bg-slate-700"
-                  >
-                    عرض
-                  </button>
-                </div>
-              </div>
-
-              {/* Leaderboard & Honor Roll Quick Control */}
-              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 space-y-3 flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                    <Award className="h-4 w-4 text-amber-400" />
-                    لوحة الشرف وتكريم الأوائل 🥇
-                  </span>
-                  <span className="text-[10px] text-emerald-400 font-bold">{StorageService.getLeaderboard().length} طالب مكرم</span>
-                </div>
-                <p className="text-xs text-slate-400">استعراض الأوائل ومنح مكافآت وأوسمة التميز الفردية للطلاب المتفوقين.</p>
-                <button
-                  onClick={() => setActiveTab('leaderboard-admin')}
-                  className="w-full rounded-xl border border-amber-500/30 bg-amber-500/10 py-2 text-xs font-bold text-amber-300 hover:bg-amber-500/20 flex items-center justify-center gap-1.5"
-                >
-                  <Award className="h-3.5 w-3.5" />
-                  <span>فتح لوحة الشرف والجوائز</span>
-                </button>
-              </div>
-            </div>
-          </div>
+      {/* Top Executive Header Bar */}
+      <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-xl">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3">
           
-          {/* Real Metrics Grid */}
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-              <span className="text-xs font-bold text-slate-400">إجمالي الطلاب</span>
-              <p className="mt-2 text-2xl font-black text-white">{students.length}</p>
-              <p className="text-[10px] text-blue-400 mt-1">طالب مسجل</p>
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 shadow-lg shadow-blue-500/25 text-white font-black text-xl border border-blue-400/30">
+              Ψ
             </div>
-
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-              <span className="text-xs font-bold text-slate-400">الكورسات المتاحة</span>
-              <p className="mt-2 text-2xl font-black text-amber-400">{courses.length}</p>
-              <p className="text-[10px] text-slate-400 mt-1">كورس ومنهج</p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-              <span className="text-xs font-bold text-slate-400">الامتحانات والكويزات</span>
-              <p className="mt-2 text-2xl font-black text-purple-400">{exams.length}</p>
-              <p className="text-[10px] text-slate-400 mt-1">اختبار متاح</p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-              <span className="text-xs font-bold text-slate-400">الأكواد المنشأة</span>
-              <p className="mt-2 text-2xl font-black text-emerald-400">{codes.length}</p>
-              <p className="text-[10px] text-slate-400 mt-1">المستخدم منها: {codes.filter(c => c.isUsed).length}</p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-              <span className="text-xs font-bold text-slate-400">المذكرات والملازم</span>
-              <p className="mt-2 text-2xl font-black text-rose-400">{pdfs.length}</p>
-              <p className="text-[10px] text-slate-400 mt-1">ملف PDF</p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-              <span className="text-xs font-bold text-slate-400">محاولات الامتحانات</span>
-              <p className="mt-2 text-2xl font-black text-white">{attempts.length}</p>
-              <p className="text-[10px] text-slate-400 mt-1">تسليم مصحح</p>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-black text-white tracking-tight">غرفة إدارة منصة {settings.platformName || 'ويكيفزياء'}</h1>
+                <span className="rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 px-2.5 py-0.5 text-[10px] font-bold">
+                  Super Admin
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                إشراف الأستاذ: <span className="text-amber-300 font-bold">{settings.instructorTitle}</span> • إدارة المنهاج والطلاب
+              </p>
             </div>
           </div>
 
-          {/* Quick Actions Panel */}
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
-            <h3 className="font-bold text-white text-base">إجراءات الإدارة السريعة</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-              <button
-                onClick={() => { setActiveTab('courses'); setShowAddCourse(true); }}
-                className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 p-3 text-xs font-bold text-white hover:bg-blue-500"
-              >
-                <Plus className="h-4 w-4" />
-                <span>إضافة كورس جديد</span>
-              </button>
-              <button
-                onClick={() => { setActiveTab('codes'); setShowAddCode(true); }}
-                className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 p-3 text-xs font-bold text-slate-950 hover:bg-amber-400"
-              >
-                <Key className="h-4 w-4" />
-                <span>توليد أكواد تفعيل</span>
-              </button>
-              <button
-                onClick={() => { setActiveTab('exams'); setShowAddExam(true); }}
-                className="flex items-center justify-center gap-2 rounded-xl bg-purple-600 p-3 text-xs font-bold text-white hover:bg-purple-500"
-              >
-                <HelpCircle className="h-4 w-4" />
-                <span>إنشاء امتحان جديد</span>
-              </button>
-              <button
-                onClick={() => { setActiveTab('notifs'); setShowAddNotif(true); }}
-                className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 p-3 text-xs font-bold text-white hover:bg-emerald-500"
-              >
-                <Bell className="h-4 w-4" />
-                <span>إرسال إشعار للطلاب</span>
-              </button>
-            </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={handleForceSyncCloud}
+              disabled={isSyncingCloud}
+              className="flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-400 hover:bg-emerald-500/20 transition-all disabled:opacity-50"
+              title="مزامنة فورية لكل البيانات مع قاعدة بيانات Firebase Firestore"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isSyncingCloud ? 'animate-spin' : ''}`} />
+              <span>{isSyncingCloud ? 'جارٍ المزامنة...' : 'مزامنة السحابة (Firestore)'}</span>
+            </button>
+            <button
+              onClick={() => onNavigate('dashboard')}
+              className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-bold text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
+            >
+              <Eye className="h-3.5 w-3.5 text-blue-400" />
+              <span>معاينة كطالب</span>
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs font-bold text-rose-400 hover:bg-rose-500/20 transition-colors"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span>خروج</span>
+            </button>
           </div>
 
-          {/* Recent Submissions */}
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
-            <h3 className="font-bold text-white text-base">أحدث نتائج الطلاب المسلمة</h3>
-            <div className="divide-y divide-slate-800">
-              {attempts.slice(0, 5).map(att => (
-                <div key={att.id} className="py-3 flex items-center justify-between text-xs">
-                  <div>
-                    <span className="font-bold text-white">{att.studentName}</span>
-                    <span className="text-slate-400 mx-2">•</span>
-                    <span className="text-slate-300">{att.examTitle}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className={`font-black ${att.passed ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {att.score}/{att.maxScore} ({att.percentage}%)
-                    </span>
-                    <span className="text-slate-400">{new Date(att.submittedAt).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</span>
+        </div>
+      </header>
+
+      {/* Main Layout: Sidebar + Stage */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6">
+        
+        {/* Cloud Sync & Upload Alerts */}
+        {syncFeedback && (
+          <div className="mb-6 flex items-center justify-between gap-2 rounded-2xl border border-emerald-500/40 bg-emerald-950/40 p-3.5 text-xs text-emerald-300 animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center gap-2">
+              <Cloud className="h-4 w-4 text-emerald-400" />
+              <span className="font-bold">{syncFeedback}</span>
+            </div>
+            <span className="text-[10px] text-emerald-400/80 font-mono">Firebase Firestore Cloud Active</span>
+          </div>
+        )}
+
+        {isUploadingFile && (
+          <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-blue-500/40 bg-blue-950/50 p-4 text-xs text-blue-200 animate-pulse">
+            <div className="flex items-center gap-3">
+              <RefreshCw className="h-5 w-5 animate-spin text-blue-400" />
+              <div>
+                <p className="font-bold text-white text-sm">{uploadProgressText || 'جارٍ معالجة ورفع الملف...'}</p>
+                <p className="text-[11px] text-blue-300">يتم حفظ الملف ليعمل بسرعة فائقة لدى جميع الطلاب</p>
+              </div>
+            </div>
+            <span className="rounded-full bg-blue-500/20 px-3 py-1 text-[10px] font-bold text-blue-300">جاري الحفظ...</span>
+          </div>
+        )}
+
+        <div className="flex flex-col lg:flex-row gap-6 items-start">
+          
+          {/* SIDEBAR NAVIGATION (Desktop: Sticky Sidebar, Mobile: Horizontal Scrollable Ribbon) */}
+          <aside className="w-full lg:w-72 shrink-0 lg:sticky lg:top-24 space-y-4">
+            
+            {/* Quick Status Profile Widget */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 backdrop-blur-sm hidden lg:block">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[11px] font-bold text-slate-400">حالة النظام السحابي</span>
+                <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
+                  متصل ومحمي
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-center">
+                <div className="rounded-xl border border-slate-800/80 bg-slate-950/60 p-2">
+                  <p className="text-base font-black text-white">{students.length}</p>
+                  <p className="text-[10px] text-slate-400">طالب نشط</p>
+                </div>
+                <div className="rounded-xl border border-slate-800/80 bg-slate-950/60 p-2">
+                  <p className="text-base font-black text-amber-400">{courses.length}</p>
+                  <p className="text-[10px] text-slate-400">كورس متاح</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Navigation Groups */}
+            <nav className="rounded-2xl border border-slate-800 bg-slate-900/90 p-3 space-y-4 shadow-xl backdrop-blur-md">
+              {tabCategories.map((cat, idx) => (
+                <div key={idx} className="space-y-1">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-2 block mb-1">
+                    {cat.title}
+                  </span>
+                  <div className="space-y-0.5">
+                    {cat.items.map(tab => {
+                      const Icon = tab.icon;
+                      const isActive = activeTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          onClick={() => setActiveTab(tab.id as any)}
+                          className={`w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold transition-all text-right ${
+                            isActive
+                              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20 ring-1 ring-blue-400'
+                              : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-white' : 'text-blue-400'}`} />
+                            <span>{tab.label}</span>
+                          </div>
+                          {tab.badge !== null && tab.badge !== undefined && (
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                              isActive
+                                ? 'bg-white/20 text-white'
+                                : 'bg-slate-800 text-slate-300 border border-slate-700/60'
+                            }`}>
+                              {tab.badge}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
+            </nav>
+
+          </aside>
+
+          {/* MAIN STAGE CONTENT */}
+          <main className="flex-1 w-full min-w-0 space-y-6">
+
+            {/* Dynamic Stage Header with Breadcrumb */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/60 border border-slate-800/80 p-4 rounded-2xl backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                {currentTabInfo && (
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400">
+                    <currentTabInfo.icon className="h-5 w-5" />
+                  </div>
+                )}
+                <div>
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <span>لوحة التحكم</span>
+                    <span>/</span>
+                    <span className="text-blue-400 font-bold">{currentTabInfo?.label || 'القسم'}</span>
+                  </div>
+                  <h2 className="text-lg font-black text-white mt-0.5">{currentTabInfo?.label}</h2>
+                </div>
+              </div>
+
+              {/* Quick contextual shortcut buttons based on active tab */}
+              <div className="flex items-center gap-2">
+                {activeTab !== 'overview' && (
+                  <button
+                    onClick={() => setActiveTab('overview')}
+                    className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-200 hover:bg-slate-700"
+                  >
+                    <BarChart3 className="h-3.5 w-3.5 text-blue-400" />
+                    <span>الرئيسية</span>
+                  </button>
+                )}
+                {activeTab === 'courses' && (
+                  <button
+                    onClick={() => setShowAddCourse(true)}
+                    className="flex items-center gap-1.5 rounded-xl bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-400 shadow-md shadow-amber-500/20"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>إضافة كورس</span>
+                  </button>
+                )}
+                {activeTab === 'exams' && (
+                  <button
+                    onClick={() => setShowAddExam(true)}
+                    className="flex items-center gap-1.5 rounded-xl bg-purple-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-purple-500 shadow-md shadow-purple-500/20"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>إنشاء امتحان</span>
+                  </button>
+                )}
+                {activeTab === 'pdfs' && (
+                  <button
+                    onClick={() => setShowAddPdf(true)}
+                    className="flex items-center gap-1.5 rounded-xl bg-rose-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-500 shadow-md shadow-rose-500/20"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>رفع ملزمة PDF</span>
+                  </button>
+                )}
+                {activeTab === 'codes' && (
+                  <button
+                    onClick={() => setShowAddCode(true)}
+                    className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 shadow-md shadow-emerald-500/20"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>توليد أكواد</span>
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
 
-        </div>
-      )}
+            {/* TAB 1: OVERVIEW (BENTO GRID REDESIGN) */}
+            {activeTab === 'overview' && (
+              <div className="space-y-6">
 
-      {/* TAB 2: COURSES & CURRICULUM */}
-      {activeTab === 'courses' && (
-        <div className="space-y-6">
+                {/* 1. Top Executive Welcome & Exam Countdown Banner */}
+                <div className="relative overflow-hidden rounded-3xl border border-blue-500/30 bg-gradient-to-br from-slate-900 via-slate-950 to-blue-950/40 p-6 shadow-2xl">
+                  <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="space-y-2">
+                      <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-300">
+                        <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                        <span>منظومة ويكيفزياء المتكاملة • الثانوية العامة</span>
+                      </div>
+                      <h3 className="text-xl sm:text-2xl font-black text-white">
+                        مرحباً بك يا أستاذ {settings.instructorTitle || 'يوسف'} ⚛️
+                      </h3>
+                      <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
+                        كل أدوات التحكم في المنصة، من إدارة الكورسات والملازم إلى مراقبة نتائج الطلاب وتكريم الأوائل بين يديك بنظام سحابي فوري ومستقر.
+                      </p>
+                    </div>
+
+                    {/* Quick Live Exam Countdown Badge */}
+                    <div className="rounded-2xl border border-amber-500/40 bg-slate-950/90 p-4 shrink-0 shadow-lg space-y-2 min-w-[240px]">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-slate-300 flex items-center gap-1.5">
+                          <Clock className="h-4 w-4 text-amber-400" />
+                          موعد امتحان الفيزياء
+                        </span>
+                        <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-400 font-mono">
+                          الهدف 60/60
+                        </span>
+                      </div>
+                      {(() => {
+                        const targetTime = new Date(settings.ministryExamDate || '2027-06-14T09:00').getTime();
+                        const diff = targetTime - Date.now();
+                        const days = Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
+                        const hours = Math.max(0, Math.floor((diff / (1000 * 60 * 60)) % 24));
+                        return (
+                          <div>
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-3xl font-black text-amber-400 font-mono">{days}</span>
+                              <span className="text-xs text-slate-400 font-bold">يوم</span>
+                              <span className="text-xl font-bold text-amber-300 font-mono">{hours}</span>
+                              <span className="text-xs text-slate-400 font-bold">ساعة</span>
+                            </div>
+                            <p className="text-[10px] text-emerald-400 mt-1">العد التنازلي معروض للطلاب في الصفحة الرئيسية</p>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Interactive Bento Stat Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3.5">
+                  
+                  <div 
+                    onClick={() => setActiveTab('students')}
+                    className="group cursor-pointer rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 hover:border-blue-500/50 hover:bg-slate-900 transition-all hover:scale-[1.02]"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-slate-400">إجمالي الطلاب</span>
+                      <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                        <Users className="h-4 w-4" />
+                      </div>
+                    </div>
+                    <p className="mt-2 text-2xl font-black text-white">{students.length}</p>
+                    <p className="text-[10px] text-blue-400 mt-1 flex items-center justify-between">
+                      <span>طالب مسجل</span>
+                      <span className="text-slate-500 group-hover:text-blue-300">عرض ←</span>
+                    </p>
+                  </div>
+
+                  <div 
+                    onClick={() => setActiveTab('courses')}
+                    className="group cursor-pointer rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 hover:border-amber-500/50 hover:bg-slate-900 transition-all hover:scale-[1.02]"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-slate-400">الكورسات المتاحة</span>
+                      <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 group-hover:bg-amber-500 group-hover:text-slate-950 transition-colors">
+                        <BookOpen className="h-4 w-4" />
+                      </div>
+                    </div>
+                    <p className="mt-2 text-2xl font-black text-amber-400">{courses.length}</p>
+                    <p className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
+                      <span>كورس ومنهج</span>
+                      <span className="text-slate-500 group-hover:text-amber-300">عرض ←</span>
+                    </p>
+                  </div>
+
+                  <div 
+                    onClick={() => setActiveTab('exams')}
+                    className="group cursor-pointer rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 hover:border-purple-500/50 hover:bg-slate-900 transition-all hover:scale-[1.02]"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-slate-400">الامتحانات</span>
+                      <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition-colors">
+                        <HelpCircle className="h-4 w-4" />
+                      </div>
+                    </div>
+                    <p className="mt-2 text-2xl font-black text-purple-400">{exams.length}</p>
+                    <p className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
+                      <span>اختبار وكويز</span>
+                      <span className="text-slate-500 group-hover:text-purple-300">عرض ←</span>
+                    </p>
+                  </div>
+
+                  <div 
+                    onClick={() => setActiveTab('codes')}
+                    className="group cursor-pointer rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 hover:border-emerald-500/50 hover:bg-slate-900 transition-all hover:scale-[1.02]"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-slate-400">أكواد التفعيل</span>
+                      <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-colors">
+                        <Key className="h-4 w-4" />
+                      </div>
+                    </div>
+                    <p className="mt-2 text-2xl font-black text-emerald-400">
+                      {codes.filter(c => !c.isUsed).length}
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
+                      <span>كود متاح للشحن</span>
+                      <span className="text-slate-500 group-hover:text-emerald-300">عرض ←</span>
+                    </p>
+                  </div>
+
+                  <div 
+                    onClick={() => setActiveTab('pdfs')}
+                    className="group cursor-pointer rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 hover:border-rose-500/50 hover:bg-slate-900 transition-all hover:scale-[1.02]"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-slate-400">الملازم والمذكرات</span>
+                      <div className="p-2 rounded-xl bg-rose-500/10 text-rose-400 group-hover:bg-rose-500 group-hover:text-white transition-colors">
+                        <FileText className="h-4 w-4" />
+                      </div>
+                    </div>
+                    <p className="mt-2 text-2xl font-black text-rose-400">{pdfs.length}</p>
+                    <p className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
+                      <span>ملف PDF</span>
+                      <span className="text-slate-500 group-hover:text-rose-300">عرض ←</span>
+                    </p>
+                  </div>
+
+                  <div 
+                    onClick={() => setActiveTab('results')}
+                    className="group cursor-pointer rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 hover:border-indigo-500/50 hover:bg-slate-900 transition-all hover:scale-[1.02]"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-slate-400">تسليمات الامتحانات</span>
+                      <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                        <Award className="h-4 w-4" />
+                      </div>
+                    </div>
+                    <p className="mt-2 text-2xl font-black text-indigo-300">{attempts.length}</p>
+                    <p className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
+                      <span>تسليم مصحح</span>
+                      <span className="text-slate-500 group-hover:text-indigo-300">عرض ←</span>
+                    </p>
+                  </div>
+
+                </div>
+
+                {/* 3. Main Bento 2-Column Section */}
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+                  {/* Left Column: Quick Launch Actions + Recent Results Feed (2 cols wide on desktop) */}
+                  <div className="xl:col-span-2 space-y-6">
+
+                    {/* Quick Command Center */}
+                    <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-bold text-white text-sm flex items-center gap-2">
+                          <Zap className="h-4 w-4 text-amber-400" />
+                          <span>مركز الإجراءات السريعة (Quick Launch)</span>
+                        </h4>
+                        <span className="text-[11px] text-slate-400">إجراءات بنقرة واحدة</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <button
+                          onClick={() => { setActiveTab('courses'); setShowAddCourse(true); }}
+                          className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4 text-xs font-bold text-blue-300 hover:bg-blue-600 hover:text-white transition-all group"
+                        >
+                          <div className="p-2.5 rounded-xl bg-blue-500/20 group-hover:bg-white/20 transition-colors">
+                            <Plus className="h-5 w-5" />
+                          </div>
+                          <span>إضافة كورس جديد</span>
+                        </button>
+
+                        <button
+                          onClick={() => { setActiveTab('codes'); setShowAddCode(true); }}
+                          className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs font-bold text-amber-300 hover:bg-amber-500 hover:text-slate-950 transition-all group"
+                        >
+                          <div className="p-2.5 rounded-xl bg-amber-500/20 group-hover:bg-slate-950/20 transition-colors">
+                            <Key className="h-5 w-5" />
+                          </div>
+                          <span>توليد أكواد شحن</span>
+                        </button>
+
+                        <button
+                          onClick={() => { setActiveTab('exams'); setShowAddExam(true); }}
+                          className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-purple-500/30 bg-purple-500/10 p-4 text-xs font-bold text-purple-300 hover:bg-purple-600 hover:text-white transition-all group"
+                        >
+                          <div className="p-2.5 rounded-xl bg-purple-500/20 group-hover:bg-white/20 transition-colors">
+                            <HelpCircle className="h-5 w-5" />
+                          </div>
+                          <span>إنشاء امتحان جديد</span>
+                        </button>
+
+                        <button
+                          onClick={() => { setActiveTab('notifs'); setShowAddNotif(true); }}
+                          className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs font-bold text-emerald-300 hover:bg-emerald-600 hover:text-white transition-all group"
+                        >
+                          <div className="p-2.5 rounded-xl bg-emerald-500/20 group-hover:bg-white/20 transition-colors">
+                            <Bell className="h-5 w-5" />
+                          </div>
+                          <span>إرسال إشعار عام</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Live Exam Target Date Quick Manager */}
+                    <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400">
+                            <Calendar className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-white text-sm">تحديد موعد امتحان الفيزياء الرسمي</h4>
+                            <p className="text-[11px] text-slate-400">يظهر العد التنازلي المباشر لجميع الطلاب داخل التطبيق</p>
+                          </div>
+                        </div>
+                        {dateUpdateFeedback && (
+                          <span className="rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 px-3 py-1 text-[11px] font-bold">
+                            ✓ تم التحديث
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center pt-2">
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-400">تاريخ ووقت الامتحان:</label>
+                          <input
+                            type="datetime-local"
+                            value={formatForDatetimeInput(settings.ministryExamDate)}
+                            onChange={e => handleExamDateUpdate(e.target.value)}
+                            className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-amber-300 font-mono font-bold focus:border-amber-400 focus:outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-400">اختصارات سريعة:</label>
+                          <div className="flex flex-wrap gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleExamDateUpdate('2027-06-14T09:00')}
+                              className="rounded-lg bg-amber-500/10 border border-amber-500/30 px-2.5 py-1.5 text-[11px] font-bold text-amber-300 hover:bg-amber-500 hover:text-slate-950 transition-colors"
+                            >
+                              14 يونيو 2027
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleExamDateUpdate('2027-06-21T09:00')}
+                              className="rounded-lg bg-slate-800 border border-slate-700 px-2.5 py-1.5 text-[11px] font-bold text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                            >
+                              21 يونيو 2027
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const d = new Date();
+                                d.setDate(d.getDate() + 90);
+                                handleExamDateUpdate(d.toISOString().slice(0, 16));
+                              }}
+                              className="rounded-lg bg-slate-800 border border-slate-700 px-2.5 py-1.5 text-[11px] font-bold text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                            >
+                              +90 يوم
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Recent Submissions Feed */}
+                    <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400">
+                            <Award className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-white text-sm">أحدث نتائج وتسليمات الطلاب</h4>
+                            <p className="text-[11px] text-slate-400">تحديث فوري لجميع الكويزات والامتحانات الشاملة</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setActiveTab('results')}
+                          className="text-xs font-bold text-blue-400 hover:text-blue-300"
+                        >
+                          عرض كل النتائج ({attempts.length}) ←
+                        </button>
+                      </div>
+
+                      {attempts.length === 0 ? (
+                        <div className="text-center py-8 border border-dashed border-slate-800 rounded-2xl">
+                          <Award className="h-8 w-8 text-slate-600 mx-auto mb-2" />
+                          <p className="text-xs text-slate-400">لا توجد تسليمات امتحانات مسجلة حتى الآن.</p>
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-slate-800/80">
+                          {attempts.slice(0, 6).map(att => {
+                            const student = students.find(s => s.id === att.studentId);
+                            return (
+                              <div key={att.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs hover:bg-slate-950/40 px-2 rounded-xl transition-colors">
+                                <div className="flex items-center gap-3">
+                                  <div className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-white text-xs border border-slate-700">
+                                    {att.studentName ? att.studentName[0] : 'ط'}
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-white text-sm">{att.studentName}</p>
+                                    <p className="text-[11px] text-slate-400">{att.examTitle}</p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-3 self-end sm:self-auto">
+                                  <span className={`px-2.5 py-1 rounded-lg font-black text-xs ${
+                                    att.passed 
+                                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' 
+                                      : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+                                  }`}>
+                                    {att.score}/{att.maxScore} ({att.percentage}%)
+                                  </span>
+
+                                  <span className="text-[10px] text-slate-400 font-mono">
+                                    {new Date(att.submittedAt).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+
+                                  {student && (
+                                    <button
+                                      onClick={() => sendParentWhatsappReport(student)}
+                                      title="إرسال تقرير الأداء لولي الأمر عبر واتساب"
+                                      className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 transition-colors"
+                                    >
+                                      <MessageCircle className="h-3.5 w-3.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
+
+                  {/* Right Column: Honor Roll + Weekly Challenge + AI Assistant + Cloud (1 col wide) */}
+                  <div className="space-y-6">
+
+                    {/* Honor Roll Spotlight */}
+                    <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 rounded-xl bg-amber-500/10 text-amber-400">
+                            <Trophy className="h-4 w-4" />
+                          </div>
+                          <span className="font-bold text-white text-xs">أوائل لوحة الشرف 🥇</span>
+                        </div>
+                        <button
+                          onClick={() => setActiveTab('leaderboard-admin')}
+                          className="text-[11px] font-bold text-amber-400 hover:underline"
+                        >
+                          الإدارة ←
+                        </button>
+                      </div>
+
+                      {(() => {
+                        const topLeaders = StorageService.getLeaderboard().slice(0, 3);
+                        if (topLeaders.length === 0) {
+                          return (
+                            <p className="text-xs text-slate-400 py-3 text-center">لا يوجد طلاب في لوحة الشرف حالياً.</p>
+                          );
+                        }
+                        return (
+                          <div className="space-y-2 pt-1">
+                            {topLeaders.map((leader, i) => (
+                              <div key={leader.studentId} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800/80 text-xs">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-base">
+                                    {i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}
+                                  </span>
+                                  <div>
+                                    <p className="font-bold text-white leading-tight">{leader.studentName}</p>
+                                    <p className="text-[10px] text-slate-400">{leader.governorate || 'طالب متميز'}</p>
+                                  </div>
+                                </div>
+                                <span className="font-black text-amber-400 font-mono">
+                                  {leader.points} نقطة
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
+
+                      <button
+                        onClick={() => {
+                          setBonusStudentId(students[0]?.id || '');
+                          setShowBonusModal(true);
+                        }}
+                        className="w-full mt-2 rounded-xl border border-amber-500/30 bg-amber-500/10 py-2 text-xs font-bold text-amber-300 hover:bg-amber-500/20 flex items-center justify-center gap-1.5"
+                      >
+                        <Award className="h-3.5 w-3.5" />
+                        <span>منح نقاط وأوسمة مكافأة</span>
+                      </button>
+                    </div>
+
+                    {/* Active Weekly Challenge Widget */}
+                    <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 rounded-xl bg-purple-500/10 text-purple-400">
+                            <Sparkles className="h-4 w-4" />
+                          </div>
+                          <span className="font-bold text-white text-xs">تحدي الأسبوع الفيزيائي</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-purple-400 bg-purple-500/10 border border-purple-500/30 px-2 py-0.5 rounded-full">
+                          {challenges.length} متاح
+                        </span>
+                      </div>
+
+                      {challenges.length > 0 ? (
+                        <div className="rounded-2xl border border-purple-500/20 bg-slate-950 p-3 space-y-2">
+                          <p className="font-bold text-white text-xs line-clamp-1">{challenges[0].title}</p>
+                          <p className="text-[11px] text-slate-400 line-clamp-2">{challenges[0].description}</p>
+                          <div className="flex items-center justify-between pt-1 text-[10px] text-purple-300">
+                            <span>جائزة: +{challenges[0].bonusPoints} نقطة</span>
+                            <span>{challenges[0].grade}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-400 text-center py-2">لا توجد تحديات أسبوعية منشورة.</p>
+                      )}
+
+                      <button
+                        onClick={() => { setActiveTab('challenges'); setShowAddChallenge(true); }}
+                        className="w-full rounded-xl bg-purple-600 py-2 text-xs font-bold text-white hover:bg-purple-500 flex items-center justify-center gap-1.5"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>نشر تحدي أسبوعي جديد</span>
+                      </button>
+                    </div>
+
+                    {/* AI Physics Assistant Quick Hub */}
+                    <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 rounded-xl bg-blue-500/10 text-blue-400">
+                            <Bot className="h-4 w-4" />
+                          </div>
+                          <span className="font-bold text-white text-xs">المساعد الذكي AI ⚛️</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                          جاهز للطلاب
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400">
+                        يقوم بالرد الفوري على أسئلة الطلاب وحل مسائل الفيزياء بالخطوات العلمية الدقيقة.
+                      </p>
+                      <button
+                        onClick={() => setActiveTab('ai-admin')}
+                        className="w-full rounded-xl border border-blue-500/30 bg-blue-500/10 py-2 text-xs font-bold text-blue-300 hover:bg-blue-500/20 flex items-center justify-center gap-1.5"
+                      >
+                        <Bot className="h-3.5 w-3.5" />
+                        <span>تعديل تعليمات وتجربة الـ AI</span>
+                      </button>
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+            )}
+
+            {/* TAB 2: COURSES & CURRICULUM */}
+            {activeTab === 'courses' && (
+              <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold text-white">إدارة الكورسات والمناهج</h2>
@@ -3216,6 +3573,10 @@ ${weakConceptsText}
           </div>
         </div>
       )}
+
+          </main>
+        </div>
+      </div>
 
       {/* Video & Media Hosting Interactive Guide Modal */}
       {showVideoGuideModal && (
