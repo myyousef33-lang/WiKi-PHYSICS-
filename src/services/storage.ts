@@ -1581,8 +1581,12 @@ export const StorageService = {
 
   // === Student Wallet & Payment Gateways ===
   getPaymentMethods(): PaymentMethod[] {
-    const stored = getStored<PaymentMethod[]>(STORAGE_KEYS.PAYMENT_METHODS, []);
-    if (stored && stored.length > 0) return stored;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.PAYMENT_METHODS);
+      if (raw !== null) {
+        return JSON.parse(raw) || [];
+      }
+    } catch (_) {}
 
     const defaultMethods: PaymentMethod[] = [
       {

@@ -12,8 +12,11 @@ import {
   ChevronDown, 
   ChevronUp, 
   ArrowRight,
-  HelpCircle
+  HelpCircle,
+  Wallet,
+  Check
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { Course, Student, Unit, Lesson, QuizExam } from '../types';
 
@@ -34,6 +37,26 @@ export const CourseDetailsView: React.FC<CourseDetailsViewProps> = ({
   const [student, setStudent] = useState<Student | null>(StorageService.getCurrentStudent());
   const [openUnits, setOpenUnits] = useState<Record<string, boolean>>({});
   const [exams, setExams] = useState<QuizExam[]>(StorageService.getExams());
+  const [purchaseMsg, setPurchaseMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const handleWalletPurchase = () => {
+    if (!student) {
+      onOpenAuthModal();
+      return;
+    }
+
+    if (!course) return;
+
+    const res = StorageService.purchaseCourseWithWalletBalance(student.id, course.id);
+    if (res.success) {
+      setPurchaseMsg({ type: 'success', text: res.message });
+      try {
+        confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+      } catch (_) {}
+    } else {
+      setPurchaseMsg({ type: 'error', text: res.message });
+    }
+  };
 
   useEffect(() => {
     const update = () => {
@@ -161,20 +184,52 @@ export const CourseDetailsView: React.FC<CourseDetailsViewProps> = ({
                   const firstLesson = course.units?.[0]?.lessons?.[0];
                   if (firstLesson) onNavigate('lesson-player', { courseId: course.id, lessonId: firstLesson.id });
                 }}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-3.5 text-sm font-bold text-slate-950 shadow-lg shadow-amber-500/20 hover:scale-105 transition-all"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-3.5 text-sm font-bold text-slate-950 shadow-lg shadow-amber-500/20 hover:scale-105 transition-all cursor-pointer"
               >
                 <PlayCircle className="h-5 w-5 fill-slate-950" />
                 <span>بدء / استكمال المشاهدة</span>
               </button>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
+                {purchaseMsg && (
+                  <div
+                    className={`p-3 rounded-xl text-xs font-bold ${
+                      purchaseMsg.type === 'success'
+                        ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
+                        : 'bg-rose-500/15 border border-rose-500/30 text-rose-300'
+                    }`}
+                  >
+                    {purchaseMsg.text}
+                  </div>
+                )}
+
+                {/* Wallet Direct Purchase Button */}
+                <button
+                  onClick={handleWalletPurchase}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-5 py-3 text-xs sm:text-sm font-black text-slate-950 shadow-lg shadow-emerald-500/20 hover:scale-102 transition-all cursor-pointer"
+                >
+                  <Wallet className="h-5 w-5 shrink-0" />
+                  <span>
+                    الشراء والتفعيل المباشر خصماً من المحفظة ({course.price} ج.م)
+                  </span>
+                </button>
+
+                {student && (
+                  <div className="flex items-center justify-between px-2 text-[11px] text-slate-300 font-bold bg-slate-950/60 py-1.5 rounded-xl border border-slate-800">
+                    <span>رصيد محفظتك الحالي:</span>
+                    <span className="text-amber-400 font-mono">{student.walletBalance || 0} ج.م</span>
+                  </div>
+                )}
+
+                {/* Activation Code Button */}
                 <button
                   onClick={student ? onOpenActivationModal : onOpenAuthModal}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-3.5 text-sm font-bold text-slate-950 shadow-lg shadow-amber-500/20 hover:scale-105 transition-all"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-800/90 border border-slate-700 px-5 py-2.5 text-xs font-bold text-amber-300 hover:bg-slate-700 transition-all cursor-pointer"
                 >
-                  <Key className="h-5 w-5" />
-                  <span>تفعيل الكورس بكود الاشتراك</span>
+                  <Key className="h-4 w-4 shrink-0" />
+                  <span>تفعيل بكود الاشتراك (كود مسبق الدفع)</span>
                 </button>
+
                 <p className="text-[11px] text-center text-slate-400">
                   تتوفر بعض الدروس للمعاينة المجانية بالأسفل
                 </p>

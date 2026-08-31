@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, CheckCircle2, Key, Sparkles, Filter, PlayCircle, ShieldCheck } from 'lucide-react';
+import { BookOpen, CheckCircle2, Key, Sparkles, Filter, PlayCircle, ShieldCheck, Wallet } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { Course, Student, GradeLevel } from '../types';
 
@@ -17,6 +18,22 @@ export const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({
   const [courses, setCourses] = useState<Course[]>([]);
   const [student, setStudent] = useState<Student | null>(StorageService.getCurrentStudent());
   const [selectedGrade, setSelectedGrade] = useState<string>('all');
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const handleQuickWalletPurchase = (course: Course) => {
+    if (!student) {
+      onOpenAuthModal();
+      return;
+    }
+    const res = StorageService.purchaseCourseWithWalletBalance(student.id, course.id);
+    if (res.success) {
+      setMsg(res.message);
+      try { confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } }); } catch (_) {}
+      setTimeout(() => setMsg(null), 5000);
+    } else {
+      alert(res.message);
+    }
+  };
 
   useEffect(() => {
     const update = () => {
@@ -44,6 +61,11 @@ export const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({
       
       {/* Header Banner */}
       <div className="text-center space-y-3 max-w-3xl mx-auto">
+        {msg && (
+          <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-bold text-xs sm:text-sm animate-in fade-in">
+            {msg}
+          </div>
+        )}
         <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1 text-xs font-bold text-amber-400">
           <Sparkles className="h-3.5 w-3.5" />
           <span>منهج الفيزياء للعام الدراسي 2024 / 2025</span>
@@ -139,28 +161,42 @@ export const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({
                 </div>
 
                 {/* Action Buttons */}
-                <div className="p-5 pt-0 flex items-center gap-2">
-                  <button
-                    onClick={() => onNavigate('course-details', { courseId: course.id })}
-                    className="flex-1 rounded-xl border border-slate-700 bg-slate-800/80 py-2.5 text-xs font-bold text-white hover:bg-slate-700 transition-colors"
-                  >
-                    استعراض المنهج
-                  </button>
+                <div className="p-5 pt-0 space-y-2">
                   {isEnrolled ? (
                     <button
                       onClick={() => onNavigate('course-details', { courseId: course.id })}
-                      className="flex-1 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 py-2.5 text-xs font-bold text-slate-950 shadow-md shadow-emerald-500/20 hover:bg-emerald-400 transition-colors"
+                      className="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 py-2.5 text-xs font-bold text-slate-950 shadow-md shadow-emerald-500/20 hover:bg-emerald-400 transition-colors flex items-center justify-center gap-2 cursor-pointer"
                     >
-                      دخول الكورس
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span>دخول الكورس (مشترك)</span>
                     </button>
                   ) : (
-                    <button
-                      onClick={student ? onOpenActivationModal : onOpenAuthModal}
-                      className="flex-1 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 py-2.5 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 hover:bg-amber-400 transition-colors"
-                    >
-                      تفعيل بالكود
-                    </button>
+                    <div className="flex flex-col sm:flex-row items-center gap-2">
+                      <button
+                        onClick={() => handleQuickWalletPurchase(course)}
+                        className="flex-1 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 py-2.5 px-3 text-xs font-black text-slate-950 shadow-md shadow-emerald-500/20 hover:bg-emerald-400 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                        title="خصم فوري وتفعيل تلقائي من المحفظة"
+                      >
+                        <Wallet className="h-4 w-4 shrink-0" />
+                        <span>شراء بالمحفظة ({course.price} ج.م)</span>
+                      </button>
+
+                      <button
+                        onClick={student ? onOpenActivationModal : onOpenAuthModal}
+                        className="flex-1 w-full rounded-xl border border-slate-700 bg-slate-800/90 py-2.5 px-3 text-xs font-bold text-amber-300 hover:bg-slate-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Key className="h-3.5 w-3.5 shrink-0" />
+                        <span>كود الاشتراك</span>
+                      </button>
+                    </div>
                   )}
+
+                  <button
+                    onClick={() => onNavigate('course-details', { courseId: course.id })}
+                    className="w-full rounded-xl border border-slate-800 bg-slate-900/60 py-2 text-[11px] font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                  >
+                    استعراض المنهج والتفاصيل الكاملة
+                  </button>
                 </div>
               </div>
             );
