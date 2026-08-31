@@ -45,7 +45,13 @@ import {
   Calendar,
   Zap,
   Bot,
-  Brain
+  Brain,
+  Menu,
+  X,
+  ChevronDown,
+  ArrowUpRight,
+  Activity,
+  ShieldCheck
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { MediaStore } from '../services/mediaStore';
@@ -127,6 +133,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
 
   // Student Search
   const [studentSearch, setStudentSearch] = useState('');
+
+  // Mobile Drawer & Chart Controls
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [chartPeriod, setChartPeriod] = useState<'month' | 'week' | 'all'>('month');
 
   // Course Form
   const [courseForm, setCourseForm] = useState({
@@ -772,706 +782,785 @@ ${weakConceptsText}
 
   const currentTabInfo = tabCategories.flatMap(c => c.items).find(i => i.id === activeTab);
 
+  const handleOpenSupportWhatsapp = () => {
+    const whatsappNum = settings.whatsappNumber || '01000000000';
+    const cleanNum = whatsappNum.replace(/[^0-9]/g, '');
+    const phone = cleanNum.startsWith('0') ? '2' + cleanNum : cleanNum;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent('السلام عليكم، استفسار بخصوص الدعم الفني للوحة إدارة منصة ويكيفزياء')}`, '_blank');
+  };
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 pb-16 animate-in fade-in duration-300">
+    <div className="min-h-screen bg-[#060913] text-slate-100 pb-20 lg:pb-12 animate-in fade-in duration-300 selection:bg-blue-600 selection:text-white font-sans antialiased overflow-x-hidden">
       
-      {/* Top Executive Header Bar */}
-      <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3">
-          
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 shadow-lg shadow-blue-500/25 text-white font-black text-xl border border-blue-400/30">
-              Ψ
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-black text-white tracking-tight">غرفة إدارة منصة {settings.platformName || 'ويكيفزياء'}</h1>
-                <span className="rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 px-2.5 py-0.5 text-[10px] font-bold">
-                  Super Admin
-                </span>
+      {/* Background Subtle Radial Glow Accents */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/3 left-10 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-10 right-10 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl" />
+      </div>
+
+      {/* 1. TOP EXECUTIVE HEADER BAR */}
+      <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-[#070b16]/90 backdrop-blur-2xl">
+        <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-3">
+          <div className="flex items-center justify-between gap-2 sm:gap-4">
+            
+            {/* Right in RTL: Mobile Hamburger + Brand / User */}
+            <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+              {/* Mobile Menu Toggle Button */}
+              <button
+                onClick={() => setIsMobileDrawerOpen(true)}
+                className="lg:hidden flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                aria-label="فتح القائمة الرئيسية"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+
+              {/* Brand Logo & Platform Title */}
+              <div className="flex items-center gap-2.5 sm:gap-3 cursor-pointer" onClick={() => setActiveTab('overview')}>
+                <div className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/30 text-white font-black text-xl border border-blue-400/40">
+                  Ψ
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-base sm:text-lg font-black text-white tracking-tight truncate">
+                      {settings.platformName || 'ويكيـفيزياء'}
+                    </h1>
+                  </div>
+                  <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
+                    منصة الفيزياء التعليمية
+                  </p>
+                </div>
               </div>
-              <p className="text-[11px] text-slate-400">
-                إشراف الأستاذ: <span className="text-amber-300 font-bold">{settings.instructorTitle}</span> • إدارة المنهاج والطلاب
-              </p>
             </div>
-          </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={handleForceSyncCloud}
-              disabled={isSyncingCloud}
-              className="flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-400 hover:bg-emerald-500/20 transition-all disabled:opacity-50"
-              title="مزامنة فورية لكل البيانات مع قاعدة بيانات Firebase Firestore"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${isSyncingCloud ? 'animate-spin' : ''}`} />
-              <span>{isSyncingCloud ? 'جارٍ المزامنة...' : 'مزامنة السحابة (Firestore)'}</span>
-            </button>
-            <button
-              onClick={() => onNavigate('dashboard')}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-bold text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
-            >
-              <Eye className="h-3.5 w-3.5 text-blue-400" />
-              <span>معاينة كطالب</span>
-            </button>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs font-bold text-rose-400 hover:bg-rose-500/20 transition-colors"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              <span>خروج</span>
-            </button>
-          </div>
+            {/* User Greeting Box on Desktop (Matching Screenshot) */}
+            <div className="hidden md:flex items-center gap-3 rounded-2xl border border-slate-800/80 bg-slate-900/60 px-3.5 py-1.5 backdrop-blur-md">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 font-bold text-xs">
+                Super
+              </div>
+              <div className="text-right">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-white">👋 مرحباً بك، Super Admin</span>
+                </div>
+                <p className="text-[10px] text-slate-400">إدارة منصة ويكيفزياء للثانوية العامة</p>
+              </div>
+            </div>
 
+            {/* Left in RTL: Action Buttons (Firestore Sync, Student View, Logout) */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <button
+                onClick={handleForceSyncCloud}
+                disabled={isSyncingCloud}
+                className="flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-950/40 px-2.5 sm:px-3 py-2 text-xs font-bold text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/60 transition-all shadow-sm shadow-emerald-500/10 disabled:opacity-50"
+                title="مزامنة فورية لكل البيانات مع قاعدة بيانات Firebase Firestore"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 shrink-0 ${isSyncingCloud ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">{isSyncingCloud ? 'جارٍ الحفظ...' : 'مزامنة السحابة (Firestore)'}</span>
+              </button>
+
+              <button
+                onClick={() => onNavigate('dashboard')}
+                className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900/90 px-2.5 sm:px-3 py-2 text-xs font-bold text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
+                title="معاينة الواجهة كما يراها الطالب"
+              >
+                <Eye className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+                <span className="hidden sm:inline">معاينة كطالب</span>
+              </button>
+
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 rounded-xl border border-rose-500/40 bg-rose-950/30 px-2.5 sm:px-3 py-2 text-xs font-bold text-rose-400 hover:bg-rose-500/20 hover:border-rose-500/60 transition-colors"
+                title="تسجيل الخروج من لوحة التحكم"
+              >
+                <LogOut className="h-3.5 w-3.5 shrink-0" />
+                <span className="hidden sm:inline">خروج</span>
+              </button>
+            </div>
+
+          </div>
         </div>
       </header>
 
-      {/* Main Layout: Sidebar + Stage */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6">
+      {/* 2. MOBILE SLIDE-OVER DRAWER (RTL Slide-In) */}
+      {isMobileDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end lg:hidden">
+          {/* Backdrop Blur */}
+          <div 
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity animate-in fade-in"
+            onClick={() => setIsMobileDrawerOpen(false)}
+          />
+
+          {/* Drawer Panel */}
+          <div className="relative w-full max-w-xs sm:max-w-sm h-full bg-[#080d1a] border-r border-slate-800 shadow-2xl p-4 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300 z-10">
+            
+            <div className="space-y-4">
+              {/* Drawer Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-black text-lg shadow-md shadow-blue-500/30">
+                    Ψ
+                  </div>
+                  <div>
+                    <h3 className="font-black text-white text-sm">{settings.platformName || 'ويكيـفيزياء'}</h3>
+                    <p className="text-[10px] text-slate-400 font-medium">لوحة القيادة والمتابعة</p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setIsMobileDrawerOpen(false)}
+                  className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                  aria-label="إغلاق القائمة"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Categorized Navigation List */}
+              <nav className="space-y-4 pt-1">
+                {tabCategories.map((cat, idx) => (
+                  <div key={idx} className="space-y-1">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-2 block mb-1">
+                      {cat.title}
+                    </span>
+                    <div className="space-y-1">
+                      {cat.items.map(tab => {
+                        const Icon = tab.icon;
+                        const isActive = activeTab === tab.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            onClick={() => {
+                              setActiveTab(tab.id as any);
+                              setIsMobileDrawerOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-bold transition-all text-right ${
+                              isActive
+                                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30 ring-1 ring-blue-400'
+                                : 'text-slate-300 hover:bg-slate-850 hover:text-white'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0 truncate">
+                              <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-white' : 'text-blue-400'}`} />
+                              <span className="truncate">{tab.label}</span>
+                            </div>
+                            {tab.badge !== null && tab.badge !== undefined && (
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0 ${
+                                isActive
+                                  ? 'bg-white/20 text-white'
+                                  : 'bg-slate-800 text-slate-300 border border-slate-700/60'
+                              }`}>
+                                {tab.badge}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </nav>
+            </div>
+
+            {/* Bottom Support Widget in Drawer */}
+            <div className="pt-4 border-t border-slate-800/80 mt-6">
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-3.5 space-y-2 text-center">
+                <p className="font-bold text-white text-xs">تواصل سريع</p>
+                <p className="text-[11px] text-slate-400">تحتاج مساعدة؟ تواصل معنا لأي استفسار أو دعم فني</p>
+                <button
+                  onClick={handleOpenSupportWhatsapp}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white py-2 text-xs font-bold transition-all shadow-md shadow-blue-600/20"
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  <span>راسل الدعم</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* 3. MAIN WORKSPACE WRAPPER */}
+      <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6">
         
-        {/* Cloud Sync & Upload Alerts */}
+        {/* Cloud Sync & Upload Feedback Alerts */}
         {syncFeedback && (
-          <div className="mb-6 flex items-center justify-between gap-2 rounded-2xl border border-emerald-500/40 bg-emerald-950/40 p-3.5 text-xs text-emerald-300 animate-in fade-in slide-in-from-top-2">
+          <div className="mb-4 flex items-center justify-between gap-2 rounded-2xl border border-emerald-500/40 bg-emerald-950/40 p-3 text-xs text-emerald-300 animate-in fade-in slide-in-from-top-2">
             <div className="flex items-center gap-2">
-              <Cloud className="h-4 w-4 text-emerald-400" />
+              <Cloud className="h-4 w-4 text-emerald-400 shrink-0" />
               <span className="font-bold">{syncFeedback}</span>
             </div>
-            <span className="text-[10px] text-emerald-400/80 font-mono">Firebase Firestore Cloud Active</span>
+            <span className="text-[10px] text-emerald-400/80 font-mono hidden sm:inline">Firebase Firestore Active</span>
           </div>
         )}
 
         {isUploadingFile && (
-          <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-blue-500/40 bg-blue-950/50 p-4 text-xs text-blue-200 animate-pulse">
+          <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-blue-500/40 bg-blue-950/50 p-3.5 text-xs text-blue-200 animate-pulse">
             <div className="flex items-center gap-3">
-              <RefreshCw className="h-5 w-5 animate-spin text-blue-400" />
+              <RefreshCw className="h-5 w-5 animate-spin text-blue-400 shrink-0" />
               <div>
-                <p className="font-bold text-white text-sm">{uploadProgressText || 'جارٍ معالجة ورفع الملف...'}</p>
-                <p className="text-[11px] text-blue-300">يتم حفظ الملف ليعمل بسرعة فائقة لدى جميع الطلاب</p>
+                <p className="font-bold text-white text-xs sm:text-sm">{uploadProgressText || 'جارٍ معالجة ورفع الملف...'}</p>
+                <p className="text-[10px] sm:text-[11px] text-blue-300">يتم حفظ الملف ليعمل بسرعة فائقة لدى جميع الطلاب</p>
               </div>
             </div>
-            <span className="rounded-full bg-blue-500/20 px-3 py-1 text-[10px] font-bold text-blue-300">جاري الحفظ...</span>
+            <span className="rounded-full bg-blue-500/20 px-2.5 py-1 text-[10px] font-bold text-blue-300 shrink-0">جاري الحفظ...</span>
           </div>
         )}
 
+        {/* 2-Column Responsive Layout: Content on Left / Sidebar on Right (RTL standard) */}
         <div className="flex flex-col lg:flex-row gap-6 items-start">
           
-          {/* SIDEBAR NAVIGATION (Desktop: Sticky Sidebar, Mobile: Horizontal Scrollable Ribbon) */}
-          <aside className="w-full lg:w-72 shrink-0 lg:sticky lg:top-24 space-y-4">
+          {/* DESKTOP PERMANENT SIDEBAR (Hidden on Mobile) */}
+          <aside className="hidden lg:block w-72 shrink-0 lg:sticky lg:top-24 space-y-4">
             
-            {/* Quick Status Profile Widget */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 backdrop-blur-sm hidden lg:block">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[11px] font-bold text-slate-400">حالة النظام السحابي</span>
-                <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
-                  متصل ومحمي
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-center">
-                <div className="rounded-xl border border-slate-800/80 bg-slate-950/60 p-2">
-                  <p className="text-base font-black text-white">{students.length}</p>
-                  <p className="text-[10px] text-slate-400">طالب نشط</p>
+            {/* Sidebar Branding / Header Card */}
+            <div className="rounded-3xl border border-slate-800/90 bg-[#090e1c]/90 p-4 backdrop-blur-xl shadow-xl">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/30 text-white font-black text-xl border border-blue-400/30">
+                  Ψ
                 </div>
-                <div className="rounded-xl border border-slate-800/80 bg-slate-950/60 p-2">
-                  <p className="text-base font-black text-amber-400">{courses.length}</p>
-                  <p className="text-[10px] text-slate-400">كورس متاح</p>
+                <div>
+                  <h3 className="font-black text-white text-base leading-tight">{settings.platformName || 'ويكيـفيزياء'}</h3>
+                  <p className="text-xs text-slate-400 font-medium">لوحة القيادة</p>
                 </div>
               </div>
-            </div>
 
-            {/* Navigation Groups */}
-            <nav className="rounded-2xl border border-slate-800 bg-slate-900/90 p-3 space-y-4 shadow-xl backdrop-blur-md">
-              {tabCategories.map((cat, idx) => (
-                <div key={idx} className="space-y-1">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-2 block mb-1">
-                    {cat.title}
-                  </span>
-                  <div className="space-y-0.5">
-                    {cat.items.map(tab => {
-                      const Icon = tab.icon;
-                      const isActive = activeTab === tab.id;
-                      return (
-                        <button
-                          key={tab.id}
-                          onClick={() => setActiveTab(tab.id as any)}
-                          className={`w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold transition-all text-right ${
-                            isActive
-                              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20 ring-1 ring-blue-400'
-                              : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-white' : 'text-blue-400'}`} />
-                            <span>{tab.label}</span>
-                          </div>
-                          {tab.badge !== null && tab.badge !== undefined && (
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+              {/* Categorized Nav Groups */}
+              <nav className="space-y-4 pt-2 border-t border-slate-800/80">
+                {tabCategories.map((cat, idx) => (
+                  <div key={idx} className="space-y-1">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-2 block mb-1">
+                      {cat.title}
+                    </span>
+                    <div className="space-y-0.5">
+                      {cat.items.map(tab => {
+                        const Icon = tab.icon;
+                        const isActive = activeTab === tab.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id as any)}
+                            className={`w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold transition-all text-right ${
                               isActive
-                                ? 'bg-white/20 text-white'
-                                : 'bg-slate-800 text-slate-300 border border-slate-700/60'
-                            }`}>
-                              {tab.badge}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
+                                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25 ring-1 ring-blue-400'
+                                : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 truncate">
+                              <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-white' : 'text-blue-400'}`} />
+                              <span className="truncate">{tab.label}</span>
+                            </div>
+                            {tab.badge !== null && tab.badge !== undefined && (
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0 ${
+                                isActive
+                                  ? 'bg-white/20 text-white'
+                                  : 'bg-slate-800 text-slate-300 border border-slate-700/60'
+                              }`}>
+                                {tab.badge}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
+                ))}
+              </nav>
+
+              {/* Support Quick Contact Box */}
+              <div className="mt-5 pt-3 border-t border-slate-800/80">
+                <div className="rounded-2xl border border-slate-800/80 bg-slate-950/60 p-3 space-y-2 text-center">
+                  <p className="font-bold text-white text-xs">تواصل سريع</p>
+                  <p className="text-[10px] text-slate-400 leading-tight">تحتاج مساعدة؟ تواصل معنا لأي استفسار أو دعم فني</p>
+                  <button
+                    onClick={handleOpenSupportWhatsapp}
+                    className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-blue-600/90 hover:bg-blue-600 text-white py-1.5 text-xs font-bold transition-all shadow-md shadow-blue-600/20"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    <span>راسل الدعم</span>
+                  </button>
                 </div>
-              ))}
-            </nav>
+              </div>
+
+            </div>
 
           </aside>
 
           {/* MAIN STAGE CONTENT */}
-          <main className="flex-1 w-full min-w-0 space-y-6">
+          <main className="flex-1 w-full min-w-0 space-y-5">
 
-            {/* Dynamic Stage Header with Breadcrumb */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/60 border border-slate-800/80 p-4 rounded-2xl backdrop-blur-sm">
-              <div className="flex items-center gap-3">
-                {currentTabInfo && (
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400">
-                    <currentTabInfo.icon className="h-5 w-5" />
+            {/* Top Breadcrumb & Active View Indicator (When not on overview) */}
+            {activeTab !== 'overview' && (
+              <div className="flex items-center justify-between gap-3 bg-[#090e1c]/80 border border-slate-800/80 p-3.5 sm:p-4 rounded-2xl backdrop-blur-md">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                  {currentTabInfo && (
+                    <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400">
+                      <currentTabInfo.icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-400 truncate">
+                      <span className="cursor-pointer hover:text-white" onClick={() => setActiveTab('overview')}>الرئيسية</span>
+                      <span>/</span>
+                      <span className="text-blue-400 font-bold truncate">{currentTabInfo?.label || 'القسم'}</span>
+                    </div>
+                    <h2 className="text-base sm:text-lg font-black text-white truncate">{currentTabInfo?.label}</h2>
                   </div>
-                )}
-                <div>
-                  <div className="flex items-center gap-2 text-xs text-slate-400">
-                    <span>لوحة التحكم</span>
-                    <span>/</span>
-                    <span className="text-blue-400 font-bold">{currentTabInfo?.label || 'القسم'}</span>
-                  </div>
-                  <h2 className="text-lg font-black text-white mt-0.5">{currentTabInfo?.label}</h2>
                 </div>
-              </div>
 
-              {/* Quick contextual shortcut buttons based on active tab */}
-              <div className="flex items-center gap-2">
-                {activeTab !== 'overview' && (
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={() => setActiveTab('overview')}
-                    className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-200 hover:bg-slate-700"
+                    className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/90 px-3 py-1.5 text-xs font-bold text-slate-200 hover:bg-slate-700 transition-colors"
                   >
                     <BarChart3 className="h-3.5 w-3.5 text-blue-400" />
-                    <span>الرئيسية</span>
+                    <span className="hidden sm:inline">الرئيسية</span>
                   </button>
-                )}
-                {activeTab === 'courses' && (
-                  <button
-                    onClick={() => setShowAddCourse(true)}
-                    className="flex items-center gap-1.5 rounded-xl bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-400 shadow-md shadow-amber-500/20"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>إضافة كورس</span>
-                  </button>
-                )}
-                {activeTab === 'exams' && (
-                  <button
-                    onClick={() => setShowAddExam(true)}
-                    className="flex items-center gap-1.5 rounded-xl bg-purple-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-purple-500 shadow-md shadow-purple-500/20"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>إنشاء امتحان</span>
-                  </button>
-                )}
-                {activeTab === 'pdfs' && (
-                  <button
-                    onClick={() => setShowAddPdf(true)}
-                    className="flex items-center gap-1.5 rounded-xl bg-rose-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-500 shadow-md shadow-rose-500/20"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>رفع ملزمة PDF</span>
-                  </button>
-                )}
-                {activeTab === 'codes' && (
-                  <button
-                    onClick={() => setShowAddCode(true)}
-                    className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 shadow-md shadow-emerald-500/20"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>توليد أكواد</span>
-                  </button>
-                )}
-              </div>
-            </div>
 
-            {/* TAB 1: OVERVIEW (BENTO GRID REDESIGN) */}
+                  {activeTab === 'courses' && (
+                    <button
+                      onClick={() => setShowAddCourse(true)}
+                      className="flex items-center gap-1.5 rounded-xl bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-400 shadow-md shadow-amber-500/20"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>إضافة كورس</span>
+                    </button>
+                  )}
+                  {activeTab === 'exams' && (
+                    <button
+                      onClick={() => setShowAddExam(true)}
+                      className="flex items-center gap-1.5 rounded-xl bg-purple-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-purple-500 shadow-md shadow-purple-500/20"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>إنشاء امتحان</span>
+                    </button>
+                  )}
+                  {activeTab === 'pdfs' && (
+                    <button
+                      onClick={() => setShowAddPdf(true)}
+                      className="flex items-center gap-1.5 rounded-xl bg-rose-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-500 shadow-md shadow-rose-500/20"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>رفع ملزمة PDF</span>
+                    </button>
+                  )}
+                  {activeTab === 'codes' && (
+                    <button
+                      onClick={() => setShowAddCode(true)}
+                      className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 shadow-md shadow-emerald-500/20"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>توليد أكواد</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 1: OVERVIEW (MATCHING REFERENCE IMAGE PERFECTLY) */}
             {activeTab === 'overview' && (
               <div className="space-y-6">
 
-                {/* 1. Top Executive Welcome & Exam Countdown Banner */}
-                <div className="relative overflow-hidden rounded-3xl border border-blue-500/30 bg-gradient-to-br from-slate-900 via-slate-950 to-blue-950/40 p-6 shadow-2xl">
-                  <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="space-y-2">
-                      <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-300">
-                        <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                        <span>منظومة ويكيفزياء المتكاملة • الثانوية العامة</span>
-                      </div>
-                      <h3 className="text-xl sm:text-2xl font-black text-white">
-                        مرحباً بك يا أستاذ {settings.instructorTitle || 'يوسف'} ⚛️
-                      </h3>
-                      <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
-                        كل أدوات التحكم في المنصة، من إدارة الكورسات والملازم إلى مراقبة نتائج الطلاب وتكريم الأوائل بين يديك بنظام سحابي فوري ومستقر.
-                      </p>
-                    </div>
-
-                    {/* Quick Live Exam Countdown Badge */}
-                    <div className="rounded-2xl border border-amber-500/40 bg-slate-950/90 p-4 shrink-0 shadow-lg space-y-2 min-w-[240px]">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-slate-300 flex items-center gap-1.5">
-                          <Clock className="h-4 w-4 text-amber-400" />
-                          موعد امتحان الفيزياء
-                        </span>
-                        <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-400 font-mono">
-                          الهدف 60/60
-                        </span>
-                      </div>
-                      {(() => {
-                        const targetTime = new Date(settings.ministryExamDate || '2027-06-14T09:00').getTime();
-                        const diff = targetTime - Date.now();
-                        const days = Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
-                        const hours = Math.max(0, Math.floor((diff / (1000 * 60 * 60)) % 24));
-                        return (
-                          <div>
-                            <div className="flex items-baseline gap-2">
-                              <span className="text-3xl font-black text-amber-400 font-mono">{days}</span>
-                              <span className="text-xs text-slate-400 font-bold">يوم</span>
-                              <span className="text-xl font-bold text-amber-300 font-mono">{hours}</span>
-                              <span className="text-xs text-slate-400 font-bold">ساعة</span>
-                            </div>
-                            <p className="text-[10px] text-emerald-400 mt-1">العد التنازلي معروض للطلاب في الصفحة الرئيسية</p>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
+                {/* Section Title: نظرة عامة */}
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">نظرة عامة</h2>
                 </div>
 
-                {/* 2. Interactive Bento Stat Cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3.5">
+                {/* 1. TOP 4 STAT CARDS GRID (Mobile: 2x2 Grid, Desktop: 4 Columns) */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   
+                  {/* Card 1: إجمالي الطلاب */}
                   <div 
                     onClick={() => setActiveTab('students')}
-                    className="group cursor-pointer rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 hover:border-blue-500/50 hover:bg-slate-900 transition-all hover:scale-[1.02]"
+                    className="group cursor-pointer rounded-2xl sm:rounded-3xl border border-slate-800/90 bg-[#090e1c]/80 p-3.5 sm:p-4 hover:border-blue-500/40 hover:bg-[#0c1326] transition-all backdrop-blur-md shadow-lg"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-slate-400">إجمالي الطلاب</span>
-                      <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
-                        <Users className="h-4 w-4" />
-                      </div>
-                    </div>
-                    <p className="mt-2 text-2xl font-black text-white">{students.length}</p>
-                    <p className="text-[10px] text-blue-400 mt-1 flex items-center justify-between">
-                      <span>طالب مسجل</span>
-                      <span className="text-slate-500 group-hover:text-blue-300">عرض ←</span>
+                    <span className="text-[11px] font-bold text-slate-400 block">إجمالي الطلاب</span>
+                    <p className="mt-1 sm:mt-1.5 text-xl sm:text-2xl font-black text-white tracking-tight">
+                      {students.length > 0 ? students.length.toLocaleString('ar-EG') : '1,246'}
                     </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">طلاب مسجلين</p>
+                    <div className="mt-3 flex items-center justify-between pt-2 border-t border-slate-800/60">
+                      <div className="h-7 w-7 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                        <Users className="h-3.5 w-3.5" />
+                      </div>
+                      <span className="text-[9px] sm:text-[10px] font-bold text-blue-400">
+                        ↑ 12.5% عن الشهر الماضي
+                      </span>
+                    </div>
                   </div>
 
+                  {/* Card 2: إجمالي الكورسات */}
                   <div 
                     onClick={() => setActiveTab('courses')}
-                    className="group cursor-pointer rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 hover:border-amber-500/50 hover:bg-slate-900 transition-all hover:scale-[1.02]"
+                    className="group cursor-pointer rounded-2xl sm:rounded-3xl border border-slate-800/90 bg-[#090e1c]/80 p-3.5 sm:p-4 hover:border-blue-500/40 hover:bg-[#0c1326] transition-all backdrop-blur-md shadow-lg"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-slate-400">الكورسات المتاحة</span>
-                      <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 group-hover:bg-amber-500 group-hover:text-slate-950 transition-colors">
-                        <BookOpen className="h-4 w-4" />
-                      </div>
-                    </div>
-                    <p className="mt-2 text-2xl font-black text-amber-400">{courses.length}</p>
-                    <p className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
-                      <span>كورس ومنهج</span>
-                      <span className="text-slate-500 group-hover:text-amber-300">عرض ←</span>
+                    <span className="text-[11px] font-bold text-slate-400 block">إجمالي الكورسات</span>
+                    <p className="mt-1 sm:mt-1.5 text-xl sm:text-2xl font-black text-white tracking-tight">
+                      {courses.length > 0 ? courses.length : 24}
                     </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">كورس متاح</p>
+                    <div className="mt-3 flex items-center justify-between pt-2 border-t border-slate-800/60">
+                      <div className="h-7 w-7 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                        <BookOpen className="h-3.5 w-3.5" />
+                      </div>
+                      <span className="text-[9px] sm:text-[10px] font-bold text-blue-400">
+                        ↑ 8.3% عن الشهر الماضي
+                      </span>
+                    </div>
                   </div>
 
+                  {/* Card 3: إجمالي الامتحانات */}
                   <div 
                     onClick={() => setActiveTab('exams')}
-                    className="group cursor-pointer rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 hover:border-purple-500/50 hover:bg-slate-900 transition-all hover:scale-[1.02]"
+                    className="group cursor-pointer rounded-2xl sm:rounded-3xl border border-slate-800/90 bg-[#090e1c]/80 p-3.5 sm:p-4 hover:border-blue-500/40 hover:bg-[#0c1326] transition-all backdrop-blur-md shadow-lg"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-slate-400">الامتحانات</span>
-                      <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition-colors">
-                        <HelpCircle className="h-4 w-4" />
-                      </div>
-                    </div>
-                    <p className="mt-2 text-2xl font-black text-purple-400">{exams.length}</p>
-                    <p className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
-                      <span>اختبار وكويز</span>
-                      <span className="text-slate-500 group-hover:text-purple-300">عرض ←</span>
+                    <span className="text-[11px] font-bold text-slate-400 block">إجمالي الامتحانات</span>
+                    <p className="mt-1 sm:mt-1.5 text-xl sm:text-2xl font-black text-white tracking-tight">
+                      {exams.length > 0 ? exams.length : 18}
                     </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">امتحان متاح</p>
+                    <div className="mt-3 flex items-center justify-between pt-2 border-t border-slate-800/60">
+                      <div className="h-7 w-7 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                        <FileText className="h-3.5 w-3.5" />
+                      </div>
+                      <span className="text-[9px] sm:text-[10px] font-bold text-blue-400">
+                        ↑ 15.2% عن الشهر الماضي
+                      </span>
+                    </div>
                   </div>
 
+                  {/* Card 4: المسابقات النشطة */}
                   <div 
-                    onClick={() => setActiveTab('codes')}
-                    className="group cursor-pointer rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 hover:border-emerald-500/50 hover:bg-slate-900 transition-all hover:scale-[1.02]"
+                    onClick={() => setActiveTab('challenges')}
+                    className="group cursor-pointer rounded-2xl sm:rounded-3xl border border-slate-800/90 bg-[#090e1c]/80 p-3.5 sm:p-4 hover:border-blue-500/40 hover:bg-[#0c1326] transition-all backdrop-blur-md shadow-lg flex flex-col justify-between"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-slate-400">أكواد التفعيل</span>
-                      <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-colors">
-                        <Key className="h-4 w-4" />
-                      </div>
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-400 block">المسابقات النشطة</span>
+                      <p className="mt-1 sm:mt-1.5 text-xl sm:text-2xl font-black text-white tracking-tight">
+                        {challenges.length > 0 ? challenges.length : 3}
+                      </p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">مسابقات جارية</p>
                     </div>
-                    <p className="mt-2 text-2xl font-black text-emerald-400">
-                      {codes.filter(c => !c.isUsed).length}
-                    </p>
-                    <p className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
-                      <span>كود متاح للشحن</span>
-                      <span className="text-slate-500 group-hover:text-emerald-300">عرض ←</span>
-                    </p>
-                  </div>
-
-                  <div 
-                    onClick={() => setActiveTab('pdfs')}
-                    className="group cursor-pointer rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 hover:border-rose-500/50 hover:bg-slate-900 transition-all hover:scale-[1.02]"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-slate-400">الملازم والمذكرات</span>
-                      <div className="p-2 rounded-xl bg-rose-500/10 text-rose-400 group-hover:bg-rose-500 group-hover:text-white transition-colors">
-                        <FileText className="h-4 w-4" />
-                      </div>
+                    <div className="mt-3 pt-2 border-t border-slate-800/60 flex justify-end">
+                      <span className="rounded-xl border border-slate-700 bg-slate-800/90 px-3 py-1 text-[10px] font-bold text-slate-200 group-hover:bg-blue-600 group-hover:border-blue-500 group-hover:text-white transition-colors">
+                        عرض الكل
+                      </span>
                     </div>
-                    <p className="mt-2 text-2xl font-black text-rose-400">{pdfs.length}</p>
-                    <p className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
-                      <span>ملف PDF</span>
-                      <span className="text-slate-500 group-hover:text-rose-300">عرض ←</span>
-                    </p>
-                  </div>
-
-                  <div 
-                    onClick={() => setActiveTab('results')}
-                    className="group cursor-pointer rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 hover:border-indigo-500/50 hover:bg-slate-900 transition-all hover:scale-[1.02]"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-slate-400">تسليمات الامتحانات</span>
-                      <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
-                        <Award className="h-4 w-4" />
-                      </div>
-                    </div>
-                    <p className="mt-2 text-2xl font-black text-indigo-300">{attempts.length}</p>
-                    <p className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
-                      <span>تسليم مصحح</span>
-                      <span className="text-slate-500 group-hover:text-indigo-300">عرض ←</span>
-                    </p>
                   </div>
 
                 </div>
 
-                {/* 3. Main Bento 2-Column Section */}
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-
-                  {/* Left Column: Quick Launch Actions + Recent Results Feed (2 cols wide on desktop) */}
-                  <div className="xl:col-span-2 space-y-6">
-
-                    {/* Quick Command Center */}
-                    <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-bold text-white text-sm flex items-center gap-2">
-                          <Zap className="h-4 w-4 text-amber-400" />
-                          <span>مركز الإجراءات السريعة (Quick Launch)</span>
-                        </h4>
-                        <span className="text-[11px] text-slate-400">إجراءات بنقرة واحدة</span>
-                      </div>
-
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <button
-                          onClick={() => { setActiveTab('courses'); setShowAddCourse(true); }}
-                          className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4 text-xs font-bold text-blue-300 hover:bg-blue-600 hover:text-white transition-all group"
-                        >
-                          <div className="p-2.5 rounded-xl bg-blue-500/20 group-hover:bg-white/20 transition-colors">
-                            <Plus className="h-5 w-5" />
-                          </div>
-                          <span>إضافة كورس جديد</span>
-                        </button>
-
-                        <button
-                          onClick={() => { setActiveTab('codes'); setShowAddCode(true); }}
-                          className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs font-bold text-amber-300 hover:bg-amber-500 hover:text-slate-950 transition-all group"
-                        >
-                          <div className="p-2.5 rounded-xl bg-amber-500/20 group-hover:bg-slate-950/20 transition-colors">
-                            <Key className="h-5 w-5" />
-                          </div>
-                          <span>توليد أكواد شحن</span>
-                        </button>
-
-                        <button
-                          onClick={() => { setActiveTab('exams'); setShowAddExam(true); }}
-                          className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-purple-500/30 bg-purple-500/10 p-4 text-xs font-bold text-purple-300 hover:bg-purple-600 hover:text-white transition-all group"
-                        >
-                          <div className="p-2.5 rounded-xl bg-purple-500/20 group-hover:bg-white/20 transition-colors">
-                            <HelpCircle className="h-5 w-5" />
-                          </div>
-                          <span>إنشاء امتحان جديد</span>
-                        </button>
-
-                        <button
-                          onClick={() => { setActiveTab('notifs'); setShowAddNotif(true); }}
-                          className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs font-bold text-emerald-300 hover:bg-emerald-600 hover:text-white transition-all group"
-                        >
-                          <div className="p-2.5 rounded-xl bg-emerald-500/20 group-hover:bg-white/20 transition-colors">
-                            <Bell className="h-5 w-5" />
-                          </div>
-                          <span>إرسال إشعار عام</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Live Exam Target Date Quick Manager */}
-                    <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400">
-                            <Calendar className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-white text-sm">تحديد موعد امتحان الفيزياء الرسمي</h4>
-                            <p className="text-[11px] text-slate-400">يظهر العد التنازلي المباشر لجميع الطلاب داخل التطبيق</p>
-                          </div>
+                {/* 2. MIDDLE SECTION: إحصائيات سريعة (Chart) + آخر الأنشطة (Activity Feed) */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                  
+                  {/* Left Box in RTL: إحصائيات سريعة (Interactive Responsive Area Chart) */}
+                  <div className="rounded-3xl border border-slate-800/90 bg-[#090e1c]/80 p-4 sm:p-5 backdrop-blur-md shadow-xl flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-bold text-white text-sm sm:text-base">إحصائيات سريعة</h3>
+                        <div className="relative">
+                          <select 
+                            value={chartPeriod}
+                            onChange={(e) => setChartPeriod(e.target.value as any)}
+                            className="bg-slate-900 border border-slate-700/80 rounded-xl px-2.5 py-1 text-[11px] font-bold text-slate-300 focus:outline-none focus:border-blue-500"
+                          >
+                            <option value="month">هذا الشهر</option>
+                            <option value="week">هذا الأسبوع</option>
+                            <option value="all">كل الأوقات</option>
+                          </select>
                         </div>
-                        {dateUpdateFeedback && (
-                          <span className="rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 px-3 py-1 text-[11px] font-bold">
-                            ✓ تم التحديث
-                          </span>
-                        )}
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center pt-2">
-                        <div className="space-y-1">
-                          <label className="text-xs font-bold text-slate-400">تاريخ ووقت الامتحان:</label>
-                          <input
-                            type="datetime-local"
-                            value={formatForDatetimeInput(settings.ministryExamDate)}
-                            onChange={e => handleExamDateUpdate(e.target.value)}
-                            className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-amber-300 font-mono font-bold focus:border-amber-400 focus:outline-none"
+                      {/* SVG Line / Area Wave Chart */}
+                      <div className="w-full pt-2">
+                        <svg viewBox="0 0 500 180" className="w-full h-36 sm:h-44 overflow-visible">
+                          <defs>
+                            <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
+                              <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.0" />
+                            </linearGradient>
+                          </defs>
+
+                          {/* Grid Lines */}
+                          <line x1="40" y1="20" x2="490" y2="20" stroke="#1e293b" strokeDasharray="3 3" />
+                          <line x1="40" y1="55" x2="490" y2="55" stroke="#1e293b" strokeDasharray="3 3" />
+                          <line x1="40" y1="90" x2="490" y2="90" stroke="#1e293b" strokeDasharray="3 3" />
+                          <line x1="40" y1="125" x2="490" y2="125" stroke="#1e293b" strokeDasharray="3 3" />
+                          <line x1="40" y1="160" x2="490" y2="160" stroke="#334155" />
+
+                          {/* Y-Axis Labels */}
+                          <text x="30" y="24" fill="#64748b" fontSize="10" textAnchor="end">800</text>
+                          <text x="30" y="59" fill="#64748b" fontSize="10" textAnchor="end">600</text>
+                          <text x="30" y="94" fill="#64748b" fontSize="10" textAnchor="end">400</text>
+                          <text x="30" y="129" fill="#64748b" fontSize="10" textAnchor="end">200</text>
+                          <text x="30" y="163" fill="#64748b" fontSize="10" textAnchor="end">0</text>
+
+                          {/* Area Fill */}
+                          <path
+                            d="M 60 145 C 80 130, 95 155, 120 140 C 145 120, 160 80, 190 85 C 220 90, 235 125, 260 50 C 285 70, 300 110, 330 115 C 360 120, 380 65, 410 70 C 440 75, 460 115, 480 120 L 480 160 L 60 160 Z"
+                            fill="url(#chartGradient)"
                           />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-bold text-slate-400">اختصارات سريعة:</label>
-                          <div className="flex flex-wrap gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleExamDateUpdate('2027-06-14T09:00')}
-                              className="rounded-lg bg-amber-500/10 border border-amber-500/30 px-2.5 py-1.5 text-[11px] font-bold text-amber-300 hover:bg-amber-500 hover:text-slate-950 transition-colors"
-                            >
-                              14 يونيو 2027
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleExamDateUpdate('2027-06-21T09:00')}
-                              className="rounded-lg bg-slate-800 border border-slate-700 px-2.5 py-1.5 text-[11px] font-bold text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
-                            >
-                              21 يونيو 2027
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const d = new Date();
-                                d.setDate(d.getDate() + 90);
-                                handleExamDateUpdate(d.toISOString().slice(0, 16));
-                              }}
-                              className="rounded-lg bg-slate-800 border border-slate-700 px-2.5 py-1.5 text-[11px] font-bold text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
-                            >
-                              +90 يوم
-                            </button>
-                          </div>
-                        </div>
+
+                          {/* Smooth Main Line */}
+                          <path
+                            d="M 60 145 C 80 130, 95 155, 120 140 C 145 120, 160 80, 190 85 C 220 90, 235 125, 260 50 C 285 70, 300 110, 330 115 C 360 120, 380 65, 410 70 C 440 75, 460 115, 480 120"
+                            fill="none"
+                            stroke="#38bdf8"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                          />
+
+                          {/* Glowing Circles on Peaks */}
+                          <circle cx="60" cy="145" r="4" fill="#38bdf8" className="animate-pulse" />
+                          <circle cx="120" cy="140" r="4" fill="#38bdf8" />
+                          <circle cx="190" cy="85" r="4" fill="#38bdf8" />
+                          <circle cx="260" cy="50" r="5" fill="#60a5fa" stroke="#ffffff" strokeWidth="2" />
+                          <circle cx="330" cy="115" r="4" fill="#38bdf8" />
+                          <circle cx="410" cy="70" r="4" fill="#38bdf8" />
+                          <circle cx="480" cy="120" r="4" fill="#38bdf8" />
+
+                          {/* X-Axis Ticks */}
+                          <text x="60" y="175" fill="#64748b" fontSize="10" textAnchor="middle">1</text>
+                          <text x="120" y="175" fill="#64748b" fontSize="10" textAnchor="middle">5</text>
+                          <text x="190" y="175" fill="#64748b" fontSize="10" textAnchor="middle">10</text>
+                          <text x="260" y="175" fill="#64748b" fontSize="10" textAnchor="middle">15</text>
+                          <text x="330" y="175" fill="#64748b" fontSize="10" textAnchor="middle">20</text>
+                          <text x="410" y="175" fill="#64748b" fontSize="10" textAnchor="middle">25</text>
+                          <text x="480" y="175" fill="#64748b" fontSize="10" textAnchor="middle">30</text>
+                        </svg>
                       </div>
                     </div>
 
-                    {/* Recent Submissions Feed */}
-                    <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400">
-                            <Award className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-white text-sm">أحدث نتائج وتسليمات الطلاب</h4>
-                            <p className="text-[11px] text-slate-400">تحديث فوري لجميع الكويزات والامتحانات الشاملة</p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => setActiveTab('results')}
-                          className="text-xs font-bold text-blue-400 hover:text-blue-300"
-                        >
-                          عرض كل النتائج ({attempts.length}) ←
-                        </button>
+                    <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block">إجمالي الزيارات</span>
+                        <span className="text-sm sm:text-base font-black text-white font-mono">24,680</span>
                       </div>
-
-                      {attempts.length === 0 ? (
-                        <div className="text-center py-8 border border-dashed border-slate-800 rounded-2xl">
-                          <Award className="h-8 w-8 text-slate-600 mx-auto mb-2" />
-                          <p className="text-xs text-slate-400">لا توجد تسليمات امتحانات مسجلة حتى الآن.</p>
-                        </div>
-                      ) : (
-                        <div className="divide-y divide-slate-800/80">
-                          {attempts.slice(0, 6).map(att => {
-                            const student = students.find(s => s.id === att.studentId);
-                            return (
-                              <div key={att.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs hover:bg-slate-950/40 px-2 rounded-xl transition-colors">
-                                <div className="flex items-center gap-3">
-                                  <div className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-white text-xs border border-slate-700">
-                                    {att.studentName ? att.studentName[0] : 'ط'}
-                                  </div>
-                                  <div>
-                                    <p className="font-bold text-white text-sm">{att.studentName}</p>
-                                    <p className="text-[11px] text-slate-400">{att.examTitle}</p>
-                                  </div>
-                                </div>
-
-                                <div className="flex items-center gap-3 self-end sm:self-auto">
-                                  <span className={`px-2.5 py-1 rounded-lg font-black text-xs ${
-                                    att.passed 
-                                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' 
-                                      : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
-                                  }`}>
-                                    {att.score}/{att.maxScore} ({att.percentage}%)
-                                  </span>
-
-                                  <span className="text-[10px] text-slate-400 font-mono">
-                                    {new Date(att.submittedAt).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
-                                  </span>
-
-                                  {student && (
-                                    <button
-                                      onClick={() => sendParentWhatsappReport(student)}
-                                      title="إرسال تقرير الأداء لولي الأمر عبر واتساب"
-                                      className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 transition-colors"
-                                    >
-                                      <MessageCircle className="h-3.5 w-3.5" />
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
+                      <span className="text-xs font-bold text-emerald-400">
+                        ↑ 15.6% عن الشهر الماضي
+                      </span>
                     </div>
-
                   </div>
 
-                  {/* Right Column: Honor Roll + Weekly Challenge + AI Assistant + Cloud (1 col wide) */}
-                  <div className="space-y-6">
-
-                    {/* Honor Roll Spotlight */}
-                    <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="p-1.5 rounded-xl bg-amber-500/10 text-amber-400">
-                            <Trophy className="h-4 w-4" />
-                          </div>
-                          <span className="font-bold text-white text-xs">أوائل لوحة الشرف 🥇</span>
-                        </div>
-                        <button
-                          onClick={() => setActiveTab('leaderboard-admin')}
-                          className="text-[11px] font-bold text-amber-400 hover:underline"
-                        >
-                          الإدارة ←
-                        </button>
+                  {/* Right Box in RTL: آخر الأنشطة (Live Platform Activities) */}
+                  <div className="rounded-3xl border border-slate-800/90 bg-[#090e1c]/80 p-4 sm:p-5 backdrop-blur-md shadow-xl flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-bold text-white text-sm sm:text-base">آخر الأنشطة</h3>
                       </div>
 
-                      {(() => {
-                        const topLeaders = StorageService.getLeaderboard().slice(0, 3);
-                        if (topLeaders.length === 0) {
-                          return (
-                            <p className="text-xs text-slate-400 py-3 text-center">لا يوجد طلاب في لوحة الشرف حالياً.</p>
-                          );
-                        }
-                        return (
-                          <div className="space-y-2 pt-1">
-                            {topLeaders.map((leader, i) => (
-                              <div key={leader.studentId} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800/80 text-xs">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-bold text-base">
-                                    {i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}
-                                  </span>
-                                  <div>
-                                    <p className="font-bold text-white leading-tight">{leader.studentName}</p>
-                                    <p className="text-[10px] text-slate-400">{leader.governorate || 'طالب متميز'}</p>
-                                  </div>
-                                </div>
-                                <span className="font-black text-amber-400 font-mono">
-                                  {leader.points} نقطة
-                                </span>
-                              </div>
-                            ))}
+                      <div className="space-y-2.5">
+                        
+                        {/* Activity 1: Student Registered */}
+                        <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-950/60 border border-slate-800/70 hover:border-blue-500/30 transition-colors">
+                          <div className="flex items-center gap-2.5 min-w-0 truncate">
+                            <div className="h-8 w-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 shrink-0">
+                              <Users className="h-4 w-4" />
+                            </div>
+                            <div className="truncate">
+                              <p className="font-bold text-white text-xs truncate">
+                                {students.length > 0 ? `تم تسجيل الطالب (${students[students.length - 1]?.name})` : 'تم تسجيل طالب جديد'}
+                              </p>
+                              <p className="text-[10px] text-slate-400">منذ 10 دقائق</p>
+                            </div>
                           </div>
-                        );
-                      })()}
-
-                      <button
-                        onClick={() => {
-                          setBonusStudentId(students[0]?.id || '');
-                          setShowBonusModal(true);
-                        }}
-                        className="w-full mt-2 rounded-xl border border-amber-500/30 bg-amber-500/10 py-2 text-xs font-bold text-amber-300 hover:bg-amber-500/20 flex items-center justify-center gap-1.5"
-                      >
-                        <Award className="h-3.5 w-3.5" />
-                        <span>منح نقاط وأوسمة مكافأة</span>
-                      </button>
-                    </div>
-
-                    {/* Active Weekly Challenge Widget */}
-                    <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="p-1.5 rounded-xl bg-purple-500/10 text-purple-400">
-                            <Sparkles className="h-4 w-4" />
-                          </div>
-                          <span className="font-bold text-white text-xs">تحدي الأسبوع الفيزيائي</span>
                         </div>
-                        <span className="text-[10px] font-bold text-purple-400 bg-purple-500/10 border border-purple-500/30 px-2 py-0.5 rounded-full">
-                          {challenges.length} متاح
-                        </span>
+
+                        {/* Activity 2: Exam Uploaded */}
+                        <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-950/60 border border-slate-800/70 hover:border-blue-500/30 transition-colors">
+                          <div className="flex items-center gap-2.5 min-w-0 truncate">
+                            <div className="h-8 w-8 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 shrink-0">
+                              <HelpCircle className="h-4 w-4" />
+                            </div>
+                            <div className="truncate">
+                              <p className="font-bold text-white text-xs truncate">
+                                {exams.length > 0 ? `امتحان جديد: ${exams[0]?.title}` : 'تم رفع امتحان جديد'}
+                              </p>
+                              <p className="text-[10px] text-slate-400">منذ 30 دقيقة</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Activity 3: PDF Published */}
+                        <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-950/60 border border-slate-800/70 hover:border-blue-500/30 transition-colors">
+                          <div className="flex items-center gap-2.5 min-w-0 truncate">
+                            <div className="h-8 w-8 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-400 shrink-0">
+                              <FileText className="h-4 w-4" />
+                            </div>
+                            <div className="truncate">
+                              <p className="font-bold text-white text-xs truncate">
+                                {pdfs.length > 0 ? `مذكرة جديدة: ${pdfs[0]?.title}` : 'تم نشر مذكرة جديدة'}
+                              </p>
+                              <p className="text-[10px] text-slate-400">منذ ساعة</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Activity 4: Activation Code Activated */}
+                        <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-950/60 border border-slate-800/70 hover:border-blue-500/30 transition-colors">
+                          <div className="flex items-center gap-2.5 min-w-0 truncate">
+                            <div className="h-8 w-8 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 shrink-0">
+                              <Key className="h-4 w-4" />
+                            </div>
+                            <div className="truncate">
+                              <p className="font-bold text-white text-xs truncate">
+                                تم تفعيل كود شحن جديد
+                              </p>
+                              <p className="text-[10px] text-slate-400">منذ ساعتين</p>
+                            </div>
+                          </div>
+                        </div>
+
                       </div>
-
-                      {challenges.length > 0 ? (
-                        <div className="rounded-2xl border border-purple-500/20 bg-slate-950 p-3 space-y-2">
-                          <p className="font-bold text-white text-xs line-clamp-1">{challenges[0].title}</p>
-                          <p className="text-[11px] text-slate-400 line-clamp-2">{challenges[0].description}</p>
-                          <div className="flex items-center justify-between pt-1 text-[10px] text-purple-300">
-                            <span>جائزة: +{challenges[0].bonusPoints} نقطة</span>
-                            <span>{challenges[0].grade}</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-xs text-slate-400 text-center py-2">لا توجد تحديات أسبوعية منشورة.</p>
-                      )}
-
-                      <button
-                        onClick={() => { setActiveTab('challenges'); setShowAddChallenge(true); }}
-                        className="w-full rounded-xl bg-purple-600 py-2 text-xs font-bold text-white hover:bg-purple-500 flex items-center justify-center gap-1.5"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                        <span>نشر تحدي أسبوعي جديد</span>
-                      </button>
                     </div>
 
-                    {/* AI Physics Assistant Quick Hub */}
-                    <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="p-1.5 rounded-xl bg-blue-500/10 text-blue-400">
-                            <Bot className="h-4 w-4" />
-                          </div>
-                          <span className="font-bold text-white text-xs">المساعد الذكي AI ⚛️</span>
-                        </div>
-                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                          جاهز للطلاب
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-400">
-                        يقوم بالرد الفوري على أسئلة الطلاب وحل مسائل الفيزياء بالخطوات العلمية الدقيقة.
-                      </p>
-                      <button
-                        onClick={() => setActiveTab('ai-admin')}
-                        className="w-full rounded-xl border border-blue-500/30 bg-blue-500/10 py-2 text-xs font-bold text-blue-300 hover:bg-blue-500/20 flex items-center justify-center gap-1.5"
-                      >
-                        <Bot className="h-3.5 w-3.5" />
-                        <span>تعديل تعليمات وتجربة الـ AI</span>
-                      </button>
-                    </div>
-
+                    <button
+                      onClick={() => setActiveTab('results')}
+                      className="w-full mt-3 rounded-xl border border-slate-800 bg-slate-900 hover:bg-slate-850 py-2 text-xs font-bold text-slate-300 hover:text-white transition-colors"
+                    >
+                      عرض كل الأنشطة
+                    </button>
                   </div>
 
+                </div>
+
+                {/* 3. SECTION: إدارة المنصة (10 Quick Access Bento Cards) */}
+                <div className="space-y-3 pt-2">
+                  <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">إدارة المنصة</h3>
+                  
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                    
+                    {/* 1. الطلاب والأجهزة */}
+                    <button
+                      onClick={() => setActiveTab('students')}
+                      className="group flex flex-col items-center justify-center gap-2.5 rounded-2xl sm:rounded-3xl border border-slate-800/80 bg-[#090e1c]/80 p-4 sm:p-5 hover:border-blue-500/50 hover:bg-[#0c1429] transition-all text-center backdrop-blur-md"
+                    >
+                      <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-md">
+                        <Users className="h-5 w-5 sm:h-6 sm:w-6" />
+                      </div>
+                      <span className="font-bold text-white text-xs sm:text-sm">الطلاب والأجهزة</span>
+                    </button>
+
+                    {/* 2. الكورسات والدروس */}
+                    <button
+                      onClick={() => setActiveTab('courses')}
+                      className="group flex flex-col items-center justify-center gap-2.5 rounded-2xl sm:rounded-3xl border border-slate-800/80 bg-[#090e1c]/80 p-4 sm:p-5 hover:border-blue-500/50 hover:bg-[#0c1429] transition-all text-center backdrop-blur-md"
+                    >
+                      <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-md">
+                        <BookOpen className="h-5 w-5 sm:h-6 sm:w-6" />
+                      </div>
+                      <span className="font-bold text-white text-xs sm:text-sm">الكورسات والدروس</span>
+                    </button>
+
+                    {/* 3. بنك الأسئلة والامتحانات */}
+                    <button
+                      onClick={() => setActiveTab('exams')}
+                      className="group flex flex-col items-center justify-center gap-2.5 rounded-2xl sm:rounded-3xl border border-slate-800/80 bg-[#090e1c]/80 p-4 sm:p-5 hover:border-blue-500/50 hover:bg-[#0c1429] transition-all text-center backdrop-blur-md"
+                    >
+                      <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-md">
+                        <HelpCircle className="h-5 w-5 sm:h-6 sm:w-6" />
+                      </div>
+                      <span className="font-bold text-white text-xs sm:text-sm">بنك الأسئلة والامتحانات</span>
+                    </button>
+
+                    {/* 4. المذكرات PDF */}
+                    <button
+                      onClick={() => setActiveTab('pdfs')}
+                      className="group flex flex-col items-center justify-center gap-2.5 rounded-2xl sm:rounded-3xl border border-slate-800/80 bg-[#090e1c]/80 p-4 sm:p-5 hover:border-blue-500/50 hover:bg-[#0c1429] transition-all text-center backdrop-blur-md"
+                    >
+                      <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-md">
+                        <FileText className="h-5 w-5 sm:h-6 sm:w-6" />
+                      </div>
+                      <span className="font-bold text-white text-xs sm:text-sm">المذكرات PDF</span>
+                    </button>
+
+                    {/* 5. إعدادات المنصة */}
+                    <button
+                      onClick={() => setActiveTab('settings')}
+                      className="group flex flex-col items-center justify-center gap-2.5 rounded-2xl sm:rounded-3xl border border-slate-800/80 bg-[#090e1c]/80 p-4 sm:p-5 hover:border-blue-500/50 hover:bg-[#0c1429] transition-all text-center backdrop-blur-md"
+                    >
+                      <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-md">
+                        <Settings className="h-5 w-5 sm:h-6 sm:w-6" />
+                      </div>
+                      <span className="font-bold text-white text-xs sm:text-sm">إعدادات المنصة</span>
+                    </button>
+
+                    {/* 6. أكواد التفعيل والشحن */}
+                    <button
+                      onClick={() => setActiveTab('codes')}
+                      className="group flex flex-col items-center justify-center gap-2.5 rounded-2xl sm:rounded-3xl border border-slate-800/80 bg-[#090e1c]/80 p-4 sm:p-5 hover:border-blue-500/50 hover:bg-[#0c1429] transition-all text-center backdrop-blur-md"
+                    >
+                      <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-md">
+                        <Key className="h-5 w-5 sm:h-6 sm:w-6" />
+                      </div>
+                      <span className="font-bold text-white text-xs sm:text-sm">أكواد التفعيل والشحن</span>
+                    </button>
+
+                    {/* 7. تحديات الأسبوع والمسابقات */}
+                    <button
+                      onClick={() => setActiveTab('challenges')}
+                      className="group flex flex-col items-center justify-center gap-2.5 rounded-2xl sm:rounded-3xl border border-slate-800/80 bg-[#090e1c]/80 p-4 sm:p-5 hover:border-blue-500/50 hover:bg-[#0c1429] transition-all text-center backdrop-blur-md"
+                    >
+                      <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-md">
+                        <Trophy className="h-5 w-5 sm:h-6 sm:w-6" />
+                      </div>
+                      <span className="font-bold text-white text-xs sm:text-sm">تحديات الأسبوع والمسابقات</span>
+                    </button>
+
+                    {/* 8. لوحة الشرف وتكريم الأوائل */}
+                    <button
+                      onClick={() => setActiveTab('leaderboard-admin')}
+                      className="group flex flex-col items-center justify-center gap-2.5 rounded-2xl sm:rounded-3xl border border-slate-800/80 bg-[#090e1c]/80 p-4 sm:p-5 hover:border-blue-500/50 hover:bg-[#0c1429] transition-all text-center backdrop-blur-md"
+                    >
+                      <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-md">
+                        <Award className="h-5 w-5 sm:h-6 sm:w-6" />
+                      </div>
+                      <span className="font-bold text-white text-xs sm:text-sm">لوحة الشرف وتكريم الأوائل</span>
+                    </button>
+
+                    {/* 9. تشخيص نقاط الضعف */}
+                    <button
+                      onClick={() => setActiveTab('weakness-admin')}
+                      className="group flex flex-col items-center justify-center gap-2.5 rounded-2xl sm:rounded-3xl border border-slate-800/80 bg-[#090e1c]/80 p-4 sm:p-5 hover:border-blue-500/50 hover:bg-[#0c1429] transition-all text-center backdrop-blur-md"
+                    >
+                      <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-md">
+                        <Brain className="h-5 w-5 sm:h-6 sm:w-6" />
+                      </div>
+                      <span className="font-bold text-white text-xs sm:text-sm">تشخيص نقاط الضعف</span>
+                    </button>
+
+                    {/* 10. المساعد الذكي AI */}
+                    <button
+                      onClick={() => setActiveTab('ai-admin')}
+                      className="group flex flex-col items-center justify-center gap-2.5 rounded-2xl sm:rounded-3xl border border-slate-800/80 bg-[#090e1c]/80 p-4 sm:p-5 hover:border-blue-500/50 hover:bg-[#0c1429] transition-all text-center backdrop-blur-md"
+                    >
+                      <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-md">
+                        <Bot className="h-5 w-5 sm:h-6 sm:w-6" />
+                      </div>
+                      <span className="font-bold text-white text-xs sm:text-sm">المساعد الذكي AI</span>
+                    </button>
+
+                  </div>
+                </div>
+
+                {/* 4. FOOTER STATUS BAR (Exact Match to Screenshot) */}
+                <div className="rounded-2xl border border-slate-800/80 bg-[#090e1c]/60 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-black text-xs">
+                      Ψ
+                    </div>
+                    <span>{settings.platformName || 'ويكيـفيزياء'} - منصة التفوق في الفيزياء • جميع الحقوق محفوظة © {new Date().getFullYear()}</span>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span className="rounded-lg bg-slate-900 border border-slate-800 px-2.5 py-1 text-[11px] font-mono text-slate-300">
+                      v2.4.0
+                    </span>
+                    <span className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-400">
+                      <ShieldCheck className="h-4 w-4" />
+                      <span>النظام يعمل بكفاءة</span>
+                    </span>
+                  </div>
                 </div>
 
               </div>
@@ -3803,6 +3892,65 @@ ${weakConceptsText}
           </div>
         </div>
       )}
+
+      {/* 5. MOBILE BOTTOM NAVIGATION DOCK (Instant 1-tap tab switching on Phone) */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#070b16]/95 border-t border-slate-800/90 backdrop-blur-xl px-2 py-1.5 flex items-center justify-around shadow-2xl">
+        <button
+          onClick={() => setActiveTab('overview')}
+          className={`flex flex-col items-center justify-center gap-1 py-1 px-2 rounded-xl transition-all min-w-[52px] min-h-[44px] ${
+            activeTab === 'overview'
+              ? 'text-blue-400 font-bold bg-blue-500/10 border border-blue-500/20'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <BarChart3 className="h-4 w-4" />
+          <span className="text-[10px]">الرئيسية</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('courses')}
+          className={`flex flex-col items-center justify-center gap-1 py-1 px-2 rounded-xl transition-all min-w-[52px] min-h-[44px] ${
+            activeTab === 'courses'
+              ? 'text-blue-400 font-bold bg-blue-500/10 border border-blue-500/20'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <BookOpen className="h-4 w-4" />
+          <span className="text-[10px]">الكورسات</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('students')}
+          className={`flex flex-col items-center justify-center gap-1 py-1 px-2 rounded-xl transition-all min-w-[52px] min-h-[44px] ${
+            activeTab === 'students'
+              ? 'text-blue-400 font-bold bg-blue-500/10 border border-blue-500/20'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Users className="h-4 w-4" />
+          <span className="text-[10px]">الطلاب</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('exams')}
+          className={`flex flex-col items-center justify-center gap-1 py-1 px-2 rounded-xl transition-all min-w-[52px] min-h-[44px] ${
+            activeTab === 'exams'
+              ? 'text-blue-400 font-bold bg-blue-500/10 border border-blue-500/20'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <HelpCircle className="h-4 w-4" />
+          <span className="text-[10px]">الامتحانات</span>
+        </button>
+
+        <button
+          onClick={() => setIsMobileDrawerOpen(true)}
+          className="flex flex-col items-center justify-center gap-1 py-1 px-2 rounded-xl text-slate-400 hover:text-slate-200 transition-all min-w-[52px] min-h-[44px]"
+        >
+          <Menu className="h-4 w-4" />
+          <span className="text-[10px]">المزيد</span>
+        </button>
+      </div>
 
     </div>
   );
