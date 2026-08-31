@@ -17,8 +17,9 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
 
   useEffect(() => {
     const update = () => {
-      setNotifications(StorageService.getNotifications());
-      setStudent(StorageService.getCurrentStudent());
+      const st = StorageService.getCurrentStudent();
+      setStudent(st);
+      setNotifications(StorageService.getNotificationsForStudent(st?.id, st?.grade));
     };
     update();
     return subscribeToStorage(update);

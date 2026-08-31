@@ -1190,6 +1190,35 @@ export const StorageService = {
   getNotifications(): NotificationItem[] {
     return getStored<NotificationItem[]>(STORAGE_KEYS.NOTIFICATIONS, []);
   },
+  getNotificationsForStudent(studentId?: string, studentGrade?: string): NotificationItem[] {
+    const list = this.getNotifications();
+    if (!studentId) {
+      return list.filter(n => n.target === 'all' || !n.target);
+    }
+
+    return list.filter(n => {
+      // Direct student private notification
+      if (n.target === 'student') {
+        return n.targetStudentId === studentId;
+      }
+
+      // Grade level notification
+      if (n.target === 'grade') {
+        if (!n.targetGrade || n.targetGrade === 'all') return true;
+        return n.targetGrade === studentGrade;
+      }
+
+      // Course targeted notification
+      if (n.target === 'course') {
+        if (!n.targetCourseId) return true;
+        const st = this.getStudents().find(s => s.id === studentId);
+        return st?.enrolledCourseIds?.includes(n.targetCourseId);
+      }
+
+      // Default public notification
+      return true;
+    });
+  },
   saveNotification(item: NotificationItem): void {
     const list = this.getNotifications();
     list.unshift(item);
@@ -1200,9 +1229,10 @@ export const StorageService = {
       id: 'notif-' + Date.now(),
       title: data.title || 'تنبيه جديد',
       message: data.message || '',
-      target: (data as any).target || 'all',
+      target: data.target || 'all',
       targetGrade: data.targetGrade as any,
       targetCourseId: data.targetCourseId,
+      targetStudentId: data.targetStudentId,
       createdAt: new Date().toISOString(),
       readBy: [],
       sender: data.sender || this.getSettings().instructorTitle,

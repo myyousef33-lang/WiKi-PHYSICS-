@@ -56,7 +56,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       setStudent(currentStudent);
       setIsAdmin(StorageService.isAdminLoggedIn());
 
-      const notifs = StorageService.getNotifications();
+      const notifs = StorageService.getNotificationsForStudent(currentStudent?.id, currentStudent?.grade);
       if (currentStudent) {
         const unread = notifs.filter(n => !n.readBy?.includes(currentStudent.id)).length;
         setUnreadCount(unread);

@@ -128,6 +128,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
   const [showAddCode, setShowAddCode] = useState(false);
   const [showAddChallenge, setShowAddChallenge] = useState(false);
   const [selectedWeaknessStudent, setSelectedWeaknessStudent] = useState<Student | null>(null);
+  const [selectedAnalyticsStudent, setSelectedAnalyticsStudent] = useState<Student | null>(null);
+  const [quickRechargeAmount, setQuickRechargeAmount] = useState<string>('100');
+  const [quickCourseSelect, setQuickCourseSelect] = useState<string>('');
+  const [quickPrivateNotifMsg, setQuickPrivateNotifMsg] = useState<string>('');
   const [dateUpdateFeedback, setDateUpdateFeedback] = useState<string | null>(null);
   
   // Leaderboard Bonus Points Modal State
@@ -273,7 +277,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
   const [notifForm, setNotifForm] = useState({
     title: '',
     message: '',
-    targetGrade: 'all'
+    targetType: 'all' as 'all' | 'grade' | 'student',
+    targetGrade: 'all',
+    targetStudentId: ''
   });
 
   // Manual Question Creator State
@@ -889,15 +895,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     e.preventDefault();
     if (!notifForm.title || !notifForm.message) return;
 
+    if (notifForm.targetType === 'student' && !notifForm.targetStudentId) {
+      alert('يرجى اختيار الطالب المستهدف للإشعار الخاص.');
+      return;
+    }
+
     StorageService.sendNotification({
       title: notifForm.title,
       message: notifForm.message,
-      targetGrade: notifForm.targetGrade === 'all' ? undefined : notifForm.targetGrade,
+      target: notifForm.targetType === 'student' ? 'student' : (notifForm.targetType === 'grade' ? 'grade' : 'all'),
+      targetGrade: notifForm.targetType === 'grade' && notifForm.targetGrade !== 'all' ? notifForm.targetGrade : undefined,
+      targetStudentId: notifForm.targetType === 'student' ? notifForm.targetStudentId : undefined,
       readBy: []
     });
 
     setShowAddNotif(false);
-    setNotifForm({ title: '', message: '', targetGrade: 'all' });
+    setNotifForm({ title: '', message: '', targetType: 'all', targetGrade: 'all', targetStudentId: '' });
+    alert('تم إرسال الإشعار بنجاح!');
   };
 
   // Toggle Student Block
@@ -2860,6 +2874,15 @@ ${weakConceptsText}
                       <td className="py-4 px-4 text-center">
                         <div className="flex items-center justify-center gap-1.5 flex-wrap">
                           <button
+                            onClick={() => setSelectedAnalyticsStudent(student)}
+                            className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-[11px] font-black text-amber-300 hover:bg-amber-500/20 flex items-center gap-1 shadow-sm"
+                            title="استعراض البروفايل الكامل وتحليلات النجاح والرسوب والاختبارات"
+                          >
+                            <BarChart3 className="h-3.5 w-3.5 text-amber-400" />
+                            <span>البروفايل والتحليل 📊</span>
+                          </button>
+
+                          <button
                             onClick={() => setSelectedWeaknessStudent(student)}
                             className="rounded-lg border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-[11px] font-bold text-purple-300 hover:bg-purple-500/20 flex items-center gap-1"
                             title="تشخيص نقاط الضعف والمفاهيم المفقودة"
@@ -3906,19 +3929,54 @@ ${weakConceptsText}
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-300">الفئة المستهدفة</label>
+                    <label className="text-xs font-bold text-slate-300">نطاق الإشعار</label>
+                    <select
+                      value={notifForm.targetType}
+                      onChange={e => setNotifForm({ ...notifForm, targetType: e.target.value as any })}
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                    >
+                      <option value="all">عام لجميع الطلاب 📢</option>
+                      <option value="grade">حسب الصف الدراسي 🎓</option>
+                      <option value="student">إشعار خاص بطالب محدد 🔒</option>
+                    </select>
+                  </div>
+                </div>
+
+                {notifForm.targetType === 'grade' && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-300">اختر الصف الدراسي المستهدف</label>
                     <select
                       value={notifForm.targetGrade}
                       onChange={e => setNotifForm({ ...notifForm, targetGrade: e.target.value })}
                       className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
                     >
-                      <option value="all">جميع الطلاب (الكل)</option>
+                      <option value="all">جميع الصفوف</option>
                       <option value={GradeLevel.GRADE_12}>الصف الثالث الثانوي فقط</option>
                       <option value={GradeLevel.GRADE_11}>الصف الثاني الثانوي فقط</option>
                       <option value={GradeLevel.GRADE_10}>الصف الأول الثانوي فقط</option>
                     </select>
                   </div>
-                </div>
+                )}
+
+                {notifForm.targetType === 'student' && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-amber-300">اختر الطالب المستهدف بالإشعار الخاص 🔒</label>
+                    <select
+                      value={notifForm.targetStudentId}
+                      onChange={e => setNotifForm({ ...notifForm, targetStudentId: e.target.value })}
+                      className="w-full rounded-xl border border-amber-500/40 bg-slate-950 p-2.5 text-xs text-white"
+                      required
+                    >
+                      <option value="">-- اختر طالباً من القائمة --</option>
+                      {students.map(st => (
+                        <option key={st.id} value={st.id}>
+                          {st.name} ({st.phone}) - {st.grade}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[11px] text-amber-400">سوف يظهر هذا الإشعار فقط في حساب هذا الطالب ولا يراه باقي الطلاب على المنصة.</p>
+                  </div>
+                )}
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-300">نص الرسالة والتنبيه</label>
@@ -4330,6 +4388,391 @@ ${weakConceptsText}
                 </div>
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {/* Grant Bonus Points Modal */}
+      {selectedAnalyticsStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-3 sm:p-6 overflow-y-auto">
+          <div className="relative w-full max-w-4xl rounded-3xl border border-amber-500/40 bg-[#0b1220] p-5 sm:p-8 shadow-2xl space-y-6 max-h-[92vh] overflow-y-auto text-right">
+            
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+              <div className="flex items-center gap-3">
+                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 text-slate-950 flex items-center justify-center font-black text-xl shadow-lg shadow-amber-500/20 shrink-0">
+                  {selectedAnalyticsStudent.name.charAt(0)}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xl font-black text-white">{selectedAnalyticsStudent.name}</h3>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      selectedAnalyticsStudent.isBlocked ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    }`}>
+                      {selectedAnalyticsStudent.isBlocked ? 'حساب محظور' : 'نشط'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1 flex items-center gap-3 flex-wrap">
+                    <span>📱 هاتف: <strong className="text-white font-mono" dir="ltr">{selectedAnalyticsStudent.phone}</strong></span>
+                    <span>👨‍👩‍👦 ولي الأمر: <strong className="text-white font-mono" dir="ltr">{selectedAnalyticsStudent.parentPhone || 'غير مسجل'}</strong></span>
+                    <span>🎓 المرحلة: <strong className="text-amber-400">{selectedAnalyticsStudent.grade}</strong></span>
+                    <span>📍 المحافظة: <strong className="text-slate-300">{selectedAnalyticsStudent.governorate || 'غير حددة'}</strong></span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 self-start sm:self-center">
+                <button
+                  type="button"
+                  onClick={() => sendParentWhatsappReport(selectedAnalyticsStudent)}
+                  className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-300 hover:bg-emerald-500/20 flex items-center gap-1.5"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  <span className="hidden sm:inline">تقرير واتساب</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedAnalyticsStudent(null)}
+                  className="rounded-xl border border-slate-700 bg-slate-800 p-2 text-slate-400 hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {(() => {
+              const studentAttempts = StorageService.getStudentAttempts(selectedAnalyticsStudent.id);
+              const passedAttempts = studentAttempts.filter(a => a.score >= ((a.maxScore || 50) * 0.5));
+              const failedAttempts = studentAttempts.filter(a => a.score < ((a.maxScore || 50) * 0.5));
+              const avgScore = studentAttempts.length > 0 
+                ? Math.round(studentAttempts.reduce((acc, a) => acc + a.percentage, 0) / studentAttempts.length) 
+                : 0;
+
+              const enrolledCourses = courses.filter(c => selectedAnalyticsStudent.enrolledCourseIds?.includes(c.id));
+
+              let levelLabel = 'لم يختبر بعد';
+              let levelColor = 'text-slate-400';
+              if (studentAttempts.length > 0) {
+                if (avgScore >= 85) { levelLabel = 'ممتاز جداً 🌟'; levelColor = 'text-emerald-400'; }
+                else if (avgScore >= 75) { levelLabel = 'جيد جداً 👍'; levelColor = 'text-blue-400'; }
+                else if (avgScore >= 50) { levelLabel = 'مقبول ⚠️'; levelColor = 'text-amber-400'; }
+                else { levelLabel = 'يحتاج تكثيف ومتابعة 🔴'; levelColor = 'text-rose-400'; }
+              }
+
+              return (
+                <div className="space-y-6">
+                  {/* Executive KPI Summary Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-3.5 text-center space-y-1">
+                      <span className="text-[10px] font-bold text-slate-400 block">إجمالي امتحاناته</span>
+                      <span className="text-xl font-black text-white">{studentAttempts.length}</span>
+                    </div>
+
+                    <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-3.5 text-center space-y-1">
+                      <span className="text-[10px] font-bold text-emerald-400 block">الامتحانات الناجحة ✅</span>
+                      <span className="text-xl font-black text-emerald-300">{passedAttempts.length}</span>
+                    </div>
+
+                    <div className="rounded-2xl border border-rose-500/30 bg-rose-950/20 p-3.5 text-center space-y-1">
+                      <span className="text-[10px] font-bold text-rose-400 block">الامتحانات الراسب فيها ❌</span>
+                      <span className="text-xl font-black text-rose-300">{failedAttempts.length}</span>
+                    </div>
+
+                    <div className="rounded-2xl border border-amber-500/30 bg-amber-950/20 p-3.5 text-center space-y-1">
+                      <span className="text-[10px] font-bold text-amber-400 block">متوسط درجاته 📈</span>
+                      <span className="text-xl font-black text-amber-300">{avgScore}%</span>
+                    </div>
+
+                    <div className="rounded-2xl border border-blue-500/30 bg-blue-950/20 p-3.5 text-center space-y-1">
+                      <span className="text-[10px] font-bold text-blue-400 block">الكورسات المفعلة 📚</span>
+                      <span className="text-xl font-black text-blue-300">{enrolledCourses.length}</span>
+                    </div>
+
+                    <div className="rounded-2xl border border-purple-500/30 bg-purple-950/20 p-3.5 text-center space-y-1">
+                      <span className="text-[10px] font-bold text-purple-400 block">رصيد المحفظة 💰</span>
+                      <span className="text-xl font-black text-purple-300">{selectedAnalyticsStudent.walletBalance || 0} ج.م</span>
+                    </div>
+                  </div>
+
+                  {/* Level Rating & Visual Pass/Fail Distribution */}
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950/90 p-4 space-y-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-slate-300">التقييم المستمر لمستوى الطالب:</span>
+                      <span className={`font-black ${levelColor}`}>{levelLabel}</span>
+                    </div>
+
+                    {studentAttempts.length > 0 && (
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-[11px] text-slate-400 font-bold">
+                          <span className="text-emerald-400">نسبة الاجتياز والنجاح: {Math.round((passedAttempts.length / studentAttempts.length) * 100)}%</span>
+                          <span className="text-rose-400">نسبة الرسوب: {Math.round((failedAttempts.length / studentAttempts.length) * 100)}%</span>
+                        </div>
+                        <div className="h-3 w-full rounded-full bg-slate-800 overflow-hidden flex">
+                          <div 
+                            className="bg-emerald-500 h-full transition-all" 
+                            style={{ width: `${(passedAttempts.length / studentAttempts.length) * 100}%` }}
+                            title="ناجح"
+                          />
+                          <div 
+                            className="bg-rose-500 h-full transition-all" 
+                            style={{ width: `${(failedAttempts.length / studentAttempts.length) * 100}%` }}
+                            title="راسب"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Visual Bar Chart for Exam Scores over time */}
+                  {studentAttempts.length > 0 && (
+                    <div className="rounded-2xl border border-slate-800 bg-slate-950/90 p-4 space-y-3">
+                      <h4 className="font-bold text-xs text-amber-400 flex items-center gap-1.5">
+                        <BarChart3 className="h-4 w-4" />
+                        <span>رسم بياني حقيقي لأداء الطالب في الاختبارات الأخيرة</span>
+                      </h4>
+
+                      <div className="space-y-2 pt-2">
+                        {studentAttempts.slice(0, 8).map((att) => {
+                          const isPass = att.score >= ((att.maxScore || 50) * 0.5);
+                          return (
+                            <div key={att.id} className="space-y-1 text-xs">
+                              <div className="flex justify-between text-[11px] text-slate-300 font-bold">
+                                <span>{att.examTitle}</span>
+                                <span className={isPass ? 'text-emerald-400 font-mono' : 'text-rose-400 font-mono'}>
+                                  {att.score} / {att.maxScore || 50} ({att.percentage}%) {isPass ? '✅ ناجح' : '❌ راسب'}
+                                </span>
+                              </div>
+                              <div className="h-2.5 w-full rounded-full bg-slate-800 overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all ${isPass ? 'bg-emerald-500' : 'bg-rose-500'}`}
+                                  style={{ width: `${Math.min(100, Math.max(5, att.percentage))}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Exams Results Table */}
+                  <div className="space-y-2">
+                    <h4 className="font-bold text-xs text-white">سجل جميع الامتحانات والاختبارات المنجزة:</h4>
+                    {studentAttempts.length === 0 ? (
+                      <div className="rounded-2xl border border-slate-800 bg-slate-950 p-6 text-center text-xs text-slate-400">
+                        لم يقم هذا الطالب بدخول أية امتحانات أو اختبارات إلكترونية بعد.
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl border border-slate-800 bg-slate-950/80 overflow-x-auto">
+                        <table className="w-full text-right text-xs">
+                          <thead className="border-b border-slate-800 bg-slate-900 text-slate-400">
+                            <tr>
+                              <th className="py-2.5 px-3 font-bold">اسم الامتحان</th>
+                              <th className="py-2.5 px-3 font-bold">تاريخ التقديم</th>
+                              <th className="py-2.5 px-3 font-bold">الدرجة</th>
+                              <th className="py-2.5 px-3 font-bold">النسبة</th>
+                              <th className="py-2.5 px-3 font-bold">الحالة والنتيجة</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-800/60">
+                            {studentAttempts.map(att => {
+                              const isPass = att.score >= ((att.maxScore || 50) * 0.5);
+                              return (
+                                <tr key={att.id} className="hover:bg-slate-900/50">
+                                  <td className="py-2.5 px-3 font-bold text-white">{att.examTitle}</td>
+                                  <td className="py-2.5 px-3 text-slate-400 text-[11px]">{new Date(att.submittedAt).toLocaleDateString('ar-EG')}</td>
+                                  <td className="py-2.5 px-3 font-mono font-bold text-amber-400">{att.score} / {att.maxScore || 50}</td>
+                                  <td className="py-2.5 px-3 font-mono font-bold">{att.percentage}%</td>
+                                  <td className="py-2.5 px-3">
+                                    <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-black ${
+                                      isPass ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                    }`}>
+                                      {isPass ? 'ناجح ✅' : 'راسب ❌'}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Enrolled Courses */}
+                  <div className="space-y-2">
+                    <h4 className="font-bold text-xs text-white">الكورسات والمناهج المفعلة للطالب:</h4>
+                    {enrolledCourses.length === 0 ? (
+                      <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 text-center text-xs text-slate-400">
+                        لا توجد كورسات مفعّلة لـ هذا الطالب حالياً.
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {enrolledCourses.map(c => {
+                          const expDate = selectedAnalyticsStudent.courseExpiryDates?.[c.id];
+                          return (
+                            <div key={c.id} className="rounded-xl border border-slate-800 bg-slate-950 p-3 space-y-1">
+                              <h5 className="font-bold text-xs text-amber-300">{c.title}</h5>
+                              <p className="text-[11px] text-slate-400">السعر: {c.price} ج.م</p>
+                              {expDate && (
+                                <p className="text-[10px] text-slate-500">ينتهي الاشتراك في: {new Date(expDate).toLocaleDateString('ar-EG')}</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Admin Quick Direct Actions on Student */}
+                  <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-4">
+                    <h4 className="font-bold text-xs text-amber-300 flex items-center gap-1.5">
+                      <Zap className="h-4 w-4" />
+                      <span>إجراءات وإدارة سريعة على حساب الطالب</span>
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {/* Direct Recharge */}
+                      <div className="space-y-1.5 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <label className="text-[11px] font-bold text-slate-300 block">شحن محفظة مباشر</label>
+                        <div className="flex gap-1.5">
+                          <input
+                            type="number"
+                            value={quickRechargeAmount}
+                            onChange={e => setQuickRechargeAmount(e.target.value)}
+                            className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-white font-mono"
+                            placeholder="المبلغ"
+                          />
+                          <button
+                            onClick={() => {
+                              const amt = Number(quickRechargeAmount);
+                              if (amt <= 0) return;
+                              const updated = { ...selectedAnalyticsStudent, walletBalance: (selectedAnalyticsStudent.walletBalance || 0) + amt };
+                              StorageService.saveStudent(updated);
+                              setSelectedAnalyticsStudent(updated);
+                              StorageService.sendNotification({
+                                title: 'تم شحن رصيدك بنجاح 💰',
+                                message: `تم إضافة ${amt} ج.م إلى حسابك بقرار مباشر من إدارة المنصة.`,
+                                target: 'student',
+                                targetStudentId: updated.id
+                              });
+                              alert(`تم إضافة ${amt} ج.م لرصيد الطالب بنجاح!`);
+                            }}
+                            className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold text-white hover:bg-emerald-500 shrink-0 cursor-pointer"
+                          >
+                            إضافة
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Direct Course Activation */}
+                      <div className="space-y-1.5 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <label className="text-[11px] font-bold text-slate-300 block">تفعيل كورس مجاني يدوي</label>
+                        <div className="flex gap-1.5">
+                          <select
+                            value={quickCourseSelect}
+                            onChange={e => setQuickCourseSelect(e.target.value)}
+                            className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-white"
+                          >
+                            <option value="">-- اختر كورس --</option>
+                            {courses.map(c => (
+                              <option key={c.id} value={c.id}>{c.title}</option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => {
+                              if (!quickCourseSelect) return;
+                              const course = courses.find(c => c.id === quickCourseSelect);
+                              const enrolled = selectedAnalyticsStudent.enrolledCourseIds || [];
+                              if (!enrolled.includes(quickCourseSelect)) {
+                                enrolled.push(quickCourseSelect);
+                                const updated = { ...selectedAnalyticsStudent, enrolledCourseIds: enrolled };
+                                StorageService.saveStudent(updated);
+                                setSelectedAnalyticsStudent(updated);
+                                StorageService.sendNotification({
+                                  title: 'تم تفعيل كورس جديد لك! 🎁',
+                                  message: `تم تفعيل كورس "${course?.title || 'كورس فيزياء'}" لحسابك بقرار مباشر من إدارة المنصة.`,
+                                  target: 'student',
+                                  targetStudentId: updated.id
+                                });
+                                alert(`تم تفعيل كورس (${course?.title}) للطالب بنجاح!`);
+                              } else {
+                                alert('الكورس مفعّل مسبقاً لدى هذا الطالب.');
+                              }
+                            }}
+                            className="rounded-lg bg-amber-600 px-3 py-1 text-xs font-bold text-white hover:bg-amber-500 shrink-0 cursor-pointer"
+                          >
+                            تفعيل
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Reset Devices / Toggle Block */}
+                      <div className="space-y-1.5 bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-col justify-center">
+                        <span className="text-[11px] font-bold text-slate-300 block mb-1">التحكم بالحساب والأجهزة</span>
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={() => {
+                              handleResetDevices(selectedAnalyticsStudent);
+                              setSelectedAnalyticsStudent({ ...selectedAnalyticsStudent, registeredDevices: [] });
+                              alert('تم تفريغ أجهزة الطالب بنجاح.');
+                            }}
+                            className="flex-1 rounded-lg border border-slate-700 bg-slate-800 py-1 text-[11px] font-bold text-slate-300 hover:bg-slate-700 cursor-pointer"
+                          >
+                            تفريغ الأجهزة
+                          </button>
+                          <button
+                            onClick={() => {
+                              const newStatus = !selectedAnalyticsStudent.isBlocked;
+                              StorageService.updateStudent(selectedAnalyticsStudent.id, { isBlocked: newStatus });
+                              setSelectedAnalyticsStudent({ ...selectedAnalyticsStudent, isBlocked: newStatus });
+                            }}
+                            className={`flex-1 rounded-lg py-1 text-[11px] font-bold cursor-pointer ${
+                              selectedAnalyticsStudent.isBlocked ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
+                            }`}
+                          >
+                            {selectedAnalyticsStudent.isBlocked ? 'إلغاء الحظر' : 'حظر الحساب'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Send Direct Private Notification to Student */}
+                    <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                      <label className="text-[11px] font-bold text-amber-300 block">إرسال إشعار خاص ومباشر لهذا الطالب 🔒</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={quickPrivateNotifMsg}
+                          onChange={e => setQuickPrivateNotifMsg(e.target.value)}
+                          placeholder="اكتب رسالة أو تنبيه إداري خاص للطالب..."
+                          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-white"
+                        />
+                        <button
+                          onClick={() => {
+                            if (!quickPrivateNotifMsg.trim()) return;
+                            StorageService.sendNotification({
+                              title: 'تنبيه إداري خاص 📢',
+                              message: quickPrivateNotifMsg,
+                              target: 'student',
+                              targetStudentId: selectedAnalyticsStudent.id
+                            });
+                            setQuickPrivateNotifMsg('');
+                            alert(`تم إرسال الإشعار الخاص للطالب ${selectedAnalyticsStudent.name} بنجاح!`);
+                          }}
+                          className="rounded-lg bg-blue-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-blue-500 shrink-0 flex items-center gap-1 cursor-pointer"
+                        >
+                          <Send className="h-3.5 w-3.5" />
+                          <span>إرسال</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              );
+            })()}
+
           </div>
         </div>
       )}

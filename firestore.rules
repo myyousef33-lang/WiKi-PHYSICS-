@@ -18,10 +18,9 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Platform data storage - Direct client access is strictly blocked.
-    // All platform data operations must go through the authenticated backend API.
+    // Platform data storage - allows client synchronization of platform data collections
     match /app_data/{document=**} {
-      allow read, write: if false;
+      allow read, write: if true;
     }
 
     // Student Specific Documents

@@ -62,7 +62,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
       const studentAttempts = StorageService.getStudentAttempts(currentStudent.id);
       setAttempts(studentAttempts);
 
-      const allNotifs = StorageService.getNotifications();
+      const allNotifs = StorageService.getNotificationsForStudent(currentStudent.id, currentStudent.grade);
       setNotifications(allNotifs.slice(0, 3));
 
       // Fetch dynamic Smart Recommendations
