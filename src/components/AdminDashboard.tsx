@@ -369,8 +369,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     });
   };
 
-  // Helper for compressing images on client to prevent quota/firestore errors
-  const compressImageFile = (file: File, maxDimension = 900, quality = 0.85): Promise<string> => {
+  // Helper to normalize and convert cloud drive / external image links to direct viewable URLs
+  const normalizeImageUrl = (rawUrl: string): string => {
+    if (!rawUrl) return '';
+    let url = rawUrl.trim();
+    
+    // Handle Google Drive links (convert to direct content URL)
+    if (url.includes('drive.google.com')) {
+      const fileIdMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
+      if (fileIdMatch && fileIdMatch[1]) {
+        return `https://lh3.googleusercontent.com/d/${fileIdMatch[1]}`;
+      }
+    }
+
+    // Handle Dropbox links
+    if (url.includes('dropbox.com')) {
+      return url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '');
+    }
+
+    return url;
+  };
+
+  // Helper for compressing images on client to Base64 (to ensure universal cloud persistence for all users worldwide)
+  const compressImageFile = (file: File, maxDimension = 800, quality = 0.85): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (readerEvent) => {
@@ -4624,20 +4645,32 @@ ${weakConceptsText}
                 {/* Upload Controls */}
                 <div className="space-y-3.5 flex-1 w-full">
                   <div>
-                    <label className="text-xs text-slate-300 block mb-1.5 font-bold">اختيار صورة جديدة من جهازك (يدعم PNG مفرغة أو JPG):</label>
+                    <label className="text-xs text-slate-300 block mb-1.5 font-bold">
+                      اختيار صورة جديدة من جهازك (يتم تحويلها لـ Base64 سحابي لتظهر لجميع الطلاب فوراً):
+                    </label>
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          handleFileUpload(file, 'image', (url) => {
-                            const updated = { ...settings, instructorPhotoUrl: url };
+                          setIsUploadingFile(true);
+                          setUploadProgressText('جارٍ ضغط وتجهيز الصورة للمزامنة السحابية العامة...');
+                          try {
+                            const compressedDataUrl = await compressImageFile(file, 800, 0.85);
+                            const updated = { ...settings, instructorPhotoUrl: compressedDataUrl };
                             setSettings(updated);
                             StorageService.saveSettings(updated);
-                            setPhotoUpdateFeedback('تم حفظ وتطبيق صورة الهيرو الجديدة بنجاح!');
-                            setTimeout(() => setPhotoUpdateFeedback(null), 4000);
-                          });
+                            await StorageService.forceSyncAllToFirestore();
+                            setPhotoUpdateFeedback('تم حفظ الصورة ومزامنتها سحابياً لتظهر لجميع الطلاب فوراً!');
+                            setTimeout(() => setPhotoUpdateFeedback(null), 5000);
+                          } catch (err) {
+                            console.error('Photo upload error:', err);
+                            alert('حدث خطأ أثناء معالجة الصورة، يرجى المحاولة مرة أخرى.');
+                          } finally {
+                            setIsUploadingFile(false);
+                            setUploadProgressText('');
+                          }
                         }
                       }}
                       className="w-full text-xs text-slate-300 file:mr-0 file:ml-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-400 cursor-pointer bg-slate-900/80 p-1.5 rounded-xl border border-slate-700"
@@ -4645,7 +4678,7 @@ ${weakConceptsText}
                   </div>
 
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-0.5">
-                    <span className="text-[11px] text-slate-400 shrink-0 font-medium">أو إدخال رابط خارجي:</span>
+                    <span className="text-[11px] text-slate-400 shrink-0 font-medium">أو إدخال رابط خارجي (Google Drive / Direct URL):</span>
                     <input
                       type="text"
                       placeholder="https://..."
@@ -4659,24 +4692,28 @@ ${weakConceptsText}
                     />
                     <button
                       type="button"
-                      onClick={() => {
-                        const updated = { ...settings, instructorPhotoUrl: (settings.instructorPhotoUrl || '').trim() || '/teacher.jpg' };
+                      onClick={async () => {
+                        const raw = (settings.instructorPhotoUrl || '').trim();
+                        const normalized = normalizeImageUrl(raw) || '/teacher.jpg';
+                        const updated = { ...settings, instructorPhotoUrl: normalized };
                         setSettings(updated);
                         StorageService.saveSettings(updated);
-                        setPhotoUpdateFeedback('تم حفظ الرابط وتحديث الصورة بنجاح!');
+                        await StorageService.forceSyncAllToFirestore();
+                        setPhotoUpdateFeedback('تم حفظ الرابط ومزامنته سحابياً بنجاح!');
                         setTimeout(() => setPhotoUpdateFeedback(null), 4000);
                       }}
                       className="rounded-xl bg-amber-500 hover:bg-amber-400 px-3.5 py-2 text-xs font-bold text-slate-950 transition-all whitespace-nowrap"
                     >
-                      تطبيق الرابط
+                      تطبيق ومزامنة الرابط
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
                         const updated = { ...settings, instructorPhotoUrl: '/teacher.jpg' };
                         setSettings(updated);
                         StorageService.saveSettings(updated);
-                        setPhotoUpdateFeedback('تمت استعادة الصورة الافتراضية بنجاح!');
+                        await StorageService.forceSyncAllToFirestore();
+                        setPhotoUpdateFeedback('تمت استعادة الصورة الافتراضية ومزامنتها بنجاح!');
                         setTimeout(() => setPhotoUpdateFeedback(null), 4000);
                       }}
                       className="rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2 text-[11px] font-bold text-slate-300 hover:text-amber-400 hover:border-amber-500/50 transition-all whitespace-nowrap"

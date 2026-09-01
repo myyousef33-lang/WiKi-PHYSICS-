@@ -176,6 +176,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
 
               {/* The Real Teacher Cutout / Custom Hero Photo overlapping the blue semi-circle */}
               <img
+                key={settings.instructorPhotoUrl || 'default-teacher-photo'}
                 src={settings.instructorPhotoUrl && settings.instructorPhotoUrl.trim() !== '' ? settings.instructorPhotoUrl : teacherCutout}
                 alt={settings.instructorTitle || "أ / إبراهيم خليل"}
                 className="relative z-10 h-full w-auto object-contain object-bottom drop-shadow-2xl transition-transform duration-500 hover:scale-[1.02]"
