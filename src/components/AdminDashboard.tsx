@@ -369,6 +369,47 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     });
   };
 
+  // Helper for compressing images on client to prevent quota/firestore errors
+  const compressImageFile = (file: File, maxDimension = 900, quality = 0.85): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (readerEvent) => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > height) {
+            if (width > maxDimension) {
+              height = Math.round((height * maxDimension) / width);
+              width = maxDimension;
+            }
+          } else {
+            if (height > maxDimension) {
+              width = Math.round((width * maxDimension) / height);
+              height = maxDimension;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(readerEvent.target?.result as string);
+            return;
+          }
+          const isPng = file.type === 'image/png';
+          ctx.drawImage(img, 0, 0, width, height);
+          const mime = isPng ? 'image/png' : 'image/jpeg';
+          const dataUrl = canvas.toDataURL(mime, quality);
+          resolve(dataUrl);
+        };
+        img.onerror = () => resolve(readerEvent.target?.result as string);
+        img.src = readerEvent.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   // Robust File Uploader with API backend & graceful cloud / IndexedDB fallbacks
   const handleFileUpload = async (
     file: File, 
@@ -379,21 +420,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     const typeLabel = type === 'video' ? 'الفيديو' : type === 'pdf' ? 'ملف الـ PDF' : 'الصورة';
     const mbSize = (file.size / (1024 * 1024)).toFixed(1);
     setUploadProgressText(`جارٍ معالجة ${typeLabel} (${mbSize} MB)...`);
-    
-    // For images under 5MB: instant zero-fail client fallback
-    if (type === 'image' && file.size <= 5 * 1024 * 1024) {
-      try {
-        const dataUrl = await readFileAsDataUrl(file);
-        setIsUploadingFile(false);
-        setUploadProgressText('');
-        const sizeFormatted = `${Math.round(file.size / 1024)} KB`;
-        onSuccess(dataUrl, file.name, sizeFormatted);
-        return;
-      } catch (e) {
-        console.warn('Image read error, trying API upload...', e);
-      }
-    }
 
+    // 1. Try uploading to server API first so it gets a clean static URL
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -419,45 +447,58 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
           return;
         }
       }
-      throw new Error('API server upload unavailable on current host');
     } catch (err: any) {
-      console.warn('Server upload not reachable, saving to local device media store...', err);
-      
-      // Zero-fail client-side persistence via IndexedDB (handles large videos and PDFs up to hundreds of MBs)
+      console.warn('Server upload not reachable, continuing to fallback...', err);
+    }
+
+    // 2. Fallback for images: client-side compression to lightweight base64
+    if (type === 'image') {
       try {
-        const mediaId = `${type}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-        const mediaKey = await MediaStore.saveMedia(mediaId, file, file.name);
+        const compressedDataUrl = await compressImageFile(file, 900, 0.85);
+        setIsUploadingFile(false);
+        setUploadProgressText('');
+        const sizeFormatted = `${Math.round(compressedDataUrl.length / 1024)} KB`;
+        onSuccess(compressedDataUrl, file.name, sizeFormatted);
+        return;
+      } catch (imgErr) {
+        console.warn('Image compression fallback error:', imgErr);
+      }
+    }
+
+    // 3. Fallback for videos/PDFs: MediaStore (IndexedDB)
+    try {
+      const mediaId = `${type}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const mediaKey = await MediaStore.saveMedia(mediaId, file, file.name);
+      setIsUploadingFile(false);
+      setUploadProgressText('');
+      const sizeFormatted = `${mbSize} MB`;
+      onSuccess(mediaKey, file.name, sizeFormatted);
+      return;
+    } catch (dbErr) {
+      console.warn('IndexedDB save failed, trying dataUrl fallback...', dbErr);
+    }
+
+    // 4. Raw DataURL fallback for small files
+    if (file.size <= 5 * 1024 * 1024) {
+      try {
+        const dataUrl = await readFileAsDataUrl(file);
         setIsUploadingFile(false);
         setUploadProgressText('');
         const sizeFormatted = `${mbSize} MB`;
-        onSuccess(mediaKey, file.name, sizeFormatted);
+        onSuccess(dataUrl, file.name, sizeFormatted);
         return;
-      } catch (dbErr) {
-        console.warn('IndexedDB save failed, trying dataUrl fallback...', dbErr);
+      } catch (e) {
+        // fallback failed
       }
+    }
 
-      // Fallback for smaller files
-      if (file.size <= 8 * 1024 * 1024) {
-        try {
-          const dataUrl = await readFileAsDataUrl(file);
-          setIsUploadingFile(false);
-          setUploadProgressText('');
-          const sizeFormatted = `${mbSize} MB`;
-          onSuccess(dataUrl, file.name, sizeFormatted);
-          return;
-        } catch (e) {
-          // fallback failed
-        }
-      }
+    setIsUploadingFile(false);
+    setUploadProgressText('');
 
-      setIsUploadingFile(false);
-      setUploadProgressText('');
-
-      if (type === 'video') {
-        setShowVideoGuideModal(true);
-      } else {
-        alert(`الملف كبير (${mbSize} MB). يرجى استخدام رابط سحابي مباشر أو Google Drive أو تقليل حجم الملف.`);
-      }
+    if (type === 'video') {
+      setShowVideoGuideModal(true);
+    } else {
+      alert(`الملف كبير (${mbSize} MB). يرجى استخدام رابط سحابي مباشر أو تقليل حجم الملف.`);
     }
   };
 
@@ -4619,7 +4660,9 @@ ${weakConceptsText}
                     <button
                       type="button"
                       onClick={() => {
-                        StorageService.saveSettings(settings);
+                        const updated = { ...settings, instructorPhotoUrl: (settings.instructorPhotoUrl || '').trim() || '/teacher.jpg' };
+                        setSettings(updated);
+                        StorageService.saveSettings(updated);
                         setPhotoUpdateFeedback('تم حفظ الرابط وتحديث الصورة بنجاح!');
                         setTimeout(() => setPhotoUpdateFeedback(null), 4000);
                       }}

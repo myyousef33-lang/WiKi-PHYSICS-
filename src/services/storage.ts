@@ -142,9 +142,10 @@ const syncToFirestore = async (key: string, data: any) => {
     cloudSyncStatus = 'syncing';
     const docRef = doc(db, 'app_data', key);
     const cleanData = sanitizeForFirestore(data);
-    await setDoc(docRef, { data: cleanData, updatedAt: new Date().toISOString() });
+    const nowIso = localStorage.getItem(key + '_updated_at') || new Date().toISOString();
+    await setDoc(docRef, { data: cleanData, updatedAt: nowIso });
     cloudSyncStatus = 'synced';
-    lastSyncTimestamp = new Date().toISOString();
+    lastSyncTimestamp = nowIso;
   } catch (err) {
     console.error(`Firestore sync write error for ${key}:`, err);
     cloudSyncStatus = 'error';
@@ -160,22 +161,52 @@ const initFirestoreSync = () => {
     try {
       const docRef = doc(db, 'app_data', key);
 
-      // Helper function to safely reconcile local and remote data
-      const processRemoteData = async (remoteData: any) => {
+        // Helper function to safely reconcile local and remote data
+      const processRemoteData = async (remoteData: any, remoteUpdatedAt?: string) => {
         if (remoteData === undefined || remoteData === null) return;
 
-        // If this client wrote locally in the last 12 seconds, local state is authority
+        // If this client wrote locally in the last 15 seconds, local state is authority
         const lastWrite = lastLocalWriteTime[key] || 0;
-        if (Date.now() - lastWrite < 12000) {
+        if (Date.now() - lastWrite < 15000) {
           return;
         }
 
         const localStr = localStorage.getItem(key);
-        let localVal = null;
+        let localVal: any = null;
         if (localStr) {
           try {
             localVal = JSON.parse(localStr);
           } catch (_) {}
+        }
+
+        const localUpdatedAt = localStorage.getItem(key + '_updated_at') || '';
+
+        // Case: SETTINGS reconciliation
+        if (key === STORAGE_KEYS.SETTINGS && typeof localVal === 'object' && localVal !== null && typeof remoteData === 'object' && remoteData !== null) {
+          const isLocalCustomPhoto = localVal.instructorPhotoUrl && localVal.instructorPhotoUrl !== '/teacher.jpg' && localVal.instructorPhotoUrl.trim() !== '';
+          const isRemoteDefaultPhoto = !remoteData.instructorPhotoUrl || remoteData.instructorPhotoUrl === '/teacher.jpg' || remoteData.instructorPhotoUrl.trim() === '';
+
+          // If local has a custom photo and remote has the default, or local was updated more recently: preserve local
+          if ((isLocalCustomPhoto && isRemoteDefaultPhoto) || (localUpdatedAt && remoteUpdatedAt && localUpdatedAt > remoteUpdatedAt)) {
+            const merged = { ...SEED_SETTINGS, ...remoteData, ...localVal };
+            const mergedStr = JSON.stringify(merged);
+            if (localStr !== mergedStr) {
+              localStorage.setItem(key, mergedStr);
+              notifyListeners();
+            }
+            // Push our updated local settings to Firestore so cloud matches local
+            await setDoc(docRef, { data: sanitizeForFirestore(merged), updatedAt: localUpdatedAt || new Date().toISOString() }).catch(() => {});
+            return;
+          }
+
+          // Otherwise merge remote over local gracefully
+          const merged = { ...SEED_SETTINGS, ...localVal, ...remoteData };
+          const mergedStr = JSON.stringify(merged);
+          if (localStr !== mergedStr) {
+            localStorage.setItem(key, mergedStr);
+            notifyListeners();
+          }
+          return;
         }
 
         // Case A: Both are arrays
@@ -224,11 +255,14 @@ const initFirestoreSync = () => {
             }
           }
         } else if (typeof localVal === 'object' && localVal !== null && typeof remoteData === 'object' && remoteData !== null) {
-          // Object merge (e.g. SETTINGS)
+          // Object merge
           const localKeys = Object.keys(localVal);
           const remoteKeys = Object.keys(remoteData);
-          if (localKeys.length > remoteKeys.length) {
-            await setDoc(docRef, { data: sanitizeForFirestore(localVal), updatedAt: new Date().toISOString() }).catch(() => {});
+          if (localKeys.length > remoteKeys.length || (localUpdatedAt && remoteUpdatedAt && localUpdatedAt > remoteUpdatedAt)) {
+            const merged = { ...localVal, ...remoteData, ...localVal };
+            localStorage.setItem(key, JSON.stringify(merged));
+            notifyListeners();
+            await setDoc(docRef, { data: sanitizeForFirestore(merged), updatedAt: new Date().toISOString() }).catch(() => {});
           } else {
             const remoteStr = JSON.stringify(remoteData);
             if (localStr !== remoteStr) {
@@ -250,7 +284,8 @@ const initFirestoreSync = () => {
         const snap = await getDoc(docRef);
         if (snap.exists()) {
           const remoteData = snap.data()?.data;
-          await processRemoteData(remoteData);
+          const remoteUpdatedAt = snap.data()?.updatedAt;
+          await processRemoteData(remoteData, remoteUpdatedAt);
         } else {
           const localStr = localStorage.getItem(key);
           if (localStr) {
@@ -275,7 +310,8 @@ const initFirestoreSync = () => {
 
         if (snapshot.exists()) {
           const remoteData = snapshot.data()?.data;
-          processRemoteData(remoteData).catch(() => {});
+          const remoteUpdatedAt = snapshot.data()?.updatedAt;
+          processRemoteData(remoteData, remoteUpdatedAt).catch(() => {});
         }
       }, (err) => {
         console.warn('Firestore listener warning for', key, err);
@@ -323,6 +359,8 @@ const getStored = <T>(key: string, defaultVal: T): T => {
 const setStored = <T>(key: string, val: T): void => {
   try {
     lastLocalWriteTime[key] = Date.now();
+    const nowIso = new Date().toISOString();
+    localStorage.setItem(key + '_updated_at', nowIso);
     localStorage.setItem(key, JSON.stringify(val));
     notifyListeners();
     if (
