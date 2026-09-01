@@ -100,10 +100,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
 
     return (
       <section className="mx-auto max-w-7xl 2xl:max-w-screen-2xl px-4 sm:px-6 lg:px-10 xl:px-12">
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-8 lg:p-10 shadow-sm space-y-6">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div className="rounded-3xl border border-[#C7D9FE] bg-[#EBF1FE] p-5 sm:p-8 lg:p-10 shadow-sm space-y-6">
+          <div className="flex items-center justify-between border-b border-[#C7D9FE]/80 pb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-2xl bg-[#F5B301]/15 text-[#0D1B3E]">
+              <div className="p-2.5 rounded-2xl bg-[#F5B301]/20 text-[#0D1B3E] border border-[#F5B301]/40">
                 <PlayCircle className="h-6 w-6 text-[#1E4FD8]" />
               </div>
               <div>
@@ -111,11 +111,11 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 <p className="text-xs sm:text-sm text-[#6B7280]">شاهد جولة سريعة داخل المنصة لمعرفة كيفية تفعيل الاشتراكات ومشاهدة الدروس</p>
               </div>
             </div>
-            <span className="hidden sm:inline-flex text-xs font-bold text-[#1E4FD8] bg-blue-50 px-4 py-1.5 rounded-full border border-blue-200">
+            <span className="hidden sm:inline-flex text-xs font-bold text-[#1E4FD8] bg-white px-4 py-1.5 rounded-full border border-[#B4CFFE] shadow-xs">
               فيديو توضيحي رسمي
             </span>
           </div>
-          <div className="relative aspect-video w-full rounded-2xl lg:rounded-3xl overflow-hidden bg-slate-900 border border-slate-200 shadow-sm">
+          <div className="relative aspect-video w-full rounded-2xl lg:rounded-3xl overflow-hidden bg-slate-900 border border-[#C7D9FE] shadow-sm">
             <iframe
               src={embedUrl}
               title="الفيديو التعريفي"
@@ -247,15 +247,15 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             
             {/* Live active students & platform badge */}
             <div className="flex flex-wrap items-center justify-center gap-3">
-              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-bold text-[#0D1B3E] shadow-xs">
+              <div className="inline-flex items-center gap-2 rounded-full border border-blue-600 bg-[#1E4FD8] px-4 py-1.5 text-xs font-bold text-white shadow-sm">
                 <span className="relative flex h-2.5 w-2.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400"></span>
                 </span>
                 <span>
                   {activeCount >= 3 ? (
                     <>
-                      <strong className="text-[#1E4FD8] font-black mx-1 font-mono">{activeCount.toLocaleString('ar-EG')}</strong>{' '}
+                      <strong className="text-[#F5B301] font-black mx-1 font-mono">{activeCount.toLocaleString('ar-EG')}</strong>{' '}
                       طالب بيذاكر دلوقتي
                     </>
                   ) : (
@@ -264,31 +264,31 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 </span>
               </div>
 
-              <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-1.5 text-xs font-bold text-[#1E4FD8]">
-                <Atom className="h-4 w-4 animate-spin text-[#1E4FD8]" />
+              <div className="inline-flex items-center gap-2 rounded-full border border-blue-600 bg-[#1E4FD8] px-4 py-1.5 text-xs font-bold text-white shadow-sm">
+                <Atom className="h-4 w-4 animate-spin text-[#F5B301]" />
                 <span>المنصة الرائدة لفيزياء الثانوية العامة</span>
               </div>
             </div>
 
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-3 gap-3 sm:gap-6 p-4 sm:p-6 rounded-3xl bg-white border border-slate-200 shadow-xs text-center">
+            <div className="grid grid-cols-3 gap-3 sm:gap-6 p-4 sm:p-6 rounded-3xl bg-[#1E4FD8] border border-blue-600 shadow-md text-center text-white">
               <div>
-                <p className="text-xl sm:text-3xl font-black text-[#0D1B3E]">+10,000</p>
-                <p className="text-xs sm:text-sm text-[#6B7280] font-medium mt-0.5">طالب مستفيد</p>
+                <p className="text-xl sm:text-3xl font-black text-[#F5B301]">+10,000</p>
+                <p className="text-xs sm:text-sm text-white font-medium mt-0.5">طالب مستفيد</p>
               </div>
-              <div className="border-x border-slate-100">
-                <p className="text-xl sm:text-3xl font-black text-[#1E4FD8]">100%</p>
-                <p className="text-xs sm:text-sm text-[#6B7280] font-medium mt-0.5">تغطية أفكار الامتحانات</p>
+              <div className="border-x border-blue-400/30">
+                <p className="text-xl sm:text-3xl font-black text-[#F5B301]">100%</p>
+                <p className="text-xs sm:text-sm text-white font-medium mt-0.5">تغطية أفكار الامتحانات</p>
               </div>
               <div>
-                <p className="text-xl sm:text-3xl font-black text-emerald-600">24/7</p>
-                <p className="text-xs sm:text-sm text-[#6B7280] font-medium mt-0.5">دعم ومتابعة مستمرة</p>
+                <p className="text-xl sm:text-3xl font-black text-[#F5B301]">24/7</p>
+                <p className="text-xs sm:text-sm text-white font-medium mt-0.5">دعم ومتابعة مستمرة</p>
               </div>
             </div>
 
             {/* Security & Speed Trust Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-slate-200 text-xs text-[#6B7280] shadow-xs">
-              <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+            <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#1E4FD8] border border-blue-600 text-xs text-white font-medium shadow-sm">
+              <ShieldCheck className="h-4 w-4 text-[#F5B301] shrink-0" />
               <span>منصة آمنة ومحمية بالكامل مع سيرفرات فائقة السرعة ومشاهدة غير محدودة</span>
             </div>
 
@@ -313,8 +313,8 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
-          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#1E4FD8] transition-all">
-            <div className="rounded-2xl bg-blue-50 p-4 w-fit text-[#1E4FD8]">
+          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#1E4FD8] hover:scale-[1.02] transition-all">
+            <div className="rounded-2xl bg-white border border-[#B4CFFE] p-4 w-fit text-[#1E4FD8] shadow-xs">
               <PlayCircle className="h-7 w-7" />
             </div>
             <h3 className="font-bold text-[#0D1B3E] text-lg lg:text-xl">شرح وافي ومبسط</h3>
@@ -323,9 +323,9 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             </p>
           </div>
 
-          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#1E4FD8] transition-all">
-            <div className="rounded-2xl bg-blue-50 p-4 w-fit text-[#1E4FD8]">
-              <Award className="h-7 w-7" />
+          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#1E4FD8] hover:scale-[1.02] transition-all">
+            <div className="rounded-2xl bg-[#F5B301]/25 border border-[#F5B301]/50 p-4 w-fit text-[#0D1B3E] shadow-xs">
+              <Award className="h-7 w-7 text-[#1E4FD8]" />
             </div>
             <h3 className="font-bold text-[#0D1B3E] text-lg lg:text-xl">امتحانات وتصحيح فوري</h3>
             <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
@@ -333,8 +333,8 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             </p>
           </div>
 
-          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-emerald-500 transition-all">
-            <div className="rounded-2xl bg-emerald-50 p-4 w-fit text-emerald-600">
+          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#1E4FD8] hover:scale-[1.02] transition-all">
+            <div className="rounded-2xl bg-white border border-[#B4CFFE] p-4 w-fit text-[#1E4FD8] shadow-xs">
               <FileText className="h-7 w-7" />
             </div>
             <h3 className="font-bold text-[#0D1B3E] text-lg lg:text-xl">مذكرات وملازم PDF</h3>
@@ -343,8 +343,8 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             </p>
           </div>
 
-          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#F5B301] transition-all">
-            <div className="rounded-2xl bg-[#F5B301]/15 p-4 w-fit text-[#0D1B3E]">
+          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#1E4FD8] hover:scale-[1.02] transition-all">
+            <div className="rounded-2xl bg-[#F5B301]/25 border border-[#F5B301]/50 p-4 w-fit text-[#0D1B3E] shadow-xs">
               <ShieldCheck className="h-7 w-7 text-[#1E4FD8]" />
             </div>
             <h3 className="font-bold text-[#0D1B3E] text-lg lg:text-xl">تفعيل فوري بالأكواد</h3>
@@ -427,8 +427,8 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
         </div>
 
         {courses.length === 0 ? (
-          <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center max-w-xl mx-auto space-y-4 shadow-sm">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 border border-blue-200 text-[#1E4FD8]">
+          <div className="rounded-3xl border border-[#C7D9FE] bg-[#EBF1FE] p-12 text-center max-w-xl mx-auto space-y-4 shadow-sm">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white border border-[#B4CFFE] text-[#1E4FD8] shadow-xs">
               <BookOpen className="h-8 w-8" />
             </div>
             <div className="space-y-1.5">
@@ -450,7 +450,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               return (
                 <div
                   key={course.id}
-                  className="w-[290px] sm:w-[340px] lg:w-[380px] shrink-0 snap-start glass-card glass-card-hover rounded-3xl overflow-hidden flex flex-col justify-between group border border-slate-200 hover:border-[#1E4FD8] transition-all shadow-xs"
+                  className="w-[290px] sm:w-[340px] lg:w-[380px] shrink-0 snap-start glass-card glass-card-hover rounded-3xl overflow-hidden flex flex-col justify-between group border border-[#C7D9FE] hover:border-[#1E4FD8] transition-all shadow-xs"
                 >
                   <div>
                     {/* Video/Course Thumbnail Container */}
@@ -530,7 +530,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               return (
                 <div
                   key={course.id}
-                  className="glass-card glass-card-hover rounded-3xl overflow-hidden flex flex-col justify-between group border border-slate-200 hover:border-[#1E4FD8] transition-all shadow-xs"
+                  className="glass-card glass-card-hover rounded-3xl overflow-hidden flex flex-col justify-between group border border-[#C7D9FE] hover:border-[#1E4FD8] transition-all shadow-xs"
                 >
                   <div>
                     {/* Video/Course Thumbnail Container */}
@@ -604,9 +604,9 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
 
       {/* PDF MATERIALS TEASER */}
       <section className="mx-auto max-w-7xl 2xl:max-w-screen-2xl px-4 sm:px-6 lg:px-10 xl:px-12 space-y-8">
-        <div className="rounded-3xl border border-slate-200 bg-white p-8 sm:p-12 lg:p-16 flex flex-col lg:flex-row items-center justify-between gap-8 shadow-xs">
+        <div className="rounded-3xl border border-[#C7D9FE] bg-[#EBF1FE] p-8 sm:p-12 lg:p-16 flex flex-col lg:flex-row items-center justify-between gap-8 shadow-xs">
           <div className="space-y-3 text-center lg:text-right">
-            <span className="rounded-full bg-blue-50 border border-blue-200 px-4 py-1.5 text-xs font-bold text-[#1E4FD8]">
+            <span className="rounded-full bg-white border border-[#B4CFFE] px-4 py-1.5 text-xs font-bold text-[#1E4FD8] shadow-xs">
               المكتبة والملازم
             </span>
             <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-[#0D1B3E]">
@@ -641,7 +641,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             <p className="text-xs sm:text-sm text-[#0D1B3E] leading-relaxed">
               "الفيزياء كانت أصعب مادة عندي، لكن بفضل أسلوب الشرح المنظم وبنك الأسئلة قدرت أقفل الامتحان التجريبي بدرجة 59 من 60!"
             </p>
-            <div className="pt-3 border-t border-slate-100 text-xs sm:text-sm font-bold text-[#1E4FD8]">
+            <div className="pt-3 border-t border-[#C7D9FE]/80 text-xs sm:text-sm font-bold text-[#1E4FD8]">
               أحمد محمد — أوائل الدقهلية
             </div>
           </div>
@@ -653,7 +653,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             <p className="text-xs sm:text-sm text-[#0D1B3E] leading-relaxed">
               "ميزة تصحيح الامتحانات الفورية ومعرفة سبب الخطأ بالشرح الفيزيائي وفرت عليا وقت كبير جداً وخلتني أثق في نفسي."
             </p>
-            <div className="pt-3 border-t border-slate-100 text-xs sm:text-sm font-bold text-[#1E4FD8]">
+            <div className="pt-3 border-t border-[#C7D9FE]/80 text-xs sm:text-sm font-bold text-[#1E4FD8]">
               مريم خالد — الجيزة
             </div>
           </div>
@@ -665,7 +665,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             <p className="text-xs sm:text-sm text-[#0D1B3E] leading-relaxed">
               "المذكرات والـ PDF منظمة جداً وكل قانون معاه رسم توضيحي وأمثلة الوزارة السابقة. منصة متكاملة بمعنى الكلمة."
             </p>
-            <div className="pt-3 border-t border-slate-100 text-xs sm:text-sm font-bold text-[#1E4FD8]">
+            <div className="pt-3 border-t border-[#C7D9FE]/80 text-xs sm:text-sm font-bold text-[#1E4FD8]">
               يوسف طارق — الإسكندرية
             </div>
           </div>

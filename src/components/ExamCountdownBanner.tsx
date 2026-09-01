@@ -64,47 +64,47 @@ export const ExamCountdownBanner: React.FC<ExamCountdownBannerProps> = ({ onNavi
   const [currentTip] = useState(() => physicsTips[Math.floor(Math.random() * physicsTips.length)]);
 
   return (
-    <div className="rounded-3xl border border-blue-100 bg-white p-5 sm:p-6 shadow-sm relative overflow-hidden">
+    <div className="rounded-3xl border border-blue-600 bg-[#1E4FD8] p-5 sm:p-6 shadow-md relative overflow-hidden text-white">
       <div className="flex flex-col lg:flex-row items-center justify-between gap-6 relative z-10">
         
         {/* Title & Daily Tip */}
         <div className="space-y-2 text-center lg:text-right">
-          <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-0.5 text-[11px] font-black text-[#1E4FD8]">
-            <Clock className="h-3.5 w-3.5 text-[#1E4FD8]" />
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 backdrop-blur-xs px-3.5 py-1 text-[11px] font-black text-white shadow-xs">
+            <Clock className="h-3.5 w-3.5 text-[#F5B301]" />
             <span>العد التنازلي لامتحان الفيزياء للثانوية العامة</span>
           </div>
-          <h3 className="text-base sm:text-lg font-black text-[#0D1B3E]">
+          <h3 className="text-base sm:text-lg font-black text-white">
             رحلة الـ 60 من 60 في الفيزياء تقترب!
           </h3>
-          <p className="text-xs text-[#6B7280] font-medium">{currentTip}</p>
+          <p className="text-xs text-blue-100 font-medium">{currentTip}</p>
         </div>
 
         {/* Countdown Digits Grid */}
         <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
-          <div className="rounded-2xl border border-slate-200 bg-[#F5F7FA] p-3 sm:p-4 text-center min-w-[65px] sm:min-w-[75px] shadow-xs">
-            <span className="text-xl sm:text-2xl font-black text-[#0D1B3E] font-mono">{timeLeft.days}</span>
-            <span className="text-[10px] text-[#6B7280] font-bold block mt-0.5">يوم</span>
+          <div className="rounded-2xl border border-blue-400/30 bg-[#0D1B3E] p-3 sm:p-4 text-center min-w-[65px] sm:min-w-[75px] shadow-sm">
+            <span className="text-xl sm:text-2xl font-black text-[#F5B301] font-mono">{timeLeft.days}</span>
+            <span className="text-[10px] text-blue-100 font-bold block mt-0.5">يوم</span>
           </div>
 
-          <div className="text-[#1E4FD8] font-black text-lg">:</div>
+          <div className="text-[#F5B301] font-black text-lg">:</div>
 
-          <div className="rounded-2xl border border-slate-200 bg-[#F5F7FA] p-3 sm:p-4 text-center min-w-[65px] sm:min-w-[75px] shadow-xs">
-            <span className="text-xl sm:text-2xl font-black text-[#0D1B3E] font-mono">{timeLeft.hours}</span>
-            <span className="text-[10px] text-[#6B7280] font-bold block mt-0.5">ساعة</span>
+          <div className="rounded-2xl border border-blue-400/30 bg-[#0D1B3E] p-3 sm:p-4 text-center min-w-[65px] sm:min-w-[75px] shadow-sm">
+            <span className="text-xl sm:text-2xl font-black text-[#F5B301] font-mono">{timeLeft.hours}</span>
+            <span className="text-[10px] text-blue-100 font-bold block mt-0.5">ساعة</span>
           </div>
 
-          <div className="text-[#1E4FD8] font-black text-lg">:</div>
+          <div className="text-[#F5B301] font-black text-lg">:</div>
 
-          <div className="rounded-2xl border border-slate-200 bg-[#F5F7FA] p-3 sm:p-4 text-center min-w-[65px] sm:min-w-[75px] shadow-xs">
-            <span className="text-xl sm:text-2xl font-black text-[#0D1B3E] font-mono">{timeLeft.minutes}</span>
-            <span className="text-[10px] text-[#6B7280] font-bold block mt-0.5">دقيقة</span>
+          <div className="rounded-2xl border border-blue-400/30 bg-[#0D1B3E] p-3 sm:p-4 text-center min-w-[65px] sm:min-w-[75px] shadow-sm">
+            <span className="text-xl sm:text-2xl font-black text-[#F5B301] font-mono">{timeLeft.minutes}</span>
+            <span className="text-[10px] text-blue-100 font-bold block mt-0.5">دقيقة</span>
           </div>
 
-          <div className="text-[#1E4FD8] font-black text-lg">:</div>
+          <div className="text-[#F5B301] font-black text-lg">:</div>
 
-          <div className="rounded-2xl border border-slate-200 bg-[#F5F7FA] p-3 sm:p-4 text-center min-w-[65px] sm:min-w-[75px] shadow-xs">
-            <span className="text-xl sm:text-2xl font-black text-[#1E4FD8] font-mono">{timeLeft.seconds}</span>
-            <span className="text-[10px] text-[#6B7280] font-bold block mt-0.5">ثانية</span>
+          <div className="rounded-2xl border border-blue-400/30 bg-[#0D1B3E] p-3 sm:p-4 text-center min-w-[65px] sm:min-w-[75px] shadow-sm">
+            <span className="text-xl sm:text-2xl font-black text-[#F5B301] font-mono">{timeLeft.seconds}</span>
+            <span className="text-[10px] text-blue-100 font-bold block mt-0.5">ثانية</span>
           </div>
         </div>
 
@@ -112,7 +112,7 @@ export const ExamCountdownBanner: React.FC<ExamCountdownBannerProps> = ({ onNavi
         {onNavigate && (
           <button
             onClick={() => onNavigate('weakness-profile')}
-            className="flex items-center gap-1.5 rounded-2xl bg-[#F5B301] px-5 py-3 text-xs font-bold text-[#0D1B3E] hover:bg-[#e0a401] transition-all shadow-sm shadow-[#F5B301]/20 shrink-0"
+            className="flex items-center gap-1.5 rounded-2xl bg-[#F5B301] px-5 py-3 text-xs font-black text-[#0D1B3E] hover:bg-[#e0a401] transition-all shadow-md shrink-0"
           >
             <span>خطة المراجعة الذكية</span>
             <ChevronLeft className="h-4 w-4 text-[#0D1B3E]" />
