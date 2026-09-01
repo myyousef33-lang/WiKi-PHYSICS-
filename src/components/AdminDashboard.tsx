@@ -135,6 +135,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
   const [quickCourseSelect, setQuickCourseSelect] = useState<string>('');
   const [quickPrivateNotifMsg, setQuickPrivateNotifMsg] = useState<string>('');
   const [dateUpdateFeedback, setDateUpdateFeedback] = useState<string | null>(null);
+  const [photoUpdateFeedback, setPhotoUpdateFeedback] = useState<string | null>(null);
   
   // Leaderboard Bonus Points Modal State
   const [bonusStudentId, setBonusStudentId] = useState<string>('');
@@ -4550,29 +4551,39 @@ ${weakConceptsText}
             </div>
 
             {/* Teacher Photo Upload & Customization */}
-            <div className="rounded-2xl border border-amber-500/30 bg-amber-950/20 p-4 space-y-3">
-              <label className="text-xs font-bold text-amber-300 flex items-center gap-2">
-                <ImageIcon className="h-4 w-4 text-amber-400" />
-                <span>صورة المعلم الشخصية (تغير الصورة في الواجهة الرئيسية فوراً)</span>
-              </label>
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-950/20 p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <label className="text-xs sm:text-sm font-bold text-amber-300 flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4 text-amber-400" />
+                  <span>صورة المعلم والهيرو (تظهر في الواجهة الرئيسية وتتغير فوراً)</span>
+                </label>
+                {photoUpdateFeedback && (
+                  <span className="text-xs font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/30 px-3 py-1 rounded-full animate-in fade-in">
+                    {photoUpdateFeedback}
+                  </span>
+                )}
+              </div>
               
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                {/* Current Photo Preview */}
-                <div className="relative h-28 w-24 shrink-0 rounded-xl overflow-hidden border border-slate-700 bg-slate-950 shadow-md">
+              <div className="flex flex-col sm:flex-row items-center gap-5">
+                {/* Current Photo Preview with Background Arch Simulation */}
+                <div className="relative h-36 w-32 shrink-0 rounded-2xl overflow-hidden border-2 border-amber-500/40 bg-gradient-to-b from-blue-900/60 to-slate-950 shadow-xl flex items-end justify-center p-1">
                   <img
                     src={settings.instructorPhotoUrl || '/teacher.jpg'}
                     alt="صورة المعلم"
-                    className="h-full w-full object-cover"
+                    className="h-full w-auto max-w-full object-contain object-bottom drop-shadow-md"
                     onError={(e) => {
                       (e.currentTarget as HTMLImageElement).src = '/teacher.jpg';
                     }}
                   />
+                  <div className="absolute top-2 right-2 rounded-full bg-slate-900/80 px-2 py-0.5 text-[9px] font-bold text-amber-300 border border-amber-500/30">
+                    معاينة
+                  </div>
                 </div>
 
                 {/* Upload Controls */}
-                <div className="space-y-3 flex-1 w-full">
+                <div className="space-y-3.5 flex-1 w-full">
                   <div>
-                    <label className="text-[11px] text-slate-400 block mb-1.5 font-medium">اختيار صورة جديدة من الموبايل أو الكمبيوتر:</label>
+                    <label className="text-xs text-slate-300 block mb-1.5 font-bold">اختيار صورة جديدة من جهازك (يدعم PNG مفرغة أو JPG):</label>
                     <input
                       type="file"
                       accept="image/*"
@@ -4580,30 +4591,54 @@ ${weakConceptsText}
                         const file = e.target.files?.[0];
                         if (file) {
                           handleFileUpload(file, 'image', (url) => {
-                            setSettings({ ...settings, instructorPhotoUrl: url });
+                            const updated = { ...settings, instructorPhotoUrl: url };
+                            setSettings(updated);
+                            StorageService.saveSettings(updated);
+                            setPhotoUpdateFeedback('تم حفظ وتطبيق صورة الهيرو الجديدة بنجاح!');
+                            setTimeout(() => setPhotoUpdateFeedback(null), 4000);
                           });
                         }
                       }}
-                      className="w-full text-xs text-slate-300 file:mr-0 file:ml-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-400 cursor-pointer"
+                      className="w-full text-xs text-slate-300 file:mr-0 file:ml-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-400 cursor-pointer bg-slate-900/80 p-1.5 rounded-xl border border-slate-700"
                     />
                   </div>
 
-                  <div className="flex items-center gap-2 pt-1">
-                    <span className="text-[11px] text-slate-400 shrink-0">رابط صورة خارجي:</span>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-0.5">
+                    <span className="text-[11px] text-slate-400 shrink-0 font-medium">أو إدخال رابط خارجي:</span>
                     <input
                       type="text"
                       placeholder="https://..."
                       value={settings.instructorPhotoUrl || ''}
-                      onChange={e => setSettings({ ...settings, instructorPhotoUrl: e.target.value })}
+                      onChange={e => {
+                        const url = e.target.value;
+                        setSettings({ ...settings, instructorPhotoUrl: url });
+                      }}
                       className="flex-1 rounded-xl border border-slate-700 bg-slate-950 p-2 text-xs text-white font-mono"
                       dir="ltr"
                     />
                     <button
                       type="button"
-                      onClick={() => setSettings({ ...settings, instructorPhotoUrl: '/teacher.jpg' })}
-                      className="text-[11px] text-slate-400 hover:text-amber-400 underline whitespace-nowrap px-1"
+                      onClick={() => {
+                        StorageService.saveSettings(settings);
+                        setPhotoUpdateFeedback('تم حفظ الرابط وتحديث الصورة بنجاح!');
+                        setTimeout(() => setPhotoUpdateFeedback(null), 4000);
+                      }}
+                      className="rounded-xl bg-amber-500 hover:bg-amber-400 px-3.5 py-2 text-xs font-bold text-slate-950 transition-all whitespace-nowrap"
                     >
-                      إعادة الصورة الافتراضية
+                      تطبيق الرابط
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = { ...settings, instructorPhotoUrl: '/teacher.jpg' };
+                        setSettings(updated);
+                        StorageService.saveSettings(updated);
+                        setPhotoUpdateFeedback('تمت استعادة الصورة الافتراضية بنجاح!');
+                        setTimeout(() => setPhotoUpdateFeedback(null), 4000);
+                      }}
+                      className="rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2 text-[11px] font-bold text-slate-300 hover:text-amber-400 hover:border-amber-500/50 transition-all whitespace-nowrap"
+                    >
+                      استعادة الافتراضية
                     </button>
                   </div>
                 </div>

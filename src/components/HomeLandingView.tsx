@@ -45,13 +45,14 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
   const [activeCount, setActiveCount] = useState<number>(PresenceService.getActiveCount());
   const [courseDisplayMode, setCourseDisplayMode] = useState<'carousel' | 'grid'>('carousel');
   const coursesScrollRef = useRef<HTMLDivElement>(null);
-  const settings = StorageService.getSettings();
+  const [settings, setSettings] = useState(StorageService.getSettings());
 
   useEffect(() => {
     const update = () => {
       setCourses(StorageService.getCourses());
       setPdfs(StorageService.getPdfs());
       setStudent(StorageService.getCurrentStudent());
+      setSettings(StorageService.getSettings());
     };
     update();
 
@@ -173,15 +174,18 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 </span>
               </div>
 
-              {/* The Real Teacher Cutout Photo overlapping the blue semi-circle */}
+              {/* The Real Teacher Cutout / Custom Hero Photo overlapping the blue semi-circle */}
               <img
-                src={teacherCutout}
+                src={settings.instructorPhotoUrl && settings.instructorPhotoUrl.trim() !== '' ? settings.instructorPhotoUrl : teacherCutout}
                 alt={settings.instructorTitle || "أ / إبراهيم خليل"}
                 className="relative z-10 h-full w-auto object-contain object-bottom drop-shadow-2xl transition-transform duration-500 hover:scale-[1.02]"
                 onError={(e) => {
                   const target = e.currentTarget;
-                  if (!target.dataset.triedFallback) {
-                    target.dataset.triedFallback = 'true';
+                  if (!target.dataset.triedFallback1) {
+                    target.dataset.triedFallback1 = 'true';
+                    target.src = teacherCutout;
+                  } else if (!target.dataset.triedFallback2) {
+                    target.dataset.triedFallback2 = 'true';
                     target.src = '/teacher.jpg';
                   }
                 }}
