@@ -123,7 +123,7 @@ export default function App() {
 
   return (
     <GlobalAntiScreenshotShield>
-      <div className="min-h-screen bg-[#0C1B33] text-slate-100 flex flex-col font-sans selection:bg-[#FFB020] selection:text-[#0C1B33] overflow-x-hidden max-w-full w-full relative">
+      <div className="min-h-screen bg-[#F5F7FA] text-[#0D1B3E] flex flex-col font-sans selection:bg-[#1E4FD8] selection:text-white overflow-x-hidden max-w-full w-full relative">
       
       {/* Top Navbar */}
       <Navbar

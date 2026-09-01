@@ -9,45 +9,45 @@ export interface AvatarOption {
 export const PRESET_AVATARS: AvatarOption[] = [
   {
     id: 'preset:atom',
-    name: 'الذرة والنواة ⚛️',
+    name: 'الذرة والنواة',
     iconName: 'Atom',
-    bgGradient: 'from-orange-500/20 to-amber-600/30',
-    borderColor: 'border-orange-500/50'
+    bgGradient: 'from-blue-500/20 to-indigo-600/30',
+    borderColor: 'border-[#1E4FD8]'
   },
   {
     id: 'preset:bolt',
-    name: 'الشرارة الكهربية ⚡',
+    name: 'الشرارة الكهربية',
     iconName: 'Zap',
     bgGradient: 'from-amber-500/20 to-yellow-600/30',
-    borderColor: 'border-amber-500/50'
+    borderColor: 'border-amber-400'
   },
   {
     id: 'preset:quantum',
-    name: 'كوانتم وليزرات 🛰️',
+    name: 'كوانتم وليزرات',
     iconName: 'Sparkles',
     bgGradient: 'from-blue-500/20 to-cyan-600/30',
-    borderColor: 'border-blue-500/50'
+    borderColor: 'border-blue-400'
   },
   {
     id: 'preset:circuit',
-    name: 'مقاومات ومكثفات 🧲',
+    name: 'مقاومات ومكثفات',
     iconName: 'Cpu',
     bgGradient: 'from-emerald-500/20 to-teal-600/30',
-    borderColor: 'border-emerald-500/50'
+    borderColor: 'border-emerald-400'
   },
   {
     id: 'preset:light',
-    name: 'المصباح الفوتوني 💡',
+    name: 'المصباح الفوتوني',
     iconName: 'Lightbulb',
     bgGradient: 'from-amber-400/20 to-orange-500/30',
-    borderColor: 'border-amber-400/50'
+    borderColor: 'border-amber-400'
   },
   {
     id: 'preset:einstein',
-    name: 'عالم الفيزياء 👨‍🔬',
+    name: 'عالم الفيزياء',
     iconName: 'Award',
     bgGradient: 'from-purple-500/20 to-indigo-600/30',
-    borderColor: 'border-purple-500/50'
+    borderColor: 'border-purple-400'
   }
 ];
 

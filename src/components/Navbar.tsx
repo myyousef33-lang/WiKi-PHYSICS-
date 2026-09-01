@@ -124,7 +124,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   const isToolActive = smartToolsItems.some(item => item.id === currentView);
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-[#1E375E] bg-[#0C1B33]/95 backdrop-blur-xl shadow-lg transition-all">
+    <header className="sticky top-0 z-40 w-full border-b border-blue-100 bg-white/98 backdrop-blur-xl shadow-xs transition-all">
+      {/* Top Royal Blue Accent Line */}
+      <div className="h-1 w-full bg-gradient-to-r from-[#1E4FD8] via-[#3B82F6] to-[#1E4FD8]" />
+
       <div className="mx-auto flex h-20 lg:h-24 max-w-7xl 2xl:max-w-screen-2xl items-center justify-between px-4 sm:px-6 lg:px-10 xl:px-12">
         
         {/* Brand Logo & Name */}
@@ -147,11 +150,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={() => onNavigate(item.id)}
                 className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm lg:text-base font-bold transition-all ${
                   isActive
-                    ? 'bg-[#2E86FF]/20 text-[#2E86FF] border border-[#2E86FF]/40 shadow-md shadow-[#2E86FF]/10'
-                    : 'text-slate-200 hover:bg-[#132747] hover:text-white'
+                    ? 'bg-blue-50 text-[#1E4FD8] border border-blue-200 shadow-xs'
+                    : 'text-[#0D1B3E] hover:bg-slate-100 hover:text-[#1E4FD8]'
                 }`}
               >
-                <Icon className={`h-4 w-4 lg:h-5 lg:w-5 ${isActive ? 'text-[#2E86FF]' : 'text-slate-400'}`} />
+                <Icon className={`h-4 w-4 lg:h-5 lg:w-5 ${isActive ? 'text-[#1E4FD8]' : 'text-[#6B7280]'}`} />
                 <span>{item.label}</span>
               </button>
             );
@@ -163,21 +166,21 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => setToolsDropdownOpen(!toolsDropdownOpen)}
               className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm lg:text-base font-bold transition-all ${
                 isToolActive || toolsDropdownOpen
-                  ? 'bg-[#2E86FF]/20 text-[#2E86FF] border border-[#2E86FF]/40 shadow-md'
-                  : 'text-slate-200 hover:bg-[#132747] hover:text-white'
+                  ? 'bg-blue-50 text-[#1E4FD8] border border-blue-200 shadow-xs'
+                  : 'text-[#0D1B3E] hover:bg-slate-100 hover:text-[#1E4FD8]'
               }`}
             >
-              <Sparkles className="h-4 w-4 lg:h-5 lg:w-5 text-[#FFB020]" />
+              <Sparkles className="h-4 w-4 lg:h-5 lg:w-5 text-[#F5B301]" />
               <span>أدوات المنصة الذكية</span>
-              <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${toolsDropdownOpen ? 'rotate-180 text-[#2E86FF]' : 'text-slate-400'}`} />
+              <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${toolsDropdownOpen ? 'rotate-180 text-[#1E4FD8]' : 'text-[#6B7280]'}`} />
             </button>
 
             {/* Dropdown Menu Popup */}
             {toolsDropdownOpen && (
-              <div className="absolute top-full right-0 mt-3 w-80 lg:w-96 rounded-3xl border border-[#1E375E] bg-[#0C1B33]/98 backdrop-blur-2xl p-3 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="px-3 py-2 border-b border-[#1E375E] mb-2 flex items-center justify-between">
-                  <span className="text-xs font-black text-slate-300">الأدوات التفاعلية والذكية</span>
-                  <span className="text-[10px] bg-[#FFB020]/15 text-[#FFB020] px-2 py-0.5 rounded-full font-bold">Wiki-X Tools</span>
+              <div className="absolute top-full right-0 mt-3 w-80 lg:w-96 rounded-3xl border border-slate-200 bg-white p-3 shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="px-3 py-2 border-b border-slate-100 mb-2 flex items-center justify-between">
+                  <span className="text-xs font-black text-[#0D1B3E]">الأدوات التفاعلية والذكية</span>
+                  <span className="text-[10px] bg-[#F5B301]/20 text-[#0D1B3E] px-2 py-0.5 rounded-full font-bold">Wiki-X Tools</span>
                 </div>
                 <div className="space-y-1">
                   {smartToolsItems.map((tool) => {
@@ -192,18 +195,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                         }}
                         className={`w-full flex items-start gap-3 p-2.5 rounded-2xl text-right transition-all group ${
                           isCurrent
-                            ? 'bg-[#2E86FF]/15 border border-[#2E86FF]/30'
-                            : 'hover:bg-[#122442] border border-transparent'
+                            ? 'bg-blue-50 border border-blue-200'
+                            : 'hover:bg-slate-50 border border-transparent'
                         }`}
                       >
                         <div className={`p-2.5 rounded-xl ${tool.bg} ${tool.color} shrink-0 mt-0.5 group-hover:scale-110 transition-transform`}>
                           <Icon className="h-5 w-5" />
                         </div>
                         <div className="space-y-0.5 flex-1 min-w-0">
-                          <p className={`text-xs lg:text-sm font-bold truncate ${isCurrent ? 'text-[#2E86FF]' : 'text-white'}`}>
+                          <p className={`text-xs lg:text-sm font-bold truncate ${isCurrent ? 'text-[#1E4FD8]' : 'text-[#0D1B3E]'}`}>
                             {tool.label}
                           </p>
-                          <p className="text-[11px] text-slate-400 line-clamp-1 leading-normal">
+                          <p className="text-[11px] text-[#6B7280] line-clamp-1 leading-normal">
                             {tool.desc}
                           </p>
                         </div>
@@ -223,10 +226,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           {student && onOpenWalletModal && (
             <button
               onClick={onOpenWalletModal}
-              className="flex items-center gap-2 rounded-2xl border border-[#FFB020]/40 bg-[#FFB020]/10 px-3.5 py-2.5 text-xs lg:text-sm font-bold text-[#FFB020] hover:bg-[#FFB020]/20 hover:border-[#FFB020]/60 transition-all shadow-md shadow-[#FFB020]/10"
+              className="flex items-center gap-2 rounded-2xl border border-[#F5B301]/50 bg-[#F5B301]/15 px-3.5 py-2.5 text-xs lg:text-sm font-bold text-[#0D1B3E] hover:bg-[#F5B301]/25 transition-all shadow-xs"
               title="رصيد المحفظة وشحن الحساب"
             >
-              <Wallet className="h-4 w-4 lg:h-5 lg:w-5 shrink-0 text-[#FFB020]" />
+              <Wallet className="h-4 w-4 lg:h-5 lg:w-5 shrink-0 text-[#F5B301]" />
               <span className="font-mono font-black text-sm lg:text-base">{student.walletBalance || 0}</span>
               <span className="text-[11px]">ج.م</span>
             </button>
@@ -235,16 +238,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Activation Key Button */}
           <button
             onClick={onOpenActivationModal}
-            className="hidden items-center gap-2 rounded-2xl bg-[#FFB020] px-4 py-2.5 text-xs lg:text-sm font-black text-[#0C1B33] shadow-lg shadow-[#FFB020]/20 transition-transform hover:scale-105 active:scale-95 hover:bg-[#e59e1c] sm:flex"
+            className="hidden items-center gap-2 rounded-2xl bg-[#F5B301] px-4 py-2.5 text-xs lg:text-sm font-bold text-[#0D1B3E] shadow-sm shadow-[#F5B301]/20 transition-transform hover:scale-105 active:scale-95 hover:bg-[#e0a401] sm:flex"
           >
-            <Key className="h-4 w-4" />
+            <Key className="h-4 w-4 text-[#0D1B3E]" />
             <span>تفعيل كود</span>
           </button>
 
           {/* Notifications Button */}
           <button
             onClick={onOpenNotificationModal}
-            className="relative rounded-2xl border border-[#1E375E] bg-[#122442] p-2.5 lg:p-3 text-slate-300 transition-all hover:border-[#2E86FF]/50 hover:bg-[#1B355E] hover:text-white shadow-sm"
+            className="relative rounded-2xl border border-slate-200 bg-white p-2.5 lg:p-3 text-[#0D1B3E] transition-all hover:border-[#1E4FD8] hover:bg-blue-50 shadow-xs"
             title="الإشعارات والتنبيهات"
           >
             <Bell className="h-5 w-5 lg:h-5 lg:w-5" />
@@ -259,9 +262,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           {isAdmin && (
             <button
               onClick={() => onNavigate('admin')}
-              className="flex items-center gap-2 rounded-2xl border border-[#2E86FF]/40 bg-[#2E86FF]/15 px-3.5 py-2.5 text-xs lg:text-sm font-bold text-[#2E86FF] hover:bg-[#2E86FF]/25 transition-colors shadow-sm"
+              className="flex items-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-3.5 py-2.5 text-xs lg:text-sm font-bold text-[#1E4FD8] hover:bg-blue-100 transition-colors shadow-xs"
             >
-              <Shield className="h-4 w-4 lg:h-5 lg:w-5 text-[#2E86FF]" />
+              <Shield className="h-4 w-4 lg:h-5 lg:w-5 text-[#1E4FD8]" />
               <span className="hidden sm:inline">لوحة الإدارة</span>
             </button>
           )}
@@ -271,9 +274,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="flex items-center gap-2">
               <button
                 onClick={() => onNavigate('dashboard')}
-                className="flex items-center gap-2.5 rounded-2xl border border-[#1E375E] bg-[#122442] px-3.5 py-2 text-right transition-all hover:border-[#2E86FF]/50 hover:bg-[#1B355E]"
+                className="flex items-center gap-2.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-right transition-all hover:border-[#1E4FD8] hover:bg-blue-50 shadow-xs"
               >
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#2E86FF]/20 text-xs font-black text-[#2E86FF] overflow-hidden border border-[#2E86FF]/30 shrink-0">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-xs font-black text-[#1E4FD8] overflow-hidden border border-blue-200 shrink-0">
                   {student.avatarUrl && !student.avatarUrl.startsWith('preset:') ? (
                     <img src={student.avatarUrl} alt={student.name} className="h-full w-full object-cover" />
                   ) : presetAvatar ? (
@@ -283,15 +286,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                   )}
                 </div>
                 <div className="hidden text-right lg:block">
-                  <p className="text-xs lg:text-sm font-bold text-white truncate max-w-[130px]">{student.name.split(' ')[0]}</p>
-                  <p className="text-[10px] text-[#2E86FF] font-semibold">{student.grade.includes('الثالث') ? '3 ثانوي' : student.grade.includes('الثاني') ? '2 ثانوي' : '1 ثانوي'}</p>
+                  <p className="text-xs lg:text-sm font-bold text-[#0D1B3E] truncate max-w-[130px]">{student.name.split(' ')[0]}</p>
+                  <p className="text-[10px] text-[#1E4FD8] font-semibold">{student.grade.includes('الثالث') ? '3 ثانوي' : student.grade.includes('الثاني') ? '2 ثانوي' : '1 ثانوي'}</p>
                 </div>
               </button>
 
               {onOpenEditProfileModal && (
                 <button
                   onClick={onOpenEditProfileModal}
-                  className="rounded-2xl border border-[#1E375E] bg-[#122442] p-2.5 text-slate-300 hover:bg-[#2E86FF]/20 hover:text-[#2E86FF] hover:border-[#2E86FF]/40 transition-colors hidden sm:block"
+                  className="rounded-2xl border border-slate-200 bg-white p-2.5 text-[#6B7280] hover:bg-blue-50 hover:text-[#1E4FD8] hover:border-blue-200 transition-colors hidden sm:block shadow-xs"
                   title="تعديل الملف الشخصي"
                 >
                   <Edit3 className="h-4 w-4" />
@@ -300,7 +303,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               <button
                 onClick={handleLogout}
-                className="rounded-2xl border border-[#1E375E] bg-[#122442] p-2.5 text-slate-400 hover:bg-rose-500/15 hover:text-rose-400 transition-colors"
+                className="rounded-2xl border border-slate-200 bg-white p-2.5 text-[#6B7280] hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-colors shadow-xs"
                 title="تسجيل الخروج"
               >
                 <LogOut className="h-4 w-4" />
@@ -310,9 +313,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="flex items-center gap-1.5 sm:gap-2">
               <button
                 onClick={onOpenAuthModal}
-                className="inline-flex items-center gap-2 whitespace-nowrap rounded-2xl border border-[#2E86FF]/40 bg-[#2E86FF]/15 px-4 py-2.5 text-xs lg:text-sm font-bold text-[#2E86FF] transition-all hover:bg-[#2E86FF] hover:text-white shadow-md shadow-[#2E86FF]/15"
+                className="inline-flex items-center gap-2 whitespace-nowrap rounded-2xl border-2 border-[#1E4FD8] bg-white px-4 py-2.5 text-xs lg:text-sm font-bold text-[#1E4FD8] transition-all hover:bg-blue-50 shadow-xs"
               >
-                <User className="h-4 w-4 shrink-0" />
+                <User className="h-4 w-4 shrink-0 text-[#1E4FD8]" />
                 <span className="hidden sm:inline">تسجيل الدخول / حساب جديد</span>
                 <span className="sm:hidden">دخول</span>
               </button>
@@ -322,7 +325,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Mobile Menu Trigger */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="rounded-2xl border border-[#1E375E] bg-[#122442] p-2.5 text-slate-400 hover:text-white md:hidden"
+            className="rounded-2xl border border-slate-200 bg-white p-2.5 text-[#0D1B3E] hover:bg-slate-100 md:hidden shadow-xs"
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -331,7 +334,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="border-b border-[#1E375E] bg-[#0C1B33] px-4 pt-3 pb-6 md:hidden">
+        <div className="border-b border-slate-200 bg-white px-4 pt-3 pb-6 md:hidden shadow-lg">
           <div className="space-y-1.5">
             {allMobileNavItems.map((item) => {
               const Icon = item.icon;
@@ -347,11 +350,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                   }}
                   className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition-all ${
                     isActive
-                      ? 'bg-[#2E86FF]/15 text-[#2E86FF] border border-[#2E86FF]/30'
-                      : 'text-slate-300 hover:bg-[#132747] hover:text-white'
+                      ? 'bg-blue-50 text-[#1E4FD8] border border-blue-200'
+                      : 'text-[#0D1B3E] hover:bg-slate-50'
                   }`}
                 >
-                  <Icon className={`h-4 w-4 ${isActive ? 'text-[#2E86FF]' : 'text-slate-400'}`} />
+                  <Icon className={`h-4 w-4 ${isActive ? 'text-[#1E4FD8]' : 'text-[#6B7280]'}`} />
                   <span>{item.label}</span>
                 </button>
               );
@@ -363,13 +366,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onOpenWalletModal();
                   setMobileMenuOpen(false);
                 }}
-                className="flex w-full items-center justify-between rounded-2xl bg-[#FFB020]/10 border border-[#FFB020]/30 px-4 py-3 text-sm font-bold text-[#FFB020] hover:bg-[#FFB020]/20"
+                className="flex w-full items-center justify-between rounded-2xl bg-[#F5B301]/15 border border-[#F5B301]/40 px-4 py-3 text-sm font-bold text-[#0D1B3E] hover:bg-[#F5B301]/25"
               >
                 <div className="flex items-center gap-3">
-                  <Wallet className="h-5 w-5 text-[#FFB020]" />
+                  <Wallet className="h-5 w-5 text-[#F5B301]" />
                   <span>محفظة الطالب والشحن</span>
                 </div>
-                <span className="font-mono bg-[#FFB020]/20 px-2.5 py-0.5 rounded-full text-xs">
+                <span className="font-mono bg-[#F5B301]/25 px-2.5 py-0.5 rounded-full text-xs font-black">
                   {student.walletBalance || 0} ج.م
                 </span>
               </button>
@@ -380,9 +383,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onOpenActivationModal();
                 setMobileMenuOpen(false);
               }}
-              className="flex w-full items-center gap-3 rounded-2xl bg-[#FFB020] px-4 py-3 text-sm font-bold text-[#0C1B33] hover:bg-[#e59e1c]"
+              className="flex w-full items-center gap-3 rounded-2xl bg-[#F5B301] px-4 py-3 text-sm font-bold text-[#0D1B3E] hover:bg-[#e0a401] shadow-xs"
             >
-              <Key className="h-5 w-5 text-[#0C1B33]" />
+              <Key className="h-5 w-5 text-[#0D1B3E]" />
               <span>تفعيل كود كورس أو مذكرة</span>
             </button>
 
@@ -392,9 +395,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onNavigate('admin');
                   setMobileMenuOpen(false);
                 }}
-                className="flex w-full items-center gap-3 rounded-2xl bg-[#2E86FF]/15 border border-[#2E86FF]/30 px-4 py-3 text-sm font-bold text-[#2E86FF] hover:bg-[#2E86FF]/25"
+                className="flex w-full items-center gap-3 rounded-2xl bg-blue-50 border border-blue-200 px-4 py-3 text-sm font-bold text-[#1E4FD8] hover:bg-blue-100"
               >
-                <Shield className="h-5 w-5 text-[#2E86FF]" />
+                <Shield className="h-5 w-5 text-[#1E4FD8]" />
                 <span>لوحة تحكم الإدارة</span>
               </button>
             )}

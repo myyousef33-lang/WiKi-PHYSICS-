@@ -537,9 +537,9 @@ export const AdminWalletTab: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full rounded-xl bg-amber-500 hover:bg-amber-400 py-3 text-xs font-black text-slate-950 transition-all shadow-md shadow-amber-500/20"
+              className="w-full rounded-xl bg-[#F5B301] hover:bg-[#e0a401] py-3 text-xs font-black text-[#0D1B3E] transition-all shadow-xs"
             >
-              تأكيد الشحن الفوري 🚀
+              تأكيد الشحن الفوري
             </button>
           </form>
         </div>

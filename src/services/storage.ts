@@ -1446,13 +1446,13 @@ export const StorageService = {
       
       const badges: StudentBadge[] = [];
       if (passedCount >= 1) {
-        badges.push({ id: 'b-first', title: 'بداية بطل', description: 'اجتياز أول اختبار بنجاح', icon: '🏆', earnedAt: std.registeredAt, category: 'exams' });
+        badges.push({ id: 'b-first', title: 'بداية بطل', description: 'اجتياز أول اختبار بنجاح', icon: 'trophy', earnedAt: std.registeredAt, category: 'exams' });
       }
       if (passedCount >= 5) {
-        badges.push({ id: 'b-five', title: 'فيزيائي متميز', description: 'اجتياز 5 اختبارات بنجاح', icon: '⚡', earnedAt: new Date().toISOString(), category: 'exams' });
+        badges.push({ id: 'b-five', title: 'فيزيائي متميز', description: 'اجتياز 5 اختبارات بنجاح', icon: 'zap', earnedAt: new Date().toISOString(), category: 'exams' });
       }
       if (totalScore >= 100) {
-        badges.push({ id: 'b-century', title: 'نادي المئة', description: 'جمع أكثر من 100 نقطة', icon: '🌟', earnedAt: new Date().toISOString(), category: 'points' });
+        badges.push({ id: 'b-century', title: 'نادي المئة', description: 'جمع أكثر من 100 نقطة', icon: 'star', earnedAt: new Date().toISOString(), category: 'points' });
       }
 
       return {
@@ -1535,7 +1535,7 @@ export const StorageService = {
         id: 'badge-' + Date.now(),
         title: badgeTitle,
         description: `تمت إضافتها بواسطة المعلم (+${points} نقطة)`,
-        icon: '🎖️',
+        icon: 'medal',
         earnedAt: new Date().toISOString(),
         category: 'points'
       });
@@ -1552,7 +1552,7 @@ export const StorageService = {
           id: 'badge-' + Date.now(),
           title: badgeTitle,
           description: `تمت إضافتها بواسطة المعلم (+${points} نقطة)`,
-          icon: '🎖️',
+          icon: 'medal',
           earnedAt: new Date().toISOString(),
           category: 'points'
         }],
@@ -1757,7 +1757,7 @@ export const StorageService = {
       }
 
       this.sendNotification({
-        title: 'تم تأكيد شحن الرصيد بنجاح! 💰',
+        title: 'تم تأكيد شحن الرصيد بنجاح!',
         message: `تمت الموافقة على طلبك وإضافة مبلغ ${tx.amount} ج.م إلى رصيد محفظتك. يمكنك الآن الاشتراك في أي كورس أو مذكرة مباشرة.`,
         target: 'student',
         targetStudentId: student.id
@@ -1792,7 +1792,7 @@ export const StorageService = {
     setStored(STORAGE_KEYS.WALLET_TRANSACTIONS, transactions);
 
     this.sendNotification({
-      title: 'تنبيه بخصوص طلب شحن الرصيد ⚠️',
+      title: 'تنبيه بخصوص طلب شحن الرصيد',
       message: `تم رفض طلب الشحن المقدم بمبلغ ${tx.amount} ج.م. سبب الرفض: ${tx.adminNotes}`,
       target: 'student',
       targetStudentId: tx.studentId
@@ -1873,7 +1873,7 @@ export const StorageService = {
     setStored(STORAGE_KEYS.WALLET_TRANSACTIONS, transactions);
 
     this.sendNotification({
-      title: 'تم الاشتراك بنجاح في الكورس! 🎓',
+      title: 'تم الاشتراك بنجاح في الكورس!',
       message: `تم خصم ${cost} ج.م من رصيد محفظتك وتفعيل كورس "${course.title}". نتمنى لك مشاهدة مفيدة وممتعة!`,
       target: 'student',
       targetStudentId: student.id

@@ -55,7 +55,7 @@ export const AIPhysicsAssistant: React.FC<AIPhysicsAssistantProps> = ({
       const initialWelcome: AIChatMessage = {
         id: 'msg-welcome-' + Date.now(),
         role: 'assistant',
-        text: `أهلاً بك يا ${studentName}! 👋 أنا مساعدك الذكي في مادة الفيزياء للثانوية العامة ⚛️.\n\nيمكنك أن تسألني عن أي مسألة، قانون، استنتاج، أو ترفع صورة لمسألة صعبة وسأقوم بحلها وشرح خطواتها لك خطوة بخطوة. ${lessonTitle ? `\n(أنا جاهز لمساعدتك في درس: "${lessonTitle}")` : ''}`,
+        text: `أهلاً بك يا ${studentName}! أنا مساعدك الذكي في مادة الفيزياء للثانوية العامة.\n\nيمكنك أن تسألني عن أي مسألة، قانون، استنتاج، أو ترفع صورة لمسألة صعبة وسأقوم بحلها وشرح خطواتها لك خطوة بخطوة. ${lessonTitle ? `\n(أنا جاهز لمساعدتك في درس: "${lessonTitle}")` : ''}`,
         timestamp: new Date().toISOString()
       };
       setMessages([initialWelcome]);
@@ -167,7 +167,7 @@ export const AIPhysicsAssistant: React.FC<AIPhysicsAssistantProps> = ({
         {
           id: 'msg-welcome-' + Date.now(),
           role: 'assistant',
-          text: `تم مسح السجل. أهلاً بك يا ${studentName}! اسألني أي سؤال في الفيزياء وسأشرحه لك فوراً ⚛️`,
+          text: `تم مسح السجل. أهلاً بك يا ${studentName}! اسألني أي سؤال في الفيزياء وسأشرحه لك فوراً.`,
           timestamp: new Date().toISOString()
         }
       ]);
@@ -182,28 +182,28 @@ export const AIPhysicsAssistant: React.FC<AIPhysicsAssistantProps> = ({
   ];
 
   return (
-    <div className={`flex flex-col bg-slate-900 border border-purple-500/30 rounded-3xl shadow-2xl overflow-hidden transition-all duration-300 ${
+    <div className={`flex flex-col bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden transition-all duration-300 ${
       isFloating 
         ? isExpanded 
-          ? 'fixed inset-4 sm:inset-10 z-50' 
-          : 'fixed bottom-6 left-6 z-50 w-[92vw] sm:w-[420px] h-[580px]'
+          ? 'fixed inset-4 sm:inset-10 z-50 shadow-2xl' 
+          : 'fixed bottom-6 left-6 z-50 w-[92vw] sm:w-[420px] h-[580px] shadow-xl'
         : 'w-full h-[650px]'
     }`}>
       
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-purple-950 via-slate-900 to-slate-900 border-b border-purple-500/20">
+      <div className="flex items-center justify-between px-5 py-4 bg-white border-b border-slate-200">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-purple-500/20 border border-purple-500/40 text-purple-300 shadow-md shadow-purple-500/20">
-            <Sparkles className="h-5 w-5 animate-pulse text-purple-400" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-purple-50 border border-purple-200 text-purple-600 shadow-xs">
+            <Sparkles className="h-5 w-5 text-purple-600" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-black text-white">المساعد الفيزيائي الذكي</h3>
-              <span className="rounded-full bg-purple-500/20 border border-purple-500/30 px-2 py-0.5 text-[10px] font-bold text-purple-300">
+              <h3 className="text-sm font-black text-[#0D1B3E]">المساعد الفيزيائي الذكي</h3>
+              <span className="rounded-full bg-purple-50 border border-purple-200 px-2 py-0.5 text-[10px] font-bold text-purple-700">
                 Gemini AI
               </span>
             </div>
-            <p className="text-[11px] text-slate-400">حل المسائل وشرح القوانين على مدار 24 ساعة</p>
+            <p className="text-[11px] text-[#6B7280]">حل المسائل وشرح القوانين على مدار 24 ساعة</p>
           </div>
         </div>
 
@@ -211,7 +211,7 @@ export const AIPhysicsAssistant: React.FC<AIPhysicsAssistantProps> = ({
           <button
             onClick={handleClearChat}
             title="مسح المحادثة"
-            className="rounded-xl p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
+            className="rounded-xl p-2 text-[#6B7280] hover:text-rose-600 hover:bg-slate-100 transition-colors"
           >
             <Trash2 className="h-4 w-4" />
           </button>
@@ -220,7 +220,7 @@ export const AIPhysicsAssistant: React.FC<AIPhysicsAssistantProps> = ({
             <button
               onClick={() => setIsExpanded(!isExpanded)}
               title={isExpanded ? 'تصغير' : 'تكبير'}
-              className="rounded-xl p-2 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="rounded-xl p-2 text-[#6B7280] hover:text-[#0D1B3E] hover:bg-slate-100 transition-colors"
             >
               {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </button>
@@ -230,7 +230,7 @@ export const AIPhysicsAssistant: React.FC<AIPhysicsAssistantProps> = ({
             <button
               onClick={onClose}
               title="إغلاق"
-              className="rounded-xl p-2 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="rounded-xl p-2 text-[#6B7280] hover:text-[#0D1B3E] hover:bg-slate-100 transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
@@ -239,7 +239,7 @@ export const AIPhysicsAssistant: React.FC<AIPhysicsAssistantProps> = ({
       </div>
 
       {/* Messages List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-950/70">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#F5F7FA]">
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -247,8 +247,8 @@ export const AIPhysicsAssistant: React.FC<AIPhysicsAssistantProps> = ({
           >
             <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-xs font-bold ${
               msg.role === 'user'
-                ? 'bg-amber-500 text-slate-950'
-                : 'bg-purple-600/30 border border-purple-500/40 text-purple-300'
+                ? 'bg-[#F5B301] text-[#0D1B3E]'
+                : 'bg-purple-100 border border-purple-200 text-purple-700'
             }`}>
               {msg.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
             </div>
@@ -256,23 +256,23 @@ export const AIPhysicsAssistant: React.FC<AIPhysicsAssistantProps> = ({
             <div className={`max-w-[82%] space-y-2 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
               <div className={`rounded-2xl p-4 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap ${
                 msg.role === 'user'
-                  ? 'bg-amber-500 text-slate-950 font-medium rounded-tr-none'
-                  : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-tl-none shadow-md'
+                  ? 'bg-[#F5B301] text-[#0D1B3E] font-medium rounded-tr-none shadow-xs'
+                  : 'bg-white border border-slate-200 text-[#0D1B3E] rounded-tl-none shadow-xs'
               }`}>
                 {msg.text}
                 
                 {msg.imageUrl && (
-                  <div className="mt-2.5 rounded-xl overflow-hidden border border-amber-600/40 max-w-xs">
+                  <div className="mt-2.5 rounded-xl overflow-hidden border border-slate-200 max-w-xs bg-white p-1">
                     <img 
                       src={msg.imageUrl} 
                       alt="Uploaded question" 
-                      className="w-full h-auto object-cover max-h-48"
+                      className="w-full h-auto object-cover max-h-48 rounded-lg"
                       referrerPolicy="no-referrer"
                     />
                   </div>
                 )}
               </div>
-              <span className="text-[10px] text-slate-500 block px-1">
+              <span className="text-[10px] text-[#6B7280] block px-1">
                 {new Date(msg.timestamp).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
@@ -280,8 +280,8 @@ export const AIPhysicsAssistant: React.FC<AIPhysicsAssistantProps> = ({
         ))}
 
         {isLoading && (
-          <div className="flex gap-3 items-center text-xs text-purple-300 bg-purple-950/30 border border-purple-500/20 rounded-2xl p-3.5 w-fit">
-            <RefreshCw className="h-4 w-4 animate-spin text-purple-400" />
+          <div className="flex gap-3 items-center text-xs text-purple-800 bg-purple-50 border border-purple-200 rounded-2xl p-3.5 w-fit">
+            <RefreshCw className="h-4 w-4 animate-spin text-purple-600" />
             <span>المساعد الفيزيائي يحلل المسألة ويكتب الإجابة النموذجية...</span>
           </div>
         )}
@@ -291,12 +291,12 @@ export const AIPhysicsAssistant: React.FC<AIPhysicsAssistantProps> = ({
 
       {/* Quick Prompts Bar */}
       {messages.length <= 2 && (
-        <div className="px-4 py-2 bg-slate-900/90 border-t border-slate-800 flex gap-2 overflow-x-auto no-scrollbar">
+        <div className="px-4 py-2 bg-white border-t border-slate-200 flex gap-2 overflow-x-auto no-scrollbar">
           {quickPrompts.map((qp, idx) => (
             <button
               key={idx}
               onClick={() => handleSendMessage(qp)}
-              className="shrink-0 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-[11px] font-bold text-purple-300 hover:bg-purple-500/20 transition-colors"
+              className="shrink-0 rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-[11px] font-bold text-purple-700 hover:bg-purple-100 transition-colors"
             >
               {qp}
             </button>
@@ -306,14 +306,14 @@ export const AIPhysicsAssistant: React.FC<AIPhysicsAssistantProps> = ({
 
       {/* Selected Image Preview */}
       {selectedImage && (
-        <div className="px-4 py-2 bg-slate-900 border-t border-slate-800 flex items-center justify-between">
+        <div className="px-4 py-2 bg-white border-t border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src={selectedImage} alt="Selected" className="h-10 w-10 object-cover rounded-lg border border-purple-500" />
-            <span className="text-xs text-purple-300 font-bold">تم إرفاق صورة المسألة</span>
+            <img src={selectedImage} alt="Selected" className="h-10 w-10 object-cover rounded-lg border border-purple-300" />
+            <span className="text-xs text-purple-700 font-bold">تم إرفاق صورة المسألة</span>
           </div>
           <button
             onClick={() => setSelectedImage(null)}
-            className="p-1 text-slate-400 hover:text-rose-400"
+            className="p-1 text-[#6B7280] hover:text-rose-600"
           >
             <X className="h-4 w-4" />
           </button>
@@ -326,7 +326,7 @@ export const AIPhysicsAssistant: React.FC<AIPhysicsAssistantProps> = ({
           e.preventDefault();
           handleSendMessage();
         }}
-        className="p-3 bg-slate-900 border-t border-slate-800 flex items-center gap-2"
+        className="p-3 bg-white border-t border-slate-200 flex items-center gap-2"
       >
         <input
           type="file"
@@ -340,7 +340,7 @@ export const AIPhysicsAssistant: React.FC<AIPhysicsAssistantProps> = ({
           type="button"
           onClick={() => fileInputRef.current?.click()}
           title="رفع صورة لمسألة من كتاب أو امتحان"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-700 bg-slate-800 text-slate-300 hover:text-purple-400 hover:border-purple-500/50 transition-all"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-[#F5F7FA] text-[#6B7280] hover:text-purple-600 hover:border-purple-300 transition-all"
         >
           <ImageIcon className="h-5 w-5" />
         </button>
@@ -350,13 +350,13 @@ export const AIPhysicsAssistant: React.FC<AIPhysicsAssistantProps> = ({
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           placeholder="اكتب سؤالك الفيزيائي أو ارفع صورة للمسألة..."
-          className="flex-1 rounded-2xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-xs sm:text-sm text-white placeholder:text-slate-500 focus:border-purple-500 focus:outline-none transition-all"
+          className="flex-1 rounded-2xl border border-slate-200 bg-[#F5F7FA] px-4 py-2.5 text-xs sm:text-sm text-[#0D1B3E] placeholder:text-[#9CA3AF] focus:border-purple-500 focus:bg-white focus:outline-none transition-all"
         />
 
         <button
           type="submit"
           disabled={(!inputText.trim() && !selectedImage) || isLoading}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-purple-600 text-white hover:bg-purple-500 disabled:opacity-40 transition-all shadow-md shadow-purple-600/30"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40 transition-all shadow-xs"
         >
           <Send className="h-5 w-5 -rotate-90" />
         </button>

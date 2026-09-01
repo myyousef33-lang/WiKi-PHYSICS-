@@ -68,7 +68,7 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
   useEffect(() => {
     const triggerCaptureBlock = () => {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText("🔒 محتوى منصة ويكيفزياء محمي ضد الالتقاط والتسجيل").catch(() => {});
+        navigator.clipboard.writeText("محتوى منصة ويكيفزياء محمي ضد الالتقاط والتسجيل").catch(() => {});
       }
       setIsCaptureBlocked(true);
       setTimeout(() => {
@@ -181,11 +181,11 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
 
   if (!course || !currentLesson) {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-20 text-center text-white">
+      <div className="mx-auto max-w-2xl px-4 py-20 text-center text-[#0D1B3E]">
         <h2 className="text-xl font-bold">لم يتم العثور على الدرس</h2>
         <button
           onClick={() => onNavigate('my-courses')}
-          className="mt-4 rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950"
+          className="mt-4 rounded-xl bg-[#F5B301] px-4 py-2 text-xs font-bold text-[#0D1B3E] hover:bg-[#e0a401]"
         >
           العودة لكورساتي
         </button>
@@ -301,24 +301,24 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
     >
       
       {/* Navigation Breadcrumbs */}
-      <div className="flex items-center justify-between gap-4 border-b border-slate-800 pb-4 text-xs">
-        <div className="flex items-center gap-2 text-slate-400 truncate">
+      <div className="flex items-center justify-between gap-4 border-b border-slate-200 pb-4 text-xs">
+        <div className="flex items-center gap-2 text-[#6B7280] truncate">
           <button 
             onClick={() => onNavigate('course-details', { courseId: course.id })}
-            className="flex items-center gap-1 hover:text-amber-400 font-bold"
+            className="flex items-center gap-1 hover:text-[#1E4FD8] font-bold transition-colors"
           >
             <ArrowRight className="h-4 w-4" />
             <span>{course.title}</span>
           </button>
           <span>/</span>
-          <span className="text-white font-bold truncate">{currentLesson.title}</span>
+          <span className="text-[#0D1B3E] font-bold truncate">{currentLesson.title}</span>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsTheaterMode(!isTheaterMode)}
-            className={`hidden sm:flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors ${
-              isTheaterMode ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' : 'border-slate-800 bg-slate-900 text-slate-300 hover:text-white'
+            className={`hidden sm:flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold transition-colors ${
+              isTheaterMode ? 'bg-blue-50 text-[#1E4FD8] border-blue-200' : 'border-slate-200 bg-white text-[#4B5563] hover:text-[#0D1B3E]'
             }`}
           >
             <Tv className="h-3.5 w-3.5" />
@@ -327,7 +327,7 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
 
           <button
             onClick={() => onNavigate('course-details', { courseId: course.id })}
-            className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-1.5 text-slate-300 hover:text-white shrink-0"
+            className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[#4B5563] hover:text-[#0D1B3E] shrink-0 font-bold"
           >
             فهرس المنهج
           </button>
@@ -343,7 +343,7 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
           <div 
             ref={videoContainerRef}
             onContextMenu={(e) => e.preventDefault()}
-            className={`relative aspect-video w-full rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 shadow-2xl group flex items-center justify-center select-none ${
+            className={`relative aspect-video w-full rounded-2xl overflow-hidden border border-slate-200 bg-black shadow-md group flex items-center justify-center select-none ${
               isCaptureBlocked ? 'filter blur-2xl transition-all duration-300' : ''
             }`}
             style={{
@@ -375,7 +375,7 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
             )}
 
             {/* Quality Badge */}
-            <div className="absolute top-3 left-3 pointer-events-none rounded-lg bg-slate-950/85 backdrop-blur-md border border-slate-700/60 px-2.5 py-1 text-[11px] font-black text-amber-400 flex items-center gap-1.5 shadow-lg z-10">
+            <div className="absolute top-3 left-3 pointer-events-none rounded-lg bg-slate-950/85 backdrop-blur-md border border-slate-700/60 px-2.5 py-1 text-[11px] font-black text-[#F5B301] flex items-center gap-1.5 shadow-lg z-10">
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>Full HD 1080p</span>
             </div>
@@ -392,10 +392,10 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
             {/* Screen Capture Attempt Blocked Overlay */}
             {isCaptureBlocked && (
               <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/95 p-6 text-center animate-fadeIn font-sans">
-                <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-rose-500/20 border border-rose-500/40 text-rose-400 mb-4 animate-bounce">
+                <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-red-500/20 border border-red-500/40 text-red-400 mb-4 animate-bounce">
                   <ShieldAlert className="h-8 w-8" />
                 </div>
-                <h3 className="text-lg font-black text-white">🛑 تصوير الشاشة غير مسموح به!</h3>
+                <h3 className="text-lg font-black text-white">تصوير الشاشة غير مسموح به!</h3>
                 <p className="text-xs text-slate-300 max-w-md mt-2 leading-relaxed">
                   محتوى المنصة محمي ضد الالتقاط والتصوير لحفظ حقوق النشر والتأليف.
                 </p>
@@ -404,12 +404,12 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
           </div>
 
           {/* Video Playback & Quality Controls Bar */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 text-xs shadow-xs">
             
             {/* Speed & Seek Controls */}
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-slate-400 font-bold flex items-center gap-1">
-                <Gauge className="h-3.5 w-3.5 text-amber-400" />
+              <span className="text-[#4B5563] font-bold flex items-center gap-1">
+                <Gauge className="h-3.5 w-3.5 text-[#1E4FD8]" />
                 <span>السرعة:</span>
               </span>
               {[1, 1.25, 1.5, 1.75, 2].map((spd) => (
@@ -418,8 +418,8 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
                   onClick={() => handleSpeedChange(spd)}
                   className={`rounded-lg px-2.5 py-1 font-mono font-bold transition-all ${
                     playbackSpeed === spd
-                      ? 'bg-amber-500 text-slate-950 shadow-sm'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
+                      ? 'bg-[#1E4FD8] text-white shadow-xs'
+                      : 'bg-slate-100 text-[#4B5563] hover:bg-slate-200 hover:text-[#0D1B3E]'
                   }`}
                 >
                   {spd}x
@@ -427,17 +427,17 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
               ))}
 
               {isDirectVideo(currentLesson.videoUrl, currentLesson.videoType) && (
-                <div className="flex items-center gap-1 mr-2 border-r border-slate-700 pr-2">
+                <div className="flex items-center gap-1 mr-2 border-r border-slate-200 pr-2">
                   <button
                     onClick={() => handleSkipTime(-10)}
-                    className="rounded-lg bg-slate-800 p-1.5 text-slate-300 hover:text-white hover:bg-slate-700"
+                    className="rounded-lg bg-slate-100 p-1.5 text-[#4B5563] hover:text-[#0D1B3E] hover:bg-slate-200"
                     title="إرجاع 10 ثواني"
                   >
                     <RotateCcw className="h-3.5 w-3.5" />
                   </button>
                   <button
                     onClick={() => handleSkipTime(10)}
-                    className="rounded-lg bg-slate-800 p-1.5 text-slate-300 hover:text-white hover:bg-slate-700"
+                    className="rounded-lg bg-slate-100 p-1.5 text-[#4B5563] hover:text-[#0D1B3E] hover:bg-slate-200"
                     title="تقديم 10 ثواني"
                   >
                     <RotateCw className="h-3.5 w-3.5" />
@@ -448,15 +448,15 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
 
             {/* Quality and Fullscreen Button */}
             <div className="flex items-center gap-2">
-              <span className="text-slate-400 font-bold">الجودة:</span>
+              <span className="text-[#4B5563] font-bold">الجودة:</span>
               {(['1080p', '720p', '480p'] as const).map((q) => (
                 <button
                   key={q}
                   onClick={() => setVideoQuality(q)}
                   className={`rounded-lg px-2.5 py-1 font-bold transition-all ${
                     videoQuality === q
-                      ? 'bg-emerald-500 text-slate-950 font-black shadow-sm'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      ? 'bg-emerald-600 text-white font-black shadow-xs'
+                      : 'bg-slate-100 text-[#4B5563] hover:bg-slate-200'
                   }`}
                 >
                   {q}
@@ -466,7 +466,7 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
               {/* Dedicated Fullscreen Toggle Button */}
               <button
                 onClick={handleToggleFullscreen}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 px-3 py-1 font-black transition-all shadow-sm shadow-amber-500/20"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#F5B301] hover:bg-[#e0a401] text-[#0D1B3E] px-3 py-1 font-black transition-all shadow-xs"
                 title="تكبير الشاشة بالكامل"
               >
                 {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
@@ -477,7 +477,7 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
           </div>
 
           {/* Action Bar (Complete Lesson, AI Assistant & Previous / Next Buttons) */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
             
             <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
               {/* Mark as Complete Toggle */}
@@ -485,12 +485,12 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
                 onClick={handleToggleComplete}
                 className={`inline-flex items-center justify-center gap-2.5 rounded-xl px-4 py-2.5 text-xs font-bold transition-all ${
                   isCompleted
-                    ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                    : 'border border-slate-700 bg-slate-800 text-slate-200 hover:border-amber-500 hover:text-white'
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs'
+                    : 'border border-slate-200 bg-[#F5F7FA] text-[#0D1B3E] hover:border-[#1E4FD8]'
                 }`}
               >
-                <CheckCircle2 className={`h-4 w-4 ${isCompleted ? 'fill-slate-950 text-emerald-500' : 'text-amber-400'}`} />
-                <span>{isCompleted ? '✓ تم إكمال الدرس' : 'تحديد الدرس كـ (مكتمل)'}</span>
+                <CheckCircle2 className={`h-4 w-4 ${isCompleted ? 'text-emerald-600' : 'text-[#1E4FD8]'}`} />
+                <span>{isCompleted ? 'تم إكمال الدرس' : 'تحديد الدرس كـ (مكتمل)'}</span>
               </button>
 
               {/* Ask AI Assistant About This Lesson */}
@@ -498,12 +498,12 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
                 onClick={() => setShowAIAssistant(!showAIAssistant)}
                 className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-bold transition-all ${
                   showAIAssistant
-                    ? 'border-purple-500 bg-purple-500 text-white shadow-md shadow-purple-500/30'
-                    : 'border-purple-500/40 bg-purple-500/15 text-purple-300 hover:bg-purple-500/25'
+                    ? 'border-[#1E4FD8] bg-[#1E4FD8] text-white shadow-xs'
+                    : 'border-blue-200 bg-blue-50 text-[#1E4FD8] hover:bg-blue-100'
                 }`}
               >
-                <Bot className="h-4 w-4 text-purple-300" />
-                <span>المساعد الذكي للدرس ⚛️</span>
+                <Bot className="h-4 w-4" />
+                <span>المساعد الذكي للدرس</span>
               </button>
             </div>
 
@@ -512,8 +512,8 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
               <button
                 disabled={!prevLesson}
                 onClick={() => prevLesson && onNavigate('lesson-player', { courseId: course.id, lessonId: prevLesson.id })}
-                className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-700 px-4 py-2.5 text-xs font-bold transition-colors ${
-                  prevLesson ? 'bg-slate-800 text-white hover:bg-slate-700' : 'bg-slate-900/40 text-slate-400 border-slate-850 cursor-not-allowed'
+                className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-bold transition-colors ${
+                  prevLesson ? 'bg-white text-[#0D1B3E] hover:bg-slate-50' : 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed'
                 }`}
               >
                 <ChevronRight className="h-4 w-4" />
@@ -525,8 +525,8 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
                 onClick={() => nextLesson && onNavigate('lesson-player', { courseId: course.id, lessonId: nextLesson.id })}
                 className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 rounded-xl border px-4 py-2.5 text-xs font-bold transition-colors ${
                   nextLesson 
-                    ? 'border-amber-500/40 bg-amber-500/15 text-amber-400 hover:bg-amber-500 hover:text-slate-950' 
-                    : 'border-slate-850 bg-slate-900/40 text-slate-400 cursor-not-allowed'
+                    ? 'border-blue-200 bg-blue-50 text-[#1E4FD8] hover:bg-[#1E4FD8] hover:text-white' 
+                    : 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed'
                 }`}
               >
                 <span>الدرس التالي</span>
@@ -537,43 +537,46 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
           </div>
 
           {/* Lesson Info & Description */}
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 space-y-4 shadow-xs">
             <div className="space-y-1.5">
-              <span className="text-xs text-amber-400 font-bold">{course.instructorName} • {course.grade}</span>
-              <h1 className="text-xl sm:text-2xl font-black text-white">{currentLesson.title}</h1>
+              <span className="text-xs text-[#1E4FD8] font-bold">{course.instructorName} • {course.grade}</span>
+              <h1 className="text-xl sm:text-2xl font-black text-[#0D1B3E]">{currentLesson.title}</h1>
             </div>
 
             {currentLesson.description && (
-              <p className="text-sm text-slate-300 leading-relaxed pt-2 border-t border-slate-800">
+              <p className="text-sm text-[#4B5563] leading-relaxed pt-2 border-t border-slate-100">
                 {currentLesson.description}
               </p>
             )}
 
             {currentLesson.homeworkNotes && (
-              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-1">
-                <span className="text-xs font-bold text-amber-400">📌 تنبيهات وملاحظات الواجب:</span>
-                <p className="text-xs text-slate-300 leading-relaxed">{currentLesson.homeworkNotes}</p>
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-1">
+                <span className="text-xs font-bold text-[#0D1B3E] flex items-center gap-1.5">
+                  <FileText className="h-3.5 w-3.5 text-[#F5B301]" />
+                  تنبيهات وملاحظات الواجب:
+                </span>
+                <p className="text-xs text-[#4B5563] leading-relaxed">{currentLesson.homeworkNotes}</p>
               </div>
             )}
           </div>
 
           {/* Attachments & PDF Materials */}
           {currentLesson.pdfUrl && (
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
               <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-amber-500/10 p-2.5 text-amber-400">
-                  <FileText className="h-6 w-6" />
+                <div className="rounded-xl bg-amber-50 p-2.5 text-[#F5B301]">
+                  <FileText className="h-6 w-6 text-[#0D1B3E]" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm text-white">{currentLesson.pdfTitle || 'مذكرة شرح وتمارين الدرس.pdf'}</h4>
-                  <p className="text-xs text-slate-400">ملف PDF مرفق متضمن الملاحظات والمسائل المحلولة</p>
+                  <h4 className="font-bold text-sm text-[#0D1B3E]">{currentLesson.pdfTitle || 'مذكرة شرح وتمارين الدرس.pdf'}</h4>
+                  <p className="text-xs text-[#6B7280]">ملف PDF مرفق متضمن الملاحظات والمسائل المحلولة</p>
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={() => setShowPdfModal(true)}
-                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2.5 text-xs font-bold text-slate-950 hover:brightness-110 shadow-md shadow-amber-500/20 transition-all self-end sm:self-auto"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#F5B301] px-4 py-2.5 text-xs font-bold text-[#0D1B3E] hover:bg-[#e0a401] shadow-xs transition-all self-end sm:self-auto"
               >
                 <FileText className="h-4 w-4" />
                 <span>معاينة وقراءة المذكرة</span>
@@ -583,15 +586,15 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
 
           {/* Lesson Quiz Card if present */}
           {lessonQuiz && (
-            <div className="rounded-3xl border border-purple-500/30 bg-gradient-to-r from-slate-900 to-purple-950/30 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg">
+            <div className="rounded-3xl border border-blue-200 bg-blue-50/50 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
               <div className="flex items-center gap-4">
-                <div className="rounded-2xl bg-purple-500/20 p-3 text-purple-400">
+                <div className="rounded-2xl bg-blue-100 p-3 text-[#1E4FD8]">
                   <HelpCircle className="h-7 w-7" />
                 </div>
                 <div className="space-y-1">
-                  <span className="text-[11px] font-bold text-purple-400 uppercase tracking-wider">كويز تقييم الفهم</span>
-                  <h3 className="font-bold text-base text-white">{lessonQuiz.title}</h3>
-                  <p className="text-xs text-slate-300">
+                  <span className="text-[11px] font-bold text-[#1E4FD8] uppercase tracking-wider">كويز تقييم الفهم</span>
+                  <h3 className="font-bold text-base text-[#0D1B3E]">{lessonQuiz.title}</h3>
+                  <p className="text-xs text-[#4B5563]">
                     المدة: {lessonQuiz.durationMinutes} دقيقة • {lessonQuiz.questions?.length || 0} أسئلة اختيار من متعدد
                   </p>
                 </div>
@@ -599,7 +602,7 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
 
               <button
                 onClick={() => onNavigate('exam-runner', { examId: lessonQuiz.id, courseId: course.id, lessonId: currentLesson.id })}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-purple-600 px-6 py-3 text-xs font-bold text-white shadow-md shadow-purple-500/20 hover:bg-purple-500 transition-colors"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#1E4FD8] px-6 py-3 text-xs font-bold text-white shadow-xs hover:bg-blue-700 transition-colors"
               >
                 <PlayCircle className="h-4 w-4" />
                 <span>بدء الكويز الآن</span>
@@ -611,19 +614,19 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
 
         {/* Sidebar: Course Curriculum Playlist */}
         <div className="space-y-4">
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5 space-y-4 sticky top-24">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 space-y-4 sticky top-24 shadow-xs">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <ListOrdered className="h-5 w-5 text-amber-400" />
-                <h3 className="font-bold text-white text-sm">دروس الكورس</h3>
+                <ListOrdered className="h-5 w-5 text-[#1E4FD8]" />
+                <h3 className="font-bold text-[#0D1B3E] text-sm">دروس الكورس</h3>
               </div>
-              <span className="text-xs text-slate-400 font-bold">{allLessons.length} درس</span>
+              <span className="text-xs text-[#6B7280] font-bold">{allLessons.length} درس</span>
             </div>
 
             <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
               {course.units?.map((unit, uIdx) => (
                 <div key={unit.id} className="space-y-1.5">
-                  <p className="text-[11px] font-bold text-amber-400/90 px-2 py-1 bg-slate-950/60 rounded-lg">
+                  <p className="text-[11px] font-bold text-[#1E4FD8] px-2 py-1 bg-blue-50 rounded-lg">
                     {unit.title}
                   </p>
                   
@@ -638,24 +641,24 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
                           onClick={() => onNavigate('lesson-player', { courseId: course.id, lessonId: l.id })}
                           className={`w-full text-right flex items-start gap-2.5 p-2.5 rounded-xl text-xs transition-all ${
                             isCurrent
-                              ? 'bg-amber-500/20 border border-amber-500/40 text-amber-400 font-bold'
-                              : 'text-slate-300 hover:bg-slate-800/60'
+                              ? 'bg-blue-50 border border-blue-200 text-[#1E4FD8] font-bold'
+                              : 'text-[#4B5563] hover:bg-[#F5F7FA] hover:text-[#0D1B3E]'
                           }`}
                         >
                           <div className="mt-0.5 shrink-0">
                             {completed ? (
-                              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                             ) : isCurrent ? (
-                              <PlayCircle className="h-4 w-4 text-amber-400 animate-pulse" />
+                              <PlayCircle className="h-4 w-4 text-[#1E4FD8] animate-pulse" />
                             ) : (
-                              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-slate-800 text-[10px] text-slate-400">
+                              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-slate-100 text-[10px] text-[#6B7280]">
                                 {l.order}
                               </span>
                             )}
                           </div>
                           <div className="space-y-0.5">
                             <p className="line-clamp-2 leading-snug">{l.title}</p>
-                            <span className="text-[10px] text-slate-400">{l.durationMinutes || 45} دقيقة</span>
+                            <span className="text-[10px] text-[#6B7280]">{l.durationMinutes || 45} دقيقة</span>
                           </div>
                         </button>
                       );

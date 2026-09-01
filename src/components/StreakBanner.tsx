@@ -34,36 +34,39 @@ export const StreakBanner: React.FC<StreakBannerProps> = ({ student }) => {
   return (
     <div className="space-y-2 font-sans">
       {/* Main Streak Badge */}
-      <div className="relative overflow-hidden rounded-2xl border border-orange-500/30 bg-gradient-to-r from-orange-950/40 via-slate-900 to-amber-950/30 p-4 shadow-lg flex items-center justify-between">
+      <div className="relative overflow-hidden rounded-2xl border border-amber-200 bg-white p-4 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 text-white font-black text-xl shadow-md shadow-orange-500/30 animate-pulse">
-            <Flame className="h-7 w-7 text-white fill-amber-300" />
+          <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white font-black text-xl shadow-sm">
+            <Flame className="h-7 w-7 text-white fill-amber-200" />
           </div>
           <div>
-            <div className="flex items-center gap-1.5 text-xs font-bold text-orange-400">
-              <Sparkles className="h-3.5 w-3.5" />
+            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-700">
+              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
               <span>الاستمرارية اليومية المتتالية (Daily Streak)</span>
             </div>
-            <h4 className="text-lg font-black text-white flex items-center gap-2">
+            <h4 className="text-lg font-black text-[#0D1B3E] flex items-center gap-2">
               <span>أنت مستمر لليوم</span>
-              <span className="font-mono text-2xl text-amber-400 font-black">{streakDays}</span>
-              <span>على التوالي! 🔥</span>
+              <span className="font-mono text-2xl text-[#1E4FD8] font-black">{streakDays}</span>
+              <span className="flex items-center gap-1">
+                <span>على التوالي!</span>
+                <Flame className="h-5 w-5 text-amber-500 fill-amber-400 inline" />
+              </span>
             </h4>
           </div>
         </div>
 
-        <div className="hidden sm:flex items-center gap-2 rounded-xl border border-orange-500/20 bg-orange-500/10 px-3 py-1.5 text-xs font-bold text-amber-300">
-          <Award className="h-4 w-4 text-orange-400" />
+        <div className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-[#1E4FD8]">
+          <Award className="h-4 w-4 text-[#1E4FD8]" />
           <span>استمر يومياً لزيادة مكافآتك ومستواك!</span>
         </div>
       </div>
 
       {/* Afternoon Reminder Warning */}
       {showWarning && (
-        <div className="flex items-center justify-between rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-300 font-bold animate-fadeIn">
+        <div className="flex items-center justify-between rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 font-bold animate-fadeIn">
           <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 shrink-0 text-amber-400" />
-            <span>⚠️ تذكير: لا تفقد شعلتك اليوم! تصفح درساً أو حُل اختباراً سريعاً قبل انتهاء اليوم لحفظ استمراريتك.</span>
+            <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
+            <span>تذكير: لا تفقد شعلتك اليوم! تصفح درساً أو حُل اختباراً سريعاً قبل انتهاء اليوم لحفظ استمراريتك.</span>
           </div>
         </div>
       )}

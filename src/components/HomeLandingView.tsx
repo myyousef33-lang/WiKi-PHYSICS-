@@ -26,8 +26,7 @@ import { StorageService, subscribeToStorage } from '../services/storage';
 import { PresenceService } from '../services/presence';
 import { Course, PdfMaterial, Student } from '../types';
 import { ExamCountdownBanner } from './ExamCountdownBanner';
-import { AtomicHeroVisual } from './AtomicHeroVisual';
-import teacherPhoto from '../assets/images/teacher.jpg';
+import teacherCutout from '../assets/images/teacher-cutout.png';
 
 interface HomeLandingViewProps {
   onNavigate: (view: string, params?: any) => void;
@@ -100,22 +99,22 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
 
     return (
       <section className="mx-auto max-w-7xl 2xl:max-w-screen-2xl px-4 sm:px-6 lg:px-10 xl:px-12">
-        <div className="rounded-3xl border border-[#2E86FF]/35 bg-[#122442] p-5 sm:p-8 lg:p-10 shadow-2xl space-y-6">
-          <div className="flex items-center justify-between border-b border-[#1E375E] pb-4">
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-8 lg:p-10 shadow-sm space-y-6">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-2xl bg-[#FFB020]/15 text-[#FFB020]">
-                <PlayCircle className="h-6 w-6" />
+              <div className="p-2.5 rounded-2xl bg-[#F5B301]/15 text-[#0D1B3E]">
+                <PlayCircle className="h-6 w-6 text-[#1E4FD8]" />
               </div>
               <div>
-                <h3 className="font-black text-white text-base sm:text-xl lg:text-2xl">الفيديو التعريفي بالمنصة وشرح طريقة الاستخدام</h3>
-                <p className="text-xs sm:text-sm text-slate-300">شاهد جولة سريعة داخل المنصة لمعرفة كيفية تفعيل الاشتراكات ومشاهدة الدروس</p>
+                <h3 className="font-black text-[#0D1B3E] text-base sm:text-xl lg:text-2xl">الفيديو التعريفي بالمنصة وشرح طريقة الاستخدام</h3>
+                <p className="text-xs sm:text-sm text-[#6B7280]">شاهد جولة سريعة داخل المنصة لمعرفة كيفية تفعيل الاشتراكات ومشاهدة الدروس</p>
               </div>
             </div>
-            <span className="hidden sm:inline-flex text-xs font-bold text-[#2E86FF] bg-[#2E86FF]/10 px-4 py-1.5 rounded-full border border-[#2E86FF]/30">
+            <span className="hidden sm:inline-flex text-xs font-bold text-[#1E4FD8] bg-blue-50 px-4 py-1.5 rounded-full border border-blue-200">
               فيديو توضيحي رسمي
             </span>
           </div>
-          <div className="relative aspect-video w-full rounded-2xl lg:rounded-3xl overflow-hidden bg-black border border-[#1E375E] shadow-2xl">
+          <div className="relative aspect-video w-full rounded-2xl lg:rounded-3xl overflow-hidden bg-slate-900 border border-slate-200 shadow-sm">
             <iframe
               src={embedUrl}
               title="الفيديو التعريفي"
@@ -130,165 +129,166 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
   };
 
   return (
-    <div className="space-y-20 lg:space-y-28 xl:space-y-32 animate-in fade-in duration-300 overflow-x-hidden max-w-full pb-16">
+    <div className="space-y-16 lg:space-y-24 animate-in fade-in duration-300 overflow-x-hidden max-w-full pb-16 bg-[#F5F7FA]">
       
       {/* INTRO VIDEO IF PLACEMENT IS TOP */}
       {settings.homeVideoPlacement === 'top' && renderIntroVideo()}
 
-      {/* HERO SECTION */}
-      <section className="relative overflow-hidden pt-6 pb-16 lg:pt-10 lg:pb-24 xl:pt-14 xl:pb-28">
+      {/* HERO SECTION - English with Sara Reference Style (White + Royal Blue + Gold) */}
+      <section className="relative overflow-hidden pt-4 pb-8 sm:pt-6 sm:pb-12 lg:pt-8 lg:pb-14">
         
-        {/* Background Radial Glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#2E86FF]/12 rounded-full blur-[140px] pointer-events-none" />
+        {/* Subtle Ambient Radial Glow */}
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[650px] bg-blue-100/60 rounded-full blur-[130px] pointer-events-none" />
 
-        <div className="mx-auto max-w-7xl 2xl:max-w-screen-2xl px-4 sm:px-6 lg:px-10 xl:px-12 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 xl:gap-20 items-center">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 relative z-10 text-center space-y-6 sm:space-y-8">
+          
+          {/* 1. Teacher Photo with Royal Blue Semi-Circle Backdrop ("English with Sara" Reference Layout) */}
+          <div className="relative mx-auto w-full max-w-[320px] sm:max-w-[360px] md:max-w-[400px] flex flex-col items-center select-none">
             
-            {/* Right Column (Hero Text & CTA) in RTL */}
-            <div className="lg:col-span-7 space-y-6 lg:space-y-8 text-center lg:text-right">
+            {/* The Royal Blue Geometric Arch / Half-Circle Backdrop */}
+            <div className="relative w-full h-[320px] sm:h-[370px] md:h-[410px] flex items-end justify-center">
               
-              {/* Animated Atomic Orbit Drawing */}
-              <div className="flex justify-center lg:justify-start">
-                <AtomicHeroVisual />
+              {/* Outer Decorative Ring */}
+              <div className="absolute top-2 w-[270px] h-[270px] sm:w-[320px] sm:h-[320px] md:w-[350px] md:h-[350px] rounded-full border-2 border-blue-200/80 pointer-events-none animate-[spin_30s_linear_infinite]" />
+              
+              {/* The Solid Royal Blue (#1E4FD8) Semi-Circle / Arch behind the teacher's upper body */}
+              <div className="absolute top-4 w-[250px] h-[250px] sm:w-[290px] sm:h-[290px] md:w-[320px] md:h-[320px] rounded-full bg-gradient-to-b from-[#1E4FD8] via-[#1A44C2] to-[#123396] shadow-xl shadow-blue-600/25 flex items-center justify-center overflow-hidden">
+                {/* Subtle internal energy rings */}
+                <div className="absolute inset-2 rounded-full border border-white/20" />
+                <div className="absolute inset-8 rounded-full border border-white/10" />
+                <div className="absolute -top-10 -right-10 w-36 h-36 bg-blue-400/20 rounded-full blur-xl" />
               </div>
 
-              {/* Badges Row: Active Presence Counter Badge & Platform Banner Badge */}
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3.5">
-                
-                {/* Real-time Active Presence Counter Badge */}
-                <div className="inline-flex items-center gap-3 rounded-full border border-[#2E86FF]/40 bg-[#122442] px-5 py-2 text-xs sm:text-sm font-bold text-white shadow-xl">
-                  <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                  </span>
-                  <span>
-                    {activeCount >= 3 ? (
-                      <>
-                        <strong className="text-[#FFB020] text-sm sm:text-base font-black mx-1 font-mono">{activeCount.toLocaleString('ar-EG')}</strong>{' '}
-                        طالب بيذاكر دلوقتي
-                      </>
-                    ) : (
-                      'انضم لآلاف الطلاب الذين يذاكرون فيزياء الآن'
-                    )}
-                  </span>
-                </div>
-
-                <div className="inline-flex items-center gap-2 rounded-full border border-[#2E86FF]/40 bg-[#2E86FF]/10 px-4 py-2 text-xs sm:text-sm font-bold text-[#2E86FF] shadow-inner">
-                  <Atom className="h-4 w-4 animate-spin" />
-                  <span>المنصة الرائدة في فيزياء الثانوية العامة</span>
-                </div>
-
+              {/* Floating Physics Equation Badge on Left: E = mc² */}
+              <div className="absolute -left-2 sm:-left-4 top-1/3 z-20 bg-white/95 backdrop-blur-md border border-[#F5B301]/50 px-3 py-1 rounded-2xl shadow-md">
+                <span className="text-xs sm:text-sm font-black font-mono text-[#0D1B3E] tracking-wide dir-ltr inline-block">
+                  E = mc²
+                </span>
               </div>
 
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl xl:text-7xl font-black text-white leading-[1.15] tracking-tight">
-                طريقك إلى <span className="text-[#FFB020] physics-glow">الدرجة النهائية</span> في الفيزياء
-              </h1>
-
-              <p className="text-base sm:text-lg lg:text-xl text-slate-300 leading-relaxed max-w-3xl mx-auto lg:mx-0 font-normal">
-                تجربة تعليمية متكاملة تجمع بين الشرح التفصيلي المبسط، حل آلاف الأسئلة والأفكار العالية، ومتابعة دورية وامتحانات إلكترونية مصححة فورياً لتضمن الدرجة النهائية بأعلى كفاءة.
-              </p>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
-                {student ? (
-                  <button
-                    onClick={() => onNavigate('dashboard')}
-                    className="inline-flex items-center gap-3 rounded-2xl bg-[#FFB020] px-8 py-4 lg:px-9 lg:py-4.5 text-sm sm:text-base lg:text-lg font-black text-[#0C1B33] shadow-2xl shadow-[#FFB020]/30 hover:scale-105 active:scale-95 hover:bg-[#e59e1c] transition-all"
-                  >
-                    <GraduationCap className="h-5 w-5 lg:h-6 lg:w-6" />
-                    <span>الدخول إلى لوحة دراستي</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={onOpenAuthModal}
-                    className="inline-flex items-center gap-3 rounded-2xl bg-[#FFB020] px-8 py-4 lg:px-9 lg:py-4.5 text-sm sm:text-base lg:text-lg font-black text-[#0C1B33] shadow-2xl shadow-[#FFB020]/30 hover:scale-105 active:scale-95 hover:bg-[#e59e1c] transition-all"
-                  >
-                    <Sparkles className="h-5 w-5 lg:h-6 lg:w-6" />
-                    <span>ابدأ التعلم الآن مجاناً</span>
-                  </button>
-                )}
-
-                <button
-                  onClick={onOpenActivationModal}
-                  className="inline-flex items-center gap-2.5 rounded-2xl border-2 border-[#2E86FF]/40 bg-[#122442] px-7 py-4 lg:px-8 lg:py-4.5 text-sm sm:text-base lg:text-lg font-bold text-white hover:border-[#2E86FF] hover:bg-[#1B355E] transition-all shadow-lg"
-                >
-                  <Key className="h-5 w-5 text-[#2E86FF]" />
-                  <span>تفعيل كود الاشتراك</span>
-                </button>
+              {/* Floating Physics Equation Badge on Right: F = ma */}
+              <div className="absolute -right-2 sm:-right-4 top-1/3 z-20 bg-white/95 backdrop-blur-md border border-[#1E4FD8]/40 px-3 py-1 rounded-2xl shadow-md">
+                <span className="text-xs sm:text-sm font-black font-mono text-[#1E4FD8] tracking-wide dir-ltr inline-block">
+                  λ = h/p
+                </span>
               </div>
 
-              {/* Quick Trust Badges */}
-              <div className="grid grid-cols-3 gap-4 lg:gap-8 pt-8 border-t border-[#1E375E] max-w-2xl mx-auto lg:mx-0 text-center">
-                <div className="p-2">
-                  <p className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-black text-white">+10,000</p>
-                  <p className="text-xs sm:text-sm text-slate-300 mt-1 font-bold">طالب مستفيد</p>
-                </div>
-                <div className="p-2">
-                  <p className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-black text-[#2E86FF]">100%</p>
-                  <p className="text-xs sm:text-sm text-slate-300 mt-1 font-bold">تغطية أفكار الامتحانات</p>
-                </div>
-                <div className="p-2">
-                  <p className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-black text-emerald-400">24/7</p>
-                  <p className="text-xs sm:text-sm text-slate-300 mt-1 font-bold">دعم ومتابعة مستمرة</p>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Left Column: Teacher Card with Large Framing for Desktop */}
-            <div className="lg:col-span-5 flex justify-center">
-              <div className="relative w-full max-w-md lg:max-w-lg xl:max-w-xl">
-                
-                {/* Visual Frame */}
-                <div className="relative rounded-3xl lg:rounded-4xl border-2 border-[#2E86FF]/35 bg-[#122442] p-4 lg:p-6 shadow-2xl overflow-hidden group">
-                  
-                  {/* Teacher Photo */}
-                  <div className="relative aspect-[3/4] w-full rounded-2xl lg:rounded-3xl overflow-hidden bg-[#0C1B33] border border-[#1E375E] shadow-inner">
-                    <img
-                      src={settings.instructorPhotoUrl || '/teacher.jpg'}
-                      alt={settings.instructorTitle}
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        const target = e.currentTarget;
-                        if (!target.dataset.triedFallback) {
-                          target.dataset.triedFallback = 'true';
-                          target.src = '/teacher.jpg';
-                        }
-                      }}
-                      className="h-full w-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0C1B33] via-[#0C1B33]/35 to-transparent" />
-                    
-                    {/* Overlay Text */}
-                    <div className="absolute bottom-5 right-5 left-5 text-right space-y-1.5">
-                      <div className="inline-flex items-center gap-2 rounded-xl bg-[#FFB020] text-[#0C1B33] px-3 py-1 text-xs lg:text-sm font-black shadow-md">
-                        <Award className="h-4 w-4" />
-                        <span>كبير معلمي الفيزياء</span>
-                      </div>
-                      <h3 className="text-2xl lg:text-3xl font-black text-white">{settings.instructorTitle}</h3>
-                      <p className="text-xs sm:text-sm text-slate-200">خبرة أكثر من 15 عاماً في إعداد وتخريج أوائل الجمهورية</p>
-                    </div>
-                  </div>
-
-                  {/* Floating Highlight Card */}
-                  <div className="mt-4 flex items-center justify-between p-3.5 lg:p-4 rounded-2xl bg-[#0C1B33] border border-[#1E375E]">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400">
-                        <ShieldCheck className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <p className="text-xs lg:text-sm font-bold text-white">منصة آمنة وسريعة بالكامل</p>
-                        <p className="text-[11px] lg:text-xs text-slate-300">سيرفرات فائقة السرعة ومشاهدة غير محدودة</p>
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-
+              {/* The Real Teacher Cutout Photo overlapping the blue semi-circle */}
+              <img
+                src={teacherCutout}
+                alt={settings.instructorTitle || "أ / إبراهيم خليل"}
+                className="relative z-10 h-full w-auto object-contain object-bottom drop-shadow-2xl transition-transform duration-500 hover:scale-[1.02]"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (!target.dataset.triedFallback) {
+                    target.dataset.triedFallback = 'true';
+                    target.src = '/teacher.jpg';
+                  }
+                }}
+              />
+              
+              {/* Instructor Title Badge at Bottom */}
+              <div className="absolute -bottom-3 z-30 inline-flex items-center gap-2 rounded-full bg-white border-2 border-[#1E4FD8] px-4 py-1.5 text-xs sm:text-sm font-bold text-[#1E4FD8] shadow-lg">
+                <Award className="h-4 w-4 text-[#F5B301]" />
+                <span>{settings.instructorTitle || "كبير معلمي الفيزياء • أ / إبراهيم خليل"}</span>
               </div>
             </div>
 
           </div>
+
+          {/* 2. Main Heading directly under the teacher photo */}
+          <div className="space-y-3 max-w-2xl mx-auto pt-2">
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-[#0D1B3E] leading-[1.2] tracking-tight">
+              طريقك إلى <span className="text-[#1E4FD8]">الدرجة النهائية</span> في الفيزياء
+            </h1>
+
+            {/* 3. Short 1-2 line description */}
+            <p className="text-sm sm:text-base lg:text-lg text-[#6B7280] leading-relaxed max-w-xl mx-auto font-normal">
+              تجربة تعليمية متكاملة تجمع بين الشرح التفصيلي المبسط، حل آلاف الأسئلة والأفكار العالية، وامتحانات إلكترونية مصححة فورياً.
+            </p>
+          </div>
+
+          {/* 4. Action Buttons (White + Royal Blue + Yellow/Gold) */}
+          <div className="flex flex-wrap items-center justify-center gap-3.5 pt-2">
+            {student ? (
+              <button
+                onClick={() => onNavigate('dashboard')}
+                className="inline-flex items-center justify-center gap-2.5 rounded-2xl bg-[#F5B301] px-8 py-3.5 sm:px-9 sm:py-4 text-sm sm:text-base font-black text-[#0D1B3E] shadow-md shadow-[#F5B301]/30 hover:bg-[#e0a401] hover:scale-[1.02] active:scale-[0.98] transition-all"
+              >
+                <GraduationCap className="h-5 w-5 text-[#0D1B3E]" />
+                <span>الدخول إلى لوحة دراستي</span>
+              </button>
+            ) : (
+              <button
+                onClick={onOpenAuthModal}
+                className="inline-flex items-center justify-center gap-2.5 rounded-2xl bg-[#F5B301] px-8 py-3.5 sm:px-9 sm:py-4 text-sm sm:text-base font-black text-[#0D1B3E] shadow-md shadow-[#F5B301]/30 hover:bg-[#e0a401] hover:scale-[1.02] active:scale-[0.98] transition-all"
+              >
+                <Sparkles className="h-5 w-5 text-[#0D1B3E]" />
+                <span>ابدأ التعلم الآن مجاناً</span>
+              </button>
+            )}
+
+            <button
+              onClick={onOpenActivationModal}
+              className="inline-flex items-center justify-center gap-2.5 rounded-2xl border-2 border-[#1E4FD8] bg-white px-7 py-3.5 sm:px-8 sm:py-4 text-sm sm:text-base font-bold text-[#1E4FD8] hover:bg-blue-50 hover:border-[#1E4FD8] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xs"
+            >
+              <Key className="h-5 w-5 text-[#1E4FD8]" />
+              <span>تفعيل كود الاشتراك</span>
+            </button>
+          </div>
+
+          {/* 5. Remaining Elements: Stats & Quick Badges (Clean light cards) */}
+          <div className="pt-4 max-w-3xl mx-auto space-y-4">
+            
+            {/* Live active students & platform badge */}
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-bold text-[#0D1B3E] shadow-xs">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+                <span>
+                  {activeCount >= 3 ? (
+                    <>
+                      <strong className="text-[#1E4FD8] font-black mx-1 font-mono">{activeCount.toLocaleString('ar-EG')}</strong>{' '}
+                      طالب بيذاكر دلوقتي
+                    </>
+                  ) : (
+                    'انضم لآلاف الطلاب الذين يذاكرون فيزياء الآن'
+                  )}
+                </span>
+              </div>
+
+              <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-1.5 text-xs font-bold text-[#1E4FD8]">
+                <Atom className="h-4 w-4 animate-spin text-[#1E4FD8]" />
+                <span>المنصة الرائدة لفيزياء الثانوية العامة</span>
+              </div>
+            </div>
+
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-3 gap-3 sm:gap-6 p-4 sm:p-6 rounded-3xl bg-white border border-slate-200 shadow-xs text-center">
+              <div>
+                <p className="text-xl sm:text-3xl font-black text-[#0D1B3E]">+10,000</p>
+                <p className="text-xs sm:text-sm text-[#6B7280] font-medium mt-0.5">طالب مستفيد</p>
+              </div>
+              <div className="border-x border-slate-100">
+                <p className="text-xl sm:text-3xl font-black text-[#1E4FD8]">100%</p>
+                <p className="text-xs sm:text-sm text-[#6B7280] font-medium mt-0.5">تغطية أفكار الامتحانات</p>
+              </div>
+              <div>
+                <p className="text-xl sm:text-3xl font-black text-emerald-600">24/7</p>
+                <p className="text-xs sm:text-sm text-[#6B7280] font-medium mt-0.5">دعم ومتابعة مستمرة</p>
+              </div>
+            </div>
+
+            {/* Security & Speed Trust Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-slate-200 text-xs text-[#6B7280] shadow-xs">
+              <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span>منصة آمنة ومحمية بالكامل مع سيرفرات فائقة السرعة ومشاهدة غير محدودة</span>
+            </div>
+
+          </div>
+
         </div>
       </section>
 
@@ -302,48 +302,48 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
 
       {/* PLATFORM ADVANTAGES */}
       <section className="mx-auto max-w-7xl 2xl:max-w-screen-2xl px-4 sm:px-6 lg:px-10 xl:px-12">
-        <div className="text-center space-y-3 max-w-3xl mx-auto mb-12 lg:mb-16">
-          <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white">لماذا منصة Wiki-X فيزياء؟</h2>
-          <p className="text-sm sm:text-base lg:text-lg text-slate-300">صُممت المنصة خصيصاً لتلبية متطلبات وتحديات نظام الثانوية العامة الحديث</p>
+        <div className="text-center space-y-3 max-w-3xl mx-auto mb-10 lg:mb-14">
+          <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-[#0D1B3E]">لماذا منصة Wiki-X فيزياء؟</h2>
+          <p className="text-sm sm:text-base lg:text-lg text-[#6B7280]">صُممت المنصة خصيصاً لتلبية متطلبات وتحديات نظام الثانوية العامة الحديث</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
-          <div className="glass-card rounded-3xl p-6 sm:p-8 lg:p-10 space-y-4 shadow-xl hover:border-[#2E86FF]/50 transition-all">
-            <div className="rounded-2xl bg-[#2E86FF]/15 p-4 w-fit text-[#2E86FF]">
-              <PlayCircle className="h-8 w-8" />
+          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#1E4FD8] transition-all">
+            <div className="rounded-2xl bg-blue-50 p-4 w-fit text-[#1E4FD8]">
+              <PlayCircle className="h-7 w-7" />
             </div>
-            <h3 className="font-bold text-white text-lg lg:text-xl">شرح وافي ومبسط</h3>
-            <p className="text-xs sm:text-sm lg:text-base text-slate-300 leading-relaxed">
+            <h3 className="font-bold text-[#0D1B3E] text-lg lg:text-xl">شرح وافي ومبسط</h3>
+            <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
               فيديوهات بجودة عالية وتطبيقات عملية ورسوم متحركة لتجسيد الظواهر الفيزيائية المعقدة خطوة بخطوة.
             </p>
           </div>
 
-          <div className="glass-card rounded-3xl p-6 sm:p-8 lg:p-10 space-y-4 shadow-xl hover:border-[#2E86FF]/50 transition-all">
-            <div className="rounded-2xl bg-[#2E86FF]/15 p-4 w-fit text-[#2E86FF]">
-              <Award className="h-8 w-8" />
+          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#1E4FD8] transition-all">
+            <div className="rounded-2xl bg-blue-50 p-4 w-fit text-[#1E4FD8]">
+              <Award className="h-7 w-7" />
             </div>
-            <h3 className="font-bold text-white text-lg lg:text-xl">امتحانات وتصحيح فوري</h3>
-            <p className="text-xs sm:text-sm lg:text-base text-slate-300 leading-relaxed">
+            <h3 className="font-bold text-[#0D1B3E] text-lg lg:text-xl">امتحانات وتصحيح فوري</h3>
+            <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
               بنك أسئلة متدرج الصعوبة مع مؤقت زمني ونموذج إجابة مفصل لكل سؤال لتشخيص نقاط الضعف وعلاجها فوراً.
             </p>
           </div>
 
-          <div className="glass-card rounded-3xl p-6 sm:p-8 lg:p-10 space-y-4 shadow-xl hover:border-emerald-500/50 transition-all">
-            <div className="rounded-2xl bg-emerald-500/15 p-4 w-fit text-emerald-400">
-              <FileText className="h-8 w-8" />
+          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-emerald-500 transition-all">
+            <div className="rounded-2xl bg-emerald-50 p-4 w-fit text-emerald-600">
+              <FileText className="h-7 w-7" />
             </div>
-            <h3 className="font-bold text-white text-lg lg:text-xl">مذكرات وملازم PDF</h3>
-            <p className="text-xs sm:text-sm lg:text-base text-slate-300 leading-relaxed">
+            <h3 className="font-bold text-[#0D1B3E] text-lg lg:text-xl">مذكرات وملازم PDF</h3>
+            <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
               ملازم مطبوعة ورقمية عالية الجودة، تشمل ملخصات القوانين، الخرائط الذهنية، وأسئلة امتحانات سابقة.
             </p>
           </div>
 
-          <div className="glass-card rounded-3xl p-6 sm:p-8 lg:p-10 space-y-4 shadow-xl hover:border-[#FFB020]/50 transition-all">
-            <div className="rounded-2xl bg-[#FFB020]/15 p-4 w-fit text-[#FFB020]">
-              <ShieldCheck className="h-8 w-8" />
+          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#F5B301] transition-all">
+            <div className="rounded-2xl bg-[#F5B301]/15 p-4 w-fit text-[#0D1B3E]">
+              <ShieldCheck className="h-7 w-7 text-[#1E4FD8]" />
             </div>
-            <h3 className="font-bold text-white text-lg lg:text-xl">تفعيل فوري بالأكواد</h3>
-            <p className="text-xs sm:text-sm lg:text-base text-slate-300 leading-relaxed">
+            <h3 className="font-bold text-[#0D1B3E] text-lg lg:text-xl">تفعيل فوري بالأكواد</h3>
+            <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
               اشترك بسهولة عبر كود التفعيل السري دون تعقيدات، مع حماية أجهزتك ومتابعة مستواك بصفة دورية.
             </p>
           </div>
@@ -352,25 +352,25 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
 
       {/* FEATURED COURSES TEASER (YOUTUBE DESKTOP HORIZONTAL CAROUSEL & GRID TOGGLE) */}
       <section className="mx-auto max-w-7xl 2xl:max-w-screen-2xl px-4 sm:px-6 lg:px-10 xl:px-12 space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1E375E] pb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-6">
           <div>
             <div className="flex items-center gap-3">
-              <span className="h-3 w-3 rounded-full bg-[#FFB020] animate-pulse"></span>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white">الكورسات والمناهج المتاحة</h2>
+              <span className="h-3 w-3 rounded-full bg-[#F5B301] animate-pulse"></span>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#0D1B3E]">الكورسات والمناهج المتاحة</h2>
             </div>
-            <p className="text-xs sm:text-sm lg:text-base text-slate-300 mt-1">تصفح المحاضرات والمناهج الدراسية المصممة لجميع المراحل</p>
+            <p className="text-xs sm:text-sm lg:text-base text-[#6B7280] mt-1">تصفح المحاضرات والمناهج الدراسية المصممة لجميع المراحل</p>
           </div>
 
           <div className="flex items-center gap-3 self-end sm:self-auto">
             {/* View Mode Toggle (Desktop) */}
             {courses.length > 0 && (
-              <div className="hidden md:flex items-center gap-1 bg-[#122442] p-1 rounded-2xl border border-[#1E375E]">
+              <div className="hidden md:flex items-center gap-1 bg-white p-1 rounded-2xl border border-slate-200 shadow-xs">
                 <button
                   onClick={() => setCourseDisplayMode('carousel')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                     courseDisplayMode === 'carousel'
-                      ? 'bg-[#2E86FF] text-white shadow-md'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-[#1E4FD8] text-white shadow-xs'
+                      : 'text-[#6B7280] hover:text-[#0D1B3E]'
                   }`}
                   title="عرض كاروسيل أفقي"
                 >
@@ -381,8 +381,8 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                   onClick={() => setCourseDisplayMode('grid')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                     courseDisplayMode === 'grid'
-                      ? 'bg-[#2E86FF] text-white shadow-md'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-[#1E4FD8] text-white shadow-xs'
+                      : 'text-[#6B7280] hover:text-[#0D1B3E]'
                   }`}
                   title="عرض شبكة كاملة"
                 >
@@ -393,17 +393,17 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             )}
 
             {courses.length > 0 && courseDisplayMode === 'carousel' && (
-              <div className="flex items-center gap-1.5 bg-[#122442] p-1.5 rounded-2xl border border-[#1E375E]">
+              <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-xs">
                 <button
                   onClick={() => scrollCourses('right')}
-                  className="p-2.5 rounded-xl bg-[#0C1B33] text-slate-300 hover:text-white hover:bg-[#2E86FF] transition-all"
+                  className="p-2.5 rounded-xl bg-slate-50 text-[#6B7280] hover:text-[#1E4FD8] hover:bg-blue-50 transition-all"
                   title="التمرير لليمين"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => scrollCourses('left')}
-                  className="p-2.5 rounded-xl bg-[#0C1B33] text-slate-300 hover:text-white hover:bg-[#2E86FF] transition-all"
+                  className="p-2.5 rounded-xl bg-slate-50 text-[#6B7280] hover:text-[#1E4FD8] hover:bg-blue-50 transition-all"
                   title="التمرير لليسار"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -413,7 +413,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
 
             <button
               onClick={() => onNavigate('courses-catalog')}
-              className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#2E86FF] hover:underline bg-[#2E86FF]/10 px-4 py-2.5 rounded-2xl border border-[#2E86FF]/30"
+              className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#1E4FD8] hover:underline bg-blue-50 px-4 py-2.5 rounded-2xl border border-blue-200"
             >
               <span>عرض جميع الكورسات</span>
               <ChevronLeft className="h-4 w-4" />
@@ -422,13 +422,13 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
         </div>
 
         {courses.length === 0 ? (
-          <div className="rounded-3xl border border-[#1E375E] bg-[#122442] p-12 text-center max-w-xl mx-auto space-y-4">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#2E86FF]/15 border border-[#2E86FF]/30 text-[#2E86FF]">
+          <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center max-w-xl mx-auto space-y-4 shadow-sm">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 border border-blue-200 text-[#1E4FD8]">
               <BookOpen className="h-8 w-8" />
             </div>
             <div className="space-y-1.5">
-              <h3 className="text-lg font-bold text-white">الكورسات والمناهج قيد التجهيز</h3>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              <h3 className="text-lg font-bold text-[#0D1B3E]">الكورسات والمناهج قيد التجهيز</h3>
+              <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
                 يقوم أ / إبراهيم خليل حالياً برفع المحاضرات وحصص الشرح الجديدة. تابع قناة التليجرام لمعرفة مواعيد النشر.
               </p>
             </div>
@@ -445,11 +445,11 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               return (
                 <div
                   key={course.id}
-                  className="w-[290px] sm:w-[340px] lg:w-[390px] xl:w-[430px] 2xl:w-[460px] shrink-0 snap-start glass-card glass-card-hover rounded-3xl overflow-hidden flex flex-col justify-between group border border-[#1E375E] hover:border-[#2E86FF]/60 transition-all shadow-2xl"
+                  className="w-[290px] sm:w-[340px] lg:w-[380px] shrink-0 snap-start glass-card glass-card-hover rounded-3xl overflow-hidden flex flex-col justify-between group border border-slate-200 hover:border-[#1E4FD8] transition-all shadow-xs"
                 >
                   <div>
                     {/* Video/Course Thumbnail Container */}
-                    <div className="relative aspect-video w-full overflow-hidden bg-[#0C1B33]">
+                    <div className="relative aspect-video w-full overflow-hidden bg-slate-100">
                       <img
                         src={course.thumbnail}
                         alt={course.title}
@@ -457,48 +457,48 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                       />
                       
                       {/* Dark Gradient Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#0C1B33] via-transparent to-black/30" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
 
-                      {/* Hover Play Button Overlay (YouTube Style) */}
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-[2px]">
-                        <div className="h-14 w-14 rounded-full bg-[#FFB020] text-[#0C1B33] flex items-center justify-center shadow-2xl transform group-hover:scale-110 transition-transform">
-                          <Play className="h-7 w-7 fill-[#0C1B33] mr-0.5" />
+                      {/* Hover Play Button Overlay */}
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 backdrop-blur-[2px]">
+                        <div className="h-13 w-13 rounded-full bg-[#F5B301] text-[#0D1B3E] flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
+                          <Play className="h-6 w-6 fill-[#0D1B3E] mr-0.5" />
                         </div>
                       </div>
 
                       {/* Grade Badge */}
-                      <div className="absolute top-3 right-3 rounded-xl bg-[#0C1B33]/90 backdrop-blur-md px-3 py-1 text-xs font-bold text-[#2E86FF] border border-[#2E86FF]/30 shadow-md">
+                      <div className="absolute top-3 right-3 rounded-xl bg-white/95 backdrop-blur-md px-3 py-1 text-xs font-bold text-[#1E4FD8] border border-blue-200 shadow-sm">
                         {course.grade}
                       </div>
 
                       {/* Price Badge */}
-                      <div className="absolute top-3 left-3 rounded-xl bg-[#FFB020] px-3 py-1 text-xs font-black text-[#0C1B33] shadow-md">
+                      <div className="absolute top-3 left-3 rounded-xl bg-[#F5B301] px-3 py-1 text-xs font-bold text-[#0D1B3E] shadow-sm">
                         {course.price > 0 ? `${course.price} ج.م` : 'مجاني'}
                       </div>
 
                       {/* Bottom Badge: Lesson Count */}
-                      <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-lg bg-black/80 backdrop-blur-md px-2.5 py-1 text-xs font-bold text-slate-200 border border-white/10">
-                        <PlayCircle className="h-3.5 w-3.5 text-[#FFB020]" />
+                      <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-lg bg-black/75 backdrop-blur-md px-2.5 py-1 text-xs font-bold text-white">
+                        <PlayCircle className="h-3.5 w-3.5 text-[#F5B301]" />
                         <span>{totalLessons} درس • {course.units?.length || 0} فصول</span>
                       </div>
                     </div>
 
                     {/* Course Title & Description */}
-                    <div className="p-5 lg:p-6 space-y-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="h-7 w-7 rounded-full bg-[#2E86FF]/20 flex items-center justify-center text-[#2E86FF] text-xs font-black border border-[#2E86FF]/30 shrink-0">
+                    <div className="p-5 lg:p-6 space-y-2.5">
+                      <div className="flex items-center gap-2">
+                        <div className="h-6 w-6 rounded-full bg-blue-50 flex items-center justify-center text-[#1E4FD8] text-[10px] font-black border border-blue-200 shrink-0">
                           أكـ
                         </div>
-                        <span className="text-xs lg:text-sm font-bold text-slate-300 truncate">
+                        <span className="text-xs font-bold text-[#6B7280] truncate">
                           {course.instructorName || settings.instructorName}
                         </span>
                       </div>
 
-                      <h3 className="font-bold text-white text-base lg:text-lg leading-snug line-clamp-2 min-h-[3rem] group-hover:text-[#2E86FF] transition-colors">
+                      <h3 className="font-bold text-[#0D1B3E] text-base leading-snug line-clamp-2 min-h-[2.75rem] group-hover:text-[#1E4FD8] transition-colors">
                         {course.title}
                       </h3>
                       
-                      <p className="text-xs lg:text-sm text-slate-300 line-clamp-2 leading-relaxed">
+                      <p className="text-xs text-[#6B7280] line-clamp-2 leading-relaxed">
                         {course.description}
                       </p>
                     </div>
@@ -507,7 +507,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                   <div className="p-5 lg:p-6 pt-0">
                     <button
                       onClick={() => onNavigate('course-details', { courseId: course.id })}
-                      className="w-full rounded-2xl bg-[#2E86FF] hover:bg-[#2573e0] py-3 text-xs sm:text-sm font-bold text-white transition-all shadow-lg shadow-[#2E86FF]/20 flex items-center justify-center gap-2"
+                      className="w-full rounded-2xl bg-[#1E4FD8] hover:bg-blue-700 py-3 text-xs sm:text-sm font-bold text-white transition-all shadow-sm shadow-blue-500/20 flex items-center justify-center gap-2"
                     >
                       <span>استعراض المنهج والدروس</span>
                       <ChevronLeft className="h-4 w-4" />
@@ -519,60 +519,60 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
           </div>
         ) : (
           /* Full Grid Mode for Desktop */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 lg:gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
             {courses.map(course => {
               const totalLessons = course.units?.reduce((acc, u) => acc + (u.lessons?.length || 0), 0) || 0;
               return (
                 <div
                   key={course.id}
-                  className="glass-card glass-card-hover rounded-3xl overflow-hidden flex flex-col justify-between group border border-[#1E375E] hover:border-[#2E86FF]/60 transition-all shadow-2xl"
+                  className="glass-card glass-card-hover rounded-3xl overflow-hidden flex flex-col justify-between group border border-slate-200 hover:border-[#1E4FD8] transition-all shadow-xs"
                 >
                   <div>
                     {/* Video/Course Thumbnail Container */}
-                    <div className="relative aspect-video w-full overflow-hidden bg-[#0C1B33]">
+                    <div className="relative aspect-video w-full overflow-hidden bg-slate-100">
                       <img
                         src={course.thumbnail}
                         alt={course.title}
                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                       
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#0C1B33] via-transparent to-black/30" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
 
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-[2px]">
-                        <div className="h-14 w-14 rounded-full bg-[#FFB020] text-[#0C1B33] flex items-center justify-center shadow-2xl transform group-hover:scale-110 transition-transform">
-                          <Play className="h-7 w-7 fill-[#0C1B33] mr-0.5" />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 backdrop-blur-[2px]">
+                        <div className="h-13 w-13 rounded-full bg-[#F5B301] text-[#0D1B3E] flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
+                          <Play className="h-6 w-6 fill-[#0D1B3E] mr-0.5" />
                         </div>
                       </div>
 
-                      <div className="absolute top-3 right-3 rounded-xl bg-[#0C1B33]/90 backdrop-blur-md px-3 py-1 text-xs font-bold text-[#2E86FF] border border-[#2E86FF]/30 shadow-md">
+                      <div className="absolute top-3 right-3 rounded-xl bg-white/95 backdrop-blur-md px-3 py-1 text-xs font-bold text-[#1E4FD8] border border-blue-200 shadow-sm">
                         {course.grade}
                       </div>
 
-                      <div className="absolute top-3 left-3 rounded-xl bg-[#FFB020] px-3 py-1 text-xs font-black text-[#0C1B33] shadow-md">
+                      <div className="absolute top-3 left-3 rounded-xl bg-[#F5B301] px-3 py-1 text-xs font-bold text-[#0D1B3E] shadow-sm">
                         {course.price > 0 ? `${course.price} ج.م` : 'مجاني'}
                       </div>
 
-                      <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-lg bg-black/80 backdrop-blur-md px-2.5 py-1 text-xs font-bold text-slate-200 border border-white/10">
-                        <PlayCircle className="h-3.5 w-3.5 text-[#FFB020]" />
+                      <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-lg bg-black/75 backdrop-blur-md px-2.5 py-1 text-xs font-bold text-white">
+                        <PlayCircle className="h-3.5 w-3.5 text-[#F5B301]" />
                         <span>{totalLessons} درس • {course.units?.length || 0} فصول</span>
                       </div>
                     </div>
 
-                    <div className="p-6 space-y-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="h-7 w-7 rounded-full bg-[#2E86FF]/20 flex items-center justify-center text-[#2E86FF] text-xs font-black border border-[#2E86FF]/30 shrink-0">
+                    <div className="p-6 space-y-2.5">
+                      <div className="flex items-center gap-2">
+                        <div className="h-6 w-6 rounded-full bg-blue-50 flex items-center justify-center text-[#1E4FD8] text-[10px] font-black border border-blue-200 shrink-0">
                           أكـ
                         </div>
-                        <span className="text-xs lg:text-sm font-bold text-slate-300 truncate">
+                        <span className="text-xs font-bold text-[#6B7280] truncate">
                           {course.instructorName || settings.instructorName}
                         </span>
                       </div>
 
-                      <h3 className="font-bold text-white text-base lg:text-lg leading-snug line-clamp-2 min-h-[3rem] group-hover:text-[#2E86FF] transition-colors">
+                      <h3 className="font-bold text-[#0D1B3E] text-base leading-snug line-clamp-2 min-h-[2.75rem] group-hover:text-[#1E4FD8] transition-colors">
                         {course.title}
                       </h3>
                       
-                      <p className="text-xs lg:text-sm text-slate-300 line-clamp-2 leading-relaxed">
+                      <p className="text-xs text-[#6B7280] line-clamp-2 leading-relaxed">
                         {course.description}
                       </p>
                     </div>
@@ -581,7 +581,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                   <div className="p-6 pt-0">
                     <button
                       onClick={() => onNavigate('course-details', { courseId: course.id })}
-                      className="w-full rounded-2xl bg-[#2E86FF] hover:bg-[#2573e0] py-3 text-xs sm:text-sm font-bold text-white transition-all shadow-lg shadow-[#2E86FF]/20 flex items-center justify-center gap-2"
+                      className="w-full rounded-2xl bg-[#1E4FD8] hover:bg-blue-700 py-3 text-xs sm:text-sm font-bold text-white transition-all shadow-sm shadow-blue-500/20 flex items-center justify-center gap-2"
                     >
                       <span>استعراض المنهج والدروس</span>
                       <ChevronLeft className="h-4 w-4" />
@@ -599,22 +599,22 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
 
       {/* PDF MATERIALS TEASER */}
       <section className="mx-auto max-w-7xl 2xl:max-w-screen-2xl px-4 sm:px-6 lg:px-10 xl:px-12 space-y-8">
-        <div className="rounded-3xl border border-[#1E375E] bg-[#122442] p-8 sm:p-12 lg:p-16 flex flex-col lg:flex-row items-center justify-between gap-8 shadow-2xl">
-          <div className="space-y-4 text-center lg:text-right">
-            <span className="rounded-full bg-[#2E86FF]/15 border border-[#2E86FF]/30 px-4 py-1.5 text-xs lg:text-sm font-bold text-[#2E86FF]">
+        <div className="rounded-3xl border border-slate-200 bg-white p-8 sm:p-12 lg:p-16 flex flex-col lg:flex-row items-center justify-between gap-8 shadow-xs">
+          <div className="space-y-3 text-center lg:text-right">
+            <span className="rounded-full bg-blue-50 border border-blue-200 px-4 py-1.5 text-xs font-bold text-[#1E4FD8]">
               المكتبة والملازم
             </span>
-            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white">
+            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-[#0D1B3E]">
               أقوى مذكرات الشرح وبنوك الأسئلة PDF
             </h2>
-            <p className="text-xs sm:text-base lg:text-lg text-slate-300 max-w-2xl leading-relaxed">
+            <p className="text-xs sm:text-base text-[#6B7280] max-w-2xl leading-relaxed">
               تصفح مذكرات الشرح والمسائل المحلولة وخرائط القوانين الذهنية المجهزة خصيصاً للطباعة أو القراءة المباشرة من التابلت والكمبيوتر.
             </p>
           </div>
 
           <button
             onClick={() => onNavigate('pdf-library')}
-            className="rounded-2xl bg-[#FFB020] px-9 py-4 text-sm sm:text-base lg:text-lg font-black text-[#0C1B33] shadow-2xl shadow-[#FFB020]/25 hover:scale-105 hover:bg-[#e59e1c] transition-all shrink-0"
+            className="rounded-2xl bg-[#F5B301] px-9 py-4 text-sm sm:text-base font-bold text-[#0D1B3E] shadow-md shadow-[#F5B301]/25 hover:bg-[#e0a401] hover:scale-105 transition-all shrink-0"
           >
             تصفح مكتبة الـ PDF
           </button>
@@ -623,44 +623,44 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
 
       {/* TESTIMONIALS / SUCCESS STORIES */}
       <section className="mx-auto max-w-7xl 2xl:max-w-screen-2xl px-4 sm:px-6 lg:px-10 xl:px-12 space-y-10">
-        <div className="text-center space-y-3">
-          <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white">آراء وتجارب طلابنا المتفوقين</h2>
-          <p className="text-xs sm:text-base lg:text-lg text-slate-300">فخورون برحلة نجاح طلابنا في مختلف محافظات مصر</p>
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-[#0D1B3E]">آراء وتجارب طلابنا المتفوقين</h2>
+          <p className="text-xs sm:text-base text-[#6B7280]">فخورون برحلة نجاح طلابنا في مختلف محافظات مصر</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-          <div className="glass-card rounded-3xl p-6 sm:p-8 lg:p-10 space-y-4 shadow-xl">
-            <div className="flex items-center gap-1 text-[#FFB020]">
-              {[...Array(5)].map((_, i) => <Star key={i} className="h-5 w-5 fill-[#FFB020]" />)}
+          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs">
+            <div className="flex items-center gap-1 text-[#F5B301]">
+              {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 fill-[#F5B301]" />)}
             </div>
-            <p className="text-xs sm:text-sm lg:text-base text-slate-200 leading-relaxed">
+            <p className="text-xs sm:text-sm text-[#0D1B3E] leading-relaxed">
               "الفيزياء كانت أصعب مادة عندي، لكن بفضل أسلوب الشرح المنظم وبنك الأسئلة قدرت أقفل الامتحان التجريبي بدرجة 59 من 60!"
             </p>
-            <div className="pt-3 border-t border-[#1E375E] text-xs sm:text-sm font-bold text-white">
+            <div className="pt-3 border-t border-slate-100 text-xs sm:text-sm font-bold text-[#1E4FD8]">
               أحمد محمد — أوائل الدقهلية
             </div>
           </div>
 
-          <div className="glass-card rounded-3xl p-6 sm:p-8 lg:p-10 space-y-4 shadow-xl">
-            <div className="flex items-center gap-1 text-[#FFB020]">
-              {[...Array(5)].map((_, i) => <Star key={i} className="h-5 w-5 fill-[#FFB020]" />)}
+          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs">
+            <div className="flex items-center gap-1 text-[#F5B301]">
+              {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 fill-[#F5B301]" />)}
             </div>
-            <p className="text-xs sm:text-sm lg:text-base text-slate-200 leading-relaxed">
+            <p className="text-xs sm:text-sm text-[#0D1B3E] leading-relaxed">
               "ميزة تصحيح الامتحانات الفورية ومعرفة سبب الخطأ بالشرح الفيزيائي وفرت عليا وقت كبير جداً وخلتني أثق في نفسي."
             </p>
-            <div className="pt-3 border-t border-[#1E375E] text-xs sm:text-sm font-bold text-white">
+            <div className="pt-3 border-t border-slate-100 text-xs sm:text-sm font-bold text-[#1E4FD8]">
               مريم خالد — الجيزة
             </div>
           </div>
 
-          <div className="glass-card rounded-3xl p-6 sm:p-8 lg:p-10 space-y-4 shadow-xl">
-            <div className="flex items-center gap-1 text-[#FFB020]">
-              {[...Array(5)].map((_, i) => <Star key={i} className="h-5 w-5 fill-[#FFB020]" />)}
+          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs">
+            <div className="flex items-center gap-1 text-[#F5B301]">
+              {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 fill-[#F5B301]" />)}
             </div>
-            <p className="text-xs sm:text-sm lg:text-base text-slate-200 leading-relaxed">
+            <p className="text-xs sm:text-sm text-[#0D1B3E] leading-relaxed">
               "المذكرات والـ PDF منظمة جداً وكل قانون معاه رسم توضيحي وأمثلة الوزارة السابقة. منصة متكاملة بمعنى الكلمة."
             </p>
-            <div className="pt-3 border-t border-[#1E375E] text-xs sm:text-sm font-bold text-white">
+            <div className="pt-3 border-t border-slate-100 text-xs sm:text-sm font-bold text-[#1E4FD8]">
               يوسف طارق — الإسكندرية
             </div>
           </div>

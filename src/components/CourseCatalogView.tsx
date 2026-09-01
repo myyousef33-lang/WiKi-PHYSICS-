@@ -62,18 +62,18 @@ export const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({
       {/* Header Banner */}
       <div className="text-center space-y-3 max-w-3xl mx-auto">
         {msg && (
-          <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-bold text-xs sm:text-sm animate-in fade-in">
+          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-xs sm:text-sm animate-in fade-in">
             {msg}
           </div>
         )}
-        <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1 text-xs font-bold text-amber-400">
-          <Sparkles className="h-3.5 w-3.5" />
+        <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-1.5 text-xs font-bold text-[#1E4FD8]">
+          <Sparkles className="h-3.5 w-3.5 text-[#F5B301]" />
           <span>منهج الفيزياء للعام الدراسي 2024 / 2025</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-black text-white leading-tight">
+        <h1 className="text-3xl sm:text-4xl font-black text-[#0D1B3E] leading-tight">
           كورسات مادة الفيزياء للثانوية العامة
         </h1>
-        <p className="text-sm text-slate-400 leading-relaxed">
+        <p className="text-sm text-[#6B7280] leading-relaxed">
           شرح تفصيلي مع أقوى بنك أسئلة وتطبيقات ومراجعات دورية. اختر كورس مرحلتك وابدأ المذاكرة فوراً عبر كود التفعيل.
         </p>
       </div>
@@ -86,8 +86,8 @@ export const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({
             onClick={() => setSelectedGrade(g.id)}
             className={`rounded-xl px-5 py-2.5 text-xs font-bold transition-all ${
               selectedGrade === g.id
-                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 scale-105'
-                : 'border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-white'
+                ? 'bg-[#1E4FD8] text-white shadow-md shadow-blue-500/20 scale-105'
+                : 'border border-slate-200 bg-white text-[#0D1B3E] hover:border-blue-300 hover:text-[#1E4FD8]'
             }`}
           >
             {g.label}
@@ -97,13 +97,13 @@ export const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({
 
       {/* Courses Cards */}
       {filteredCourses.length === 0 ? (
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/40 p-12 text-center max-w-lg mx-auto space-y-4">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
+        <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center max-w-lg mx-auto space-y-4 shadow-xs">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 border border-blue-200 text-[#1E4FD8]">
             <BookOpen className="h-8 w-8" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-lg font-bold text-white">لا توجد كورسات مضافة حالياً</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <h3 className="text-lg font-bold text-[#0D1B3E]">لا توجد كورسات مضافة حالياً</h3>
+            <p className="text-xs text-[#6B7280] leading-relaxed">
               يقوم المعلم حالياً بإعداد وتجهيز محاضرات المنهج. ترقبوا رفع المحتوى الجديد قريباً!
             </p>
           </div>
@@ -120,42 +120,42 @@ export const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({
             return (
               <div
                 key={course.id}
-                className="glass-card glass-card-hover rounded-2xl overflow-hidden flex flex-col justify-between"
+                className="rounded-3xl bg-white border border-slate-200 shadow-xs hover:shadow-md hover:border-blue-200 transition-all duration-300 overflow-hidden flex flex-col justify-between"
               >
                 <div>
                   {/* Thumbnail */}
-                  <div className="relative aspect-video w-full overflow-hidden bg-slate-950">
+                  <div className="relative aspect-video w-full overflow-hidden bg-slate-100">
                     <img
                       src={course.thumbnail}
                       alt={course.title}
                       className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
                     />
-                    <div className="absolute top-2.5 right-2.5 rounded-lg bg-slate-950/85 backdrop-blur-md px-2.5 py-1 text-[11px] font-bold text-amber-400 border border-amber-500/20">
+                    <div className="absolute top-2.5 right-2.5 rounded-lg bg-white/95 backdrop-blur-md px-2.5 py-1 text-[11px] font-bold text-[#1E4FD8] border border-blue-200 shadow-xs">
                       {course.grade}
                     </div>
                     {isEnrolled && (
-                      <div className="absolute top-2.5 left-2.5 rounded-lg bg-emerald-500 text-slate-950 px-2.5 py-1 text-[10px] font-black flex items-center gap-1 shadow-sm">
+                      <div className="absolute top-2.5 left-2.5 rounded-lg bg-emerald-500 text-white px-2.5 py-1 text-[10px] font-black flex items-center gap-1 shadow-sm">
                         <CheckCircle2 className="h-3 w-3" />
                         <span>مشترك بالفعل</span>
                       </div>
                     )}
-                    <div className="absolute bottom-2.5 left-2.5 rounded-lg bg-slate-950/80 backdrop-blur-md px-2 py-0.5 text-[11px] font-bold text-slate-300">
+                    <div className="absolute bottom-2.5 left-2.5 rounded-lg bg-[#0D1B3E]/85 backdrop-blur-md px-2.5 py-0.5 text-[11px] font-bold text-white">
                       {course.units?.length || 0} فصول • {totalLessons} درس
                     </div>
                   </div>
 
                   {/* Details */}
                   <div className="p-5 space-y-3">
-                    <h3 className="font-bold text-white text-base leading-snug line-clamp-2">
+                    <h3 className="font-bold text-[#0D1B3E] text-base leading-snug line-clamp-2">
                       {course.title}
                     </h3>
-                    <p className="text-xs text-slate-400 line-clamp-3 leading-relaxed">
+                    <p className="text-xs text-[#6B7280] line-clamp-3 leading-relaxed">
                       {course.description}
                     </p>
 
-                    <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800/80">
+                    <div className="flex items-center justify-between text-xs text-[#6B7280] pt-2 border-t border-slate-100">
                       <span>المحاضر: {course.instructorName}</span>
-                      <span className="text-amber-400 font-bold">{course.price} ج.م</span>
+                      <span className="text-[#1E4FD8] font-black text-sm">{course.price} ج.م</span>
                     </div>
                   </div>
                 </div>
@@ -165,7 +165,7 @@ export const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({
                   {isEnrolled ? (
                     <button
                       onClick={() => onNavigate('course-details', { courseId: course.id })}
-                      className="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 py-2.5 text-xs font-bold text-slate-950 shadow-md shadow-emerald-500/20 hover:bg-emerald-400 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full rounded-2xl bg-emerald-500 py-3 text-xs font-bold text-white shadow-md shadow-emerald-500/20 hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <CheckCircle2 className="h-4 w-4" />
                       <span>دخول الكورس (مشترك)</span>
@@ -174,7 +174,7 @@ export const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({
                     <div className="flex flex-col sm:flex-row items-center gap-2">
                       <button
                         onClick={() => handleQuickWalletPurchase(course)}
-                        className="flex-1 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 py-2.5 px-3 text-xs font-black text-slate-950 shadow-md shadow-emerald-500/20 hover:bg-emerald-400 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="flex-1 w-full rounded-xl bg-[#F5B301] py-2.5 px-3 text-xs font-black text-[#0D1B3E] shadow-sm hover:bg-[#e0a401] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                         title="خصم فوري وتفعيل تلقائي من المحفظة"
                       >
                         <Wallet className="h-4 w-4 shrink-0" />
@@ -183,7 +183,7 @@ export const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({
 
                       <button
                         onClick={student ? onOpenActivationModal : onOpenAuthModal}
-                        className="flex-1 w-full rounded-xl border border-slate-700 bg-slate-800/90 py-2.5 px-3 text-xs font-bold text-amber-300 hover:bg-slate-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="flex-1 w-full rounded-xl border-2 border-[#1E4FD8] bg-white py-2.5 px-3 text-xs font-bold text-[#1E4FD8] hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                       >
                         <Key className="h-3.5 w-3.5 shrink-0" />
                         <span>كود الاشتراك</span>
@@ -193,7 +193,7 @@ export const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({
 
                   <button
                     onClick={() => onNavigate('course-details', { courseId: course.id })}
-                    className="w-full rounded-xl border border-slate-800 bg-slate-900/60 py-2 text-[11px] font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                    className="w-full rounded-xl border border-slate-200 bg-[#F5F7FA] py-2 text-[11px] font-bold text-[#6B7280] hover:text-[#1E4FD8] hover:border-blue-200 transition-colors"
                   >
                     استعراض المنهج والتفاصيل الكاملة
                   </button>

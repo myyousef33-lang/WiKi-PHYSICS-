@@ -678,7 +678,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     const success = await StorageService.forceSyncAllToFirestore();
     setIsSyncingCloud(false);
     if (success) {
-      setSyncFeedback('تمت مزامنة جميع الكورسات والبيانات سحابياً مع Firestore بنجاح 🚀');
+      setSyncFeedback('تمت مزامنة جميع الكورسات والبيانات سحابياً مع Firestore بنجاح');
     } else {
       setSyncFeedback('حدث خطأ أثناء المزامنة السحابية. يرجى المحاولة لاحقاً');
     }
@@ -997,7 +997,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
         const updated = { ...settings, ministryExamDate: isoStr };
         setSettings(updated);
         StorageService.saveSettings(updated);
-        setDateUpdateFeedback('تم حفظ وتطبيق موعد امتحان الفيزياء الجديد والعد التنازلي بنجاح! ⏱✨');
+        setDateUpdateFeedback('تم حفظ وتطبيق موعد امتحان الفيزياء الجديد والعد التنازلي بنجاح!');
         setTimeout(() => setDateUpdateFeedback(null), 4000);
       }
     } catch (e) {
@@ -1010,40 +1010,40 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
 
   const tabCategories = [
     {
-      title: '📊 لوحة القيادة والمتابعة',
+      title: 'لوحة القيادة والمتابعة',
       items: [
         { id: 'overview', label: 'الرئيسية والإحصائيات', icon: BarChart3, badge: null },
-        { id: 'wallet-admin', label: 'المحفظة وبوابات الدفع 💰', icon: Wallet, badge: pendingDepositsCount > 0 ? pendingDepositsCount : null },
-        { id: 'reports-export', label: 'تصدير التقارير (Excel) 📑', icon: FileSpreadsheet, badge: null },
+        { id: 'wallet-admin', label: 'المحفظة وبوابات الدفع', icon: Wallet, badge: pendingDepositsCount > 0 ? pendingDepositsCount : null },
+        { id: 'reports-export', label: 'تصدير التقارير (Excel)', icon: FileSpreadsheet, badge: null },
         { id: 'results', label: 'نتائج وتقارير الطلاب', icon: Award, badge: attempts.length > 0 ? attempts.length : null },
-        { id: 'audit-admin', label: 'سجل نشاط الإدارة 🛡️', icon: ShieldCheck, badge: null },
+        { id: 'audit-admin', label: 'سجل نشاط الإدارة', icon: ShieldCheck, badge: null },
         { id: 'notifs', label: 'مركز الإشعارات', icon: Bell, badge: notifs.length > 0 ? notifs.length : null },
         { id: 'settings', label: 'إعدادات المنصة', icon: Settings, badge: null }
       ]
     },
     {
-      title: '📚 المحتوى والملازم والتعليقات',
+      title: 'المحتوى والملازم والتعليقات',
       items: [
         { id: 'courses', label: 'الكورسات والدروس', icon: BookOpen, badge: courses.length },
-        { id: 'comments-admin', label: 'استفسارات الطلاب 💬', icon: MessageSquare, badge: commentsCount > 0 ? commentsCount : null },
+        { id: 'comments-admin', label: 'استفسارات الطلاب', icon: MessageSquare, badge: commentsCount > 0 ? commentsCount : null },
         { id: 'exams', label: 'بنك الأسئلة والامتحانات', icon: HelpCircle, badge: exams.length },
         { id: 'pdfs', label: 'المذكرات والملازم PDF', icon: FileText, badge: pdfs.length }
       ]
     },
     {
-      title: '👥 شؤون الطلاب والاشتراكات',
+      title: 'شؤون الطلاب والاشتراكات',
       items: [
         { id: 'students', label: 'سجل الطلاب والأجهزة', icon: Users, badge: students.length },
         { id: 'codes', label: 'أكواد التفعيل والشحن', icon: Key, badge: codes.filter(c => !c.isUsed).length }
       ]
     },
     {
-      title: '⚛️ المسابقات والذكاء الاصطناعي',
+      title: 'المسابقات والذكاء الاصطناعي',
       items: [
         { id: 'challenges', label: 'تحديات الأسبوع والمسابقات', icon: Trophy, badge: challenges.length },
         { id: 'leaderboard-admin', label: 'لوحة الشرف وتكريم الأوائل', icon: Award, badge: StorageService.getLeaderboard().length },
-        { id: 'weakness-admin', label: 'تشخيص نقاط الضعف 🧠', icon: Brain, badge: null },
-        { id: 'ai-admin', label: 'المساعد الذكي AI ⚛️', icon: Bot, badge: 'نشط' }
+        { id: 'weakness-admin', label: 'تشخيص نقاط الضعف', icon: Brain, badge: null },
+        { id: 'ai-admin', label: 'المساعد الذكي AI', icon: Bot, badge: 'نشط' }
       ]
     }
   ];
@@ -1059,20 +1059,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       ? weaknessProfile.weakPoints.slice(0, 4).map(w => `• ${w.conceptName} (${w.chapterOrUnit})`).join('\n')
       : '• لا توجد نقاط ضعف مسجلة حالياً (أداء ممتاز بجدارة)';
 
-    const message = `السلام عليكم ورحمة الله وبركاته 🌹
+    const message = `السلام عليكم ورحمة الله وبركاته
 تقرير ولي الأمر المعتمد للطالب/ة: *${student.name}*
 منصة: *${settings.platformName}*
 المعلم: *${settings.instructorTitle}*
 
-📊 **ملخص الأداء والمشاركات:**
+**ملخص الأداء والمشاركات:**
 • الكورسات المفعلة: ${student.enrolledCourseIds?.length || 0} كورس
 • عدد الاختبارات المكتملة: ${totalAttempts} اختبار
 • متوسط التقدير العام: *${avgPercentage}%*
 
-🎯 **النقاط والمفاهيم الجاري تركيز المراجعة عليها:**
+**النقاط والمفاهيم الجاري تركيز المراجعة عليها:**
 ${weakConceptsText}
 
-💡 **توجيهات المعلم:**
+**توجيهات المعلم:**
 نحث الطالب على استكمال مراجعة الفيديوهات الموصى بها وحل تحديات الأسبوع الفيزيائية لرفع مستواه وتحقيق 60/60.
 
 لأي استفسار التواصل مع الإدارة: ${settings.whatsappNumber}`;
@@ -1098,17 +1098,10 @@ ${weakConceptsText}
   };
 
   return (
-    <div className="min-h-screen bg-[#060913] text-slate-100 pb-20 lg:pb-12 animate-in fade-in duration-300 selection:bg-blue-600 selection:text-white font-sans antialiased overflow-x-hidden">
+    <div className="min-h-screen bg-[#F5F7FA] text-[#0D1B3E] pb-20 lg:pb-12 animate-in fade-in duration-300 selection:bg-[#1E4FD8] selection:text-white font-sans antialiased overflow-x-hidden">
       
-      {/* Background Subtle Radial Glow Accents */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 left-10 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-10 right-10 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl" />
-      </div>
-
       {/* 1. TOP EXECUTIVE HEADER BAR */}
-      <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-2xl">
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-md shadow-xs">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3.5">
           <div className="flex items-center justify-between gap-3 sm:gap-6">
             
@@ -1117,7 +1110,7 @@ ${weakConceptsText}
               {/* Mobile Menu Toggle Button */}
               <button
                 onClick={() => setIsMobileDrawerOpen(true)}
-                className="lg:hidden flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="lg:hidden flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-[#F5F7FA] text-[#0D1B3E] hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1E4FD8]"
                 aria-label="فتح القائمة الرئيسية"
               >
                 <Menu className="h-5 w-5" />
@@ -1130,27 +1123,27 @@ ${weakConceptsText}
                 title="العودة إلى النظرة العامة للوحة التحكم"
               >
                 <Logo size="md" showSubtitle={true} />
-                <span className="hidden xl:inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/30 px-2.5 py-1 rounded-xl shadow-sm">
-                  <ShieldCheck className="h-3.5 w-3.5" />
+                <span className="hidden xl:inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider bg-blue-50 text-[#1E4FD8] border border-blue-200 px-2.5 py-1 rounded-xl shadow-xs">
+                  <ShieldCheck className="h-3.5 w-3.5 text-[#1E4FD8]" />
                   لوحة الإدارة التنفيذية
                 </span>
               </div>
             </div>
 
             {/* Admin Session Badge on Desktop */}
-            <div className="hidden lg:flex items-center gap-3 rounded-2xl border border-slate-800/90 bg-slate-900/70 px-4 py-2 backdrop-blur-md shadow-sm">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/20 via-amber-600/15 to-blue-500/20 border border-amber-500/40 text-amber-400 font-black text-xs shadow-inner">
+            <div className="hidden lg:flex items-center gap-3 rounded-2xl border border-slate-200 bg-[#F5F7FA] px-4 py-2 shadow-xs">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#1E4FD8] text-white font-black text-xs shadow-xs">
                 ADMIN
               </div>
               <div className="text-right">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-white">المسؤول العام (Super Admin)</span>
+                  <span className="text-xs font-bold text-[#0D1B3E]">المسؤول العام (Super Admin)</span>
                   <span className="flex h-2 w-2 relative">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-400 mt-0.5">منصة {settings.platformName || 'ويكيفزياء'} للفيزياء الحديثة</p>
+                <p className="text-[10px] text-[#6B7280] mt-0.5">منصة {settings.platformName || 'ويكيفزياء'} للفيزياء الحديثة</p>
               </div>
             </div>
 
@@ -1159,7 +1152,7 @@ ${weakConceptsText}
               <button
                 onClick={handleForceSyncCloud}
                 disabled={isSyncingCloud}
-                className="flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-950/40 px-3 py-2 text-xs font-bold text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/60 transition-all shadow-sm shadow-emerald-500/10 disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition-all shadow-xs disabled:opacity-50"
                 title="مزامنة فورية لكل البيانات مع قاعدة بيانات Firebase Firestore"
               >
                 <RefreshCw className={`h-3.5 w-3.5 shrink-0 ${isSyncingCloud ? 'animate-spin' : ''}`} />
@@ -1168,16 +1161,16 @@ ${weakConceptsText}
 
               <button
                 onClick={() => onNavigate('dashboard')}
-                className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/90 px-3 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700 hover:text-white transition-colors"
+                className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-[#0D1B3E] hover:bg-slate-50 transition-colors shadow-xs"
                 title="معاينة الواجهة كما يراها الطالب"
               >
-                <Eye className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                <Eye className="h-3.5 w-3.5 text-[#1E4FD8] shrink-0" />
                 <span className="hidden sm:inline">معاينة كطالب</span>
               </button>
 
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-1.5 rounded-xl border border-rose-500/40 bg-rose-950/30 px-3 py-2 text-xs font-bold text-rose-400 hover:bg-rose-500/20 hover:border-rose-500/60 transition-colors"
+                className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100 transition-colors shadow-xs"
                 title="تسجيل الخروج من لوحة التحكم"
               >
                 <LogOut className="h-3.5 w-3.5 shrink-0" />
@@ -1194,26 +1187,26 @@ ${weakConceptsText}
         <div className="fixed inset-0 z-50 flex justify-end lg:hidden">
           {/* Backdrop Blur */}
           <div 
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity animate-in fade-in"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity animate-in fade-in"
             onClick={() => setIsMobileDrawerOpen(false)}
           />
 
           {/* Drawer Panel */}
-          <div className="relative w-full max-w-xs sm:max-w-sm h-full bg-[#080d1a] border-r border-slate-800 shadow-2xl p-4 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300 z-10">
+          <div className="relative w-full max-w-xs sm:max-w-sm h-full bg-white border-r border-slate-200 shadow-2xl p-4 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300 z-10">
             
             <div className="space-y-4">
               {/* Drawer Header */}
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200">
                 <div className="flex items-center gap-2">
                   <Logo size="sm" showSubtitle={false} />
-                  <span className="text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-bold bg-blue-50 text-[#1E4FD8] border border-blue-200 px-2 py-0.5 rounded-full">
                     لوحة الإدارة
                   </span>
                 </div>
 
                 <button
                   onClick={() => setIsMobileDrawerOpen(false)}
-                  className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                  className="p-2 rounded-xl text-slate-400 hover:text-[#0D1B3E] hover:bg-slate-100 transition-colors"
                   aria-label="إغلاق القائمة"
                 >
                   <X className="h-5 w-5" />
@@ -1224,7 +1217,7 @@ ${weakConceptsText}
               <nav className="space-y-4 pt-1">
                 {tabCategories.map((cat, idx) => (
                   <div key={idx} className="space-y-1">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-2 block mb-1">
+                    <span className="text-[10px] font-black text-[#6B7280] uppercase tracking-wider px-2 block mb-1">
                       {cat.title}
                     </span>
                     <div className="space-y-1">
@@ -1240,19 +1233,19 @@ ${weakConceptsText}
                             }}
                             className={`w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-bold transition-all text-right ${
                               isActive
-                                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30 ring-1 ring-blue-400'
-                                : 'text-slate-300 hover:bg-slate-850 hover:text-white'
+                                ? 'bg-[#1E4FD8] text-white shadow-sm'
+                                : 'text-[#0D1B3E] hover:bg-[#F5F7FA]'
                             }`}
                           >
                             <div className="flex items-center gap-3 min-w-0 truncate">
-                              <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-white' : 'text-blue-400'}`} />
+                              <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-white' : 'text-[#1E4FD8]'}`} />
                               <span className="truncate">{tab.label}</span>
                             </div>
                             {tab.badge !== null && tab.badge !== undefined && (
                               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0 ${
                                 isActive
                                   ? 'bg-white/20 text-white'
-                                  : 'bg-slate-800 text-slate-300 border border-slate-700/60'
+                                  : 'bg-slate-100 text-[#0D1B3E] border border-slate-200'
                               }`}>
                                 {tab.badge}
                               </span>
@@ -1267,13 +1260,13 @@ ${weakConceptsText}
             </div>
 
             {/* Bottom Support Widget in Drawer */}
-            <div className="pt-4 border-t border-slate-800/80 mt-6">
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-3.5 space-y-2 text-center">
-                <p className="font-bold text-white text-xs">تواصل سريع</p>
-                <p className="text-[11px] text-slate-400">تحتاج مساعدة؟ تواصل معنا لأي استفسار أو دعم فني</p>
+            <div className="pt-4 border-t border-slate-200 mt-6">
+              <div className="rounded-2xl border border-slate-200 bg-[#F5F7FA] p-3.5 space-y-2 text-center">
+                <p className="font-bold text-[#0D1B3E] text-xs">تواصل سريع</p>
+                <p className="text-[11px] text-[#6B7280]">تحتاج مساعدة؟ تواصل معنا لأي استفسار أو دعم فني</p>
                 <button
                   onClick={handleOpenSupportWhatsapp}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white py-2 text-xs font-bold transition-all shadow-md shadow-blue-600/20"
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#1E4FD8] hover:bg-[#163cb5] text-white py-2 text-xs font-bold transition-all shadow-xs"
                 >
                   <MessageCircle className="h-3.5 w-3.5" />
                   <span>راسل الدعم</span>
@@ -1290,25 +1283,25 @@ ${weakConceptsText}
         
         {/* Cloud Sync & Upload Feedback Alerts */}
         {syncFeedback && (
-          <div className="mb-4 flex items-center justify-between gap-2 rounded-2xl border border-emerald-500/40 bg-emerald-950/40 p-3 text-xs text-emerald-300 animate-in fade-in slide-in-from-top-2">
+          <div className="mb-4 flex items-center justify-between gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-700 animate-in fade-in slide-in-from-top-2">
             <div className="flex items-center gap-2">
-              <Cloud className="h-4 w-4 text-emerald-400 shrink-0" />
+              <Cloud className="h-4 w-4 text-emerald-600 shrink-0" />
               <span className="font-bold">{syncFeedback}</span>
             </div>
-            <span className="text-[10px] text-emerald-400/80 font-mono hidden sm:inline">Firebase Firestore Active</span>
+            <span className="text-[10px] text-emerald-600 font-mono hidden sm:inline">Firebase Firestore Active</span>
           </div>
         )}
 
         {isUploadingFile && (
-          <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-blue-500/40 bg-blue-950/50 p-3.5 text-xs text-blue-200 animate-pulse">
+          <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-3.5 text-xs text-blue-800 animate-pulse">
             <div className="flex items-center gap-3">
-              <RefreshCw className="h-5 w-5 animate-spin text-blue-400 shrink-0" />
+              <RefreshCw className="h-5 w-5 animate-spin text-[#1E4FD8] shrink-0" />
               <div>
-                <p className="font-bold text-white text-xs sm:text-sm">{uploadProgressText || 'جارٍ معالجة ورفع الملف...'}</p>
-                <p className="text-[10px] sm:text-[11px] text-blue-300">يتم حفظ الملف ليعمل بسرعة فائقة لدى جميع الطلاب</p>
+                <p className="font-bold text-[#0D1B3E] text-xs sm:text-sm">{uploadProgressText || 'جارٍ معالجة ورفع الملف...'}</p>
+                <p className="text-[10px] sm:text-[11px] text-[#6B7280]">يتم حفظ الملف ليعمل بسرعة فائقة لدى جميع الطلاب</p>
               </div>
             </div>
-            <span className="rounded-full bg-blue-500/20 px-2.5 py-1 text-[10px] font-bold text-blue-300 shrink-0">جاري الحفظ...</span>
+            <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[10px] font-bold text-[#1E4FD8] shrink-0">جاري الحفظ...</span>
           </div>
         )}
 
@@ -1319,22 +1312,22 @@ ${weakConceptsText}
           <aside className="hidden lg:block w-72 shrink-0 lg:sticky lg:top-24 space-y-4">
             
             {/* Sidebar Branding / Header Card */}
-            <div className="rounded-3xl border border-slate-800/90 bg-[#090e1c]/90 p-4 backdrop-blur-xl shadow-xl">
+            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-xs">
               <div className="flex items-center gap-3 mb-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/30 text-white font-black text-xl border border-blue-400/30">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#1E4FD8] text-white font-black text-xl shadow-xs">
                   Ψ
                 </div>
                 <div>
-                  <h3 className="font-black text-white text-base leading-tight">{settings.platformName || 'ويكيـفيزياء'}</h3>
-                  <p className="text-xs text-slate-400 font-medium">لوحة القيادة</p>
+                  <h3 className="font-black text-[#0D1B3E] text-base leading-tight">{settings.platformName || 'ويكيـفيزياء'}</h3>
+                  <p className="text-xs text-[#6B7280] font-medium">لوحة القيادة</p>
                 </div>
               </div>
 
               {/* Categorized Nav Groups */}
-              <nav className="space-y-4 pt-2 border-t border-slate-800/80">
+              <nav className="space-y-4 pt-2 border-t border-slate-200">
                 {tabCategories.map((cat, idx) => (
                   <div key={idx} className="space-y-1">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-2 block mb-1">
+                    <span className="text-[10px] font-black text-[#6B7280] uppercase tracking-wider px-2 block mb-1">
                       {cat.title}
                     </span>
                     <div className="space-y-0.5">
@@ -1347,19 +1340,19 @@ ${weakConceptsText}
                             onClick={() => setActiveTab(tab.id as any)}
                             className={`w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold transition-all text-right ${
                               isActive
-                                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25 ring-1 ring-blue-400'
-                                : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
+                                ? 'bg-[#1E4FD8] text-white shadow-xs'
+                                : 'text-[#0D1B3E] hover:bg-[#F5F7FA]'
                             }`}
                           >
                             <div className="flex items-center gap-2.5 truncate">
-                              <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-white' : 'text-blue-400'}`} />
+                              <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-white' : 'text-[#1E4FD8]'}`} />
                               <span className="truncate">{tab.label}</span>
                             </div>
                             {tab.badge !== null && tab.badge !== undefined && (
                               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0 ${
                                 isActive
                                   ? 'bg-white/20 text-white'
-                                  : 'bg-slate-800 text-slate-300 border border-slate-700/60'
+                                  : 'bg-slate-100 text-[#0D1B3E] border border-slate-200'
                               }`}>
                                 {tab.badge}
                               </span>
@@ -1373,10 +1366,10 @@ ${weakConceptsText}
               </nav>
 
               {/* Support Quick Contact Box */}
-              <div className="mt-5 pt-3 border-t border-slate-800/80">
-                <div className="rounded-2xl border border-slate-800/80 bg-slate-950/60 p-3 space-y-2 text-center">
-                  <p className="font-bold text-white text-xs">تواصل سريع</p>
-                  <p className="text-[10px] text-slate-400 leading-tight">تحتاج مساعدة؟ تواصل معنا لأي استفسار أو دعم فني</p>
+              <div className="mt-5 pt-3 border-t border-slate-200">
+                <div className="rounded-2xl border border-slate-200 bg-[#F5F7FA] p-3 space-y-2 text-center">
+                  <p className="font-bold text-[#0D1B3E] text-xs">تواصل سريع</p>
+                  <p className="text-[10px] text-[#6B7280] leading-tight">تحتاج مساعدة؟ تواصل معنا لأي استفسار أو دعم فني</p>
                   <button
                     onClick={handleOpenSupportWhatsapp}
                     className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-blue-600/90 hover:bg-blue-600 text-white py-1.5 text-xs font-bold transition-all shadow-md shadow-blue-600/20"
@@ -1490,7 +1483,7 @@ ${weakConceptsText}
                       title="ترتيب أقسام الواجهة حسب رغبتك"
                     >
                       <Layers className="h-3.5 w-3.5" />
-                      <span>{isCustomizeLayoutMode ? 'حفظ ترتيب الأقسام ✓' : 'تخصيص ترتيب الأقسام'}</span>
+                      <span>{isCustomizeLayoutMode ? 'حفظ ترتيب الأقسام' : 'تخصيص ترتيب الأقسام'}</span>
                     </button>
 
                     {isCustomizeLayoutMode && (
@@ -2527,7 +2520,7 @@ ${weakConceptsText}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-amber-300">تحديد الكورس التابع له هذا الامتحان 📚</label>
+                    <label className="text-xs font-bold text-amber-300">تحديد الكورس التابع له هذا الامتحان</label>
                     <select
                       value={examForm.courseId}
                       onChange={e => setExamForm({ ...examForm, courseId: e.target.value })}
@@ -2544,7 +2537,7 @@ ${weakConceptsText}
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-300">الصف الدراسي المستهدف 🎓</label>
+                    <label className="text-xs font-bold text-slate-300">الصف الدراسي المستهدف</label>
                     <select
                       value={examForm.grade}
                       onChange={e => setExamForm({ ...examForm, grade: e.target.value })}
@@ -2792,12 +2785,12 @@ ${weakConceptsText}
                                         : 'text-slate-400'
                                     }`}
                                   >
-                                    {String.fromCharCode(65 + oIdx)}: {opt} {oIdx === q.correctOptionIndex && '✓'}
+                                    {String.fromCharCode(65 + oIdx)}: {opt} {oIdx === q.correctOptionIndex && '(صحيح)'}
                                   </div>
                                 ))}
                               </div>
                               {q.explanation && (
-                                <p className="text-[10px] text-slate-400 pt-1">💡 التفسير: {q.explanation}</p>
+                                <p className="text-[10px] text-slate-400 pt-1">التفسير: {q.explanation}</p>
                               )}
                             </div>
                             <button
@@ -2844,7 +2837,7 @@ ${weakConceptsText}
                     <span className="rounded bg-purple-500/20 text-purple-400 text-[10px] font-bold px-2 py-0.5">
                       {ex.type === 'quiz' ? 'كويز' : 'امتحان شامل'}
                     </span>
-                    <span className="text-xs text-slate-400">⏱ {ex.durationMinutes} دقيقة</span>
+                    <span className="text-xs text-slate-400">{ex.durationMinutes} دقيقة</span>
                   </div>
                   
                   <h3 className="font-bold text-white text-base leading-snug">{ex.title}</h3>
@@ -2854,10 +2847,10 @@ ${weakConceptsText}
                     <span className="text-slate-400 text-[11px]">الكورس التابع له:</span>
                     {linkedCourse ? (
                       <span className="font-bold text-amber-300 truncate max-w-[160px]" title={linkedCourse.title}>
-                        📚 {linkedCourse.title}
+                        {linkedCourse.title}
                       </span>
                     ) : (
-                      <span className="text-slate-500 text-[11px]">🌐 عام (غير مرتبط)</span>
+                      <span className="text-slate-500 text-[11px]">عام (غير مرتبط)</span>
                     )}
                   </div>
 
@@ -2906,7 +2899,7 @@ ${weakConceptsText}
                 <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                   <h3 className="font-bold text-base text-white flex items-center gap-2">
                     <Edit3 className="h-5 w-5 text-amber-400" />
-                    <span>تعديل بيانات الامتحان وربط الكورس 📚</span>
+                    <span>تعديل بيانات الامتحان وربط الكورس</span>
                   </h3>
                   <button
                     type="button"
@@ -2944,7 +2937,7 @@ ${weakConceptsText}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-amber-300">تحديد / تغيير الكورس التابع له هذا الامتحان 📚</label>
+                      <label className="text-xs font-bold text-amber-300">تحديد / تغيير الكورس التابع له هذا الامتحان</label>
                       <select
                         value={editingExam.courseId || ''}
                         onChange={e => setEditingExam({ ...editingExam, courseId: e.target.value || undefined })}
@@ -2961,7 +2954,7 @@ ${weakConceptsText}
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-300">الصف الدراسي المستهدف 🎓</label>
+                      <label className="text-xs font-bold text-slate-300">الصف الدراسي المستهدف</label>
                       <select
                         value={editingExam.grade || 'الكل'}
                         onChange={e => setEditingExam({ ...editingExam, grade: e.target.value })}
@@ -3096,7 +3089,7 @@ ${weakConceptsText}
                             title="استعراض البروفايل الكامل وتحليلات النجاح والرسوب والاختبارات"
                           >
                             <BarChart3 className="h-3.5 w-3.5 text-amber-400" />
-                            <span>البروفايل والتحليل 📊</span>
+                            <span>البروفايل والتحليل</span>
                           </button>
 
                           <button
@@ -3189,7 +3182,7 @@ ${weakConceptsText}
                     >
                       {codeGenForm.targetType === 'course' ? (
                         <>
-                          <option value="ALL">🌟 كود شامل (تفعيل لجميع كورسات المنصة)</option>
+                          <option value="ALL">كود شامل (تفعيل لجميع كورسات المنصة)</option>
                           {courses.map(c => (
                             <option key={c.id} value={c.id}>
                               {c.title} • {c.grade}
@@ -3198,7 +3191,7 @@ ${weakConceptsText}
                         </>
                       ) : (
                         <>
-                          <option value="ALL_PDFS">📚 جميع مذكرات المنصة</option>
+                          <option value="ALL_PDFS">جميع مذكرات المنصة</option>
                           {pdfs.map(p => (
                             <option key={p.id} value={p.id}>
                               {p.title}
@@ -3313,7 +3306,7 @@ ${weakConceptsText}
                     <CheckCircle2 className="h-6 w-6" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-white">تم إنشاء الأكواد بنجاح! 🎉</h3>
+                    <h3 className="text-lg font-bold text-white">تم إنشاء الأكواد بنجاح</h3>
                     <p className="text-xs text-slate-300">
                       تم توليد {recentlyGeneratedCodes.length} كود تفعيل لـ ({recentlyGeneratedCodes[0]?.targetName})
                     </p>
@@ -3354,7 +3347,7 @@ ${weakConceptsText}
                     }`}
                   >
                     {copiedCodeId === 'ALL' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                    <span>{copiedCodeId === 'ALL' ? '✓ تم نسخ جميع الأكواد!' : 'نسخ جميع الأكواد دفعة واحدة'}</span>
+                    <span>{copiedCodeId === 'ALL' ? 'تم نسخ جميع الأكواد' : 'نسخ جميع الأكواد دفعة واحدة'}</span>
                   </button>
 
                   <button
@@ -3503,7 +3496,7 @@ ${weakConceptsText}
 
                 {/* Free vs Paid Access Selection */}
                 <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 space-y-3">
-                  <label className="text-xs font-bold text-amber-300 block">تحديد نوع الوصول للمذكرة 🔐</label>
+                  <label className="text-xs font-bold text-amber-300 block">تحديد نوع الوصول للمذكرة</label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <button
                       type="button"
@@ -3514,8 +3507,8 @@ ${weakConceptsText}
                           : 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700'
                       }`}
                     >
-                      <div className="text-xs flex items-center gap-1.5">
-                        <span>🟢 مذكرة مجانية</span>
+                      <div className="text-xs flex items-center gap-1.5 font-bold">
+                        <span>مذكرة مجانية</span>
                       </div>
                       <p className="text-[11px] opacity-80 mt-1">متاحة للقراءة والتحميل المباشر لجميع الطلاب بدون رسوم أو أكواد.</p>
                     </button>
@@ -3529,8 +3522,8 @@ ${weakConceptsText}
                           : 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700'
                       }`}
                     >
-                      <div className="text-xs flex items-center gap-1.5">
-                        <span>💳 مذكرة مدفوعة / محمية</span>
+                      <div className="text-xs flex items-center gap-1.5 font-bold">
+                        <span>مذكرة مدفوعة / محمية</span>
                       </div>
                       <p className="text-[11px] opacity-80 mt-1">تتطلب الشراء/كود تفعيل أو تكون مجانية للمشتركين في كورس معين.</p>
                     </button>
@@ -3550,7 +3543,7 @@ ${weakConceptsText}
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-xs font-bold text-amber-300">ربط بكورس معين (اختياري) 📚</label>
+                        <label className="text-xs font-bold text-amber-300">ربط بكورس معين (اختياري)</label>
                         <select
                           value={pdfForm.associatedCourseId}
                           onChange={e => setPdfForm({ ...pdfForm, associatedCourseId: e.target.value })}
@@ -3615,9 +3608,9 @@ ${weakConceptsText}
                       <div className="flex items-center justify-between">
                         <span className="text-slate-400 text-[11px]">حالة الوصول:</span>
                         {isFreePdf ? (
-                          <span className="font-bold text-emerald-400">🟢 مجانية للجميع</span>
+                          <span className="font-bold text-emerald-400">مجانية للجميع</span>
                         ) : (
-                          <span className="font-bold text-amber-400">💳 مدفوعة ({pdf.price || 50} ج.م)</span>
+                          <span className="font-bold text-amber-400">مدفوعة ({pdf.price || 50} ج.م)</span>
                         )}
                       </div>
 
@@ -3625,10 +3618,10 @@ ${weakConceptsText}
                         <span className="text-slate-400 text-[11px]">الكورس المرتبط:</span>
                         {linkedCourse ? (
                           <span className="font-bold text-amber-300 truncate max-w-[140px]" title={linkedCourse.title}>
-                            📚 {linkedCourse.title}
+                            {linkedCourse.title}
                           </span>
                         ) : (
-                          <span className="text-slate-500 text-[11px]">🌐 عام (غير مرتبط)</span>
+                          <span className="text-slate-500 text-[11px]">عام (غير مرتبط)</span>
                         )}
                       </div>
                     </div>
@@ -3690,7 +3683,7 @@ ${weakConceptsText}
                 <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                   <h3 className="font-bold text-base text-white flex items-center gap-2">
                     <Edit3 className="h-5 w-5 text-amber-400" />
-                    <span>تعديل بيانات المذكرة وخيارات الوصول ✏️</span>
+                    <span>تعديل بيانات المذكرة وخيارات الوصول</span>
                   </h3>
                   <button
                     type="button"
@@ -3783,7 +3776,7 @@ ${weakConceptsText}
 
                   {/* Free vs Paid Option */}
                   <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 space-y-3">
-                    <label className="text-xs font-bold text-amber-300 block">نوع الوصول والصلاحية للمذكرة 🔐</label>
+                    <label className="text-xs font-bold text-amber-300 block">نوع الوصول والصلاحية للمذكرة</label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <button
                         type="button"
@@ -3794,8 +3787,8 @@ ${weakConceptsText}
                             : 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700'
                         }`}
                       >
-                        <div className="text-xs flex items-center gap-1.5">
-                          <span>🟢 مذكرة مجانية</span>
+                        <div className="text-xs flex items-center gap-1.5 font-bold">
+                          <span>مذكرة مجانية</span>
                         </div>
                         <p className="text-[11px] opacity-80 mt-1">متاحة للقراءة والتحميل المباشر لجميع الطلاب بدون رسوم.</p>
                       </button>
@@ -3809,8 +3802,8 @@ ${weakConceptsText}
                             : 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700'
                         }`}
                       >
-                        <div className="text-xs flex items-center gap-1.5">
-                          <span>💳 مذكرة مدفوعة / محمية</span>
+                        <div className="text-xs flex items-center gap-1.5 font-bold">
+                          <span>مذكرة مدفوعة / محمية</span>
                         </div>
                         <p className="text-[11px] opacity-80 mt-1">تتطلب كود تفعيل/شراء أو تكون مفعّلة لمشتركي كورس معين.</p>
                       </button>
@@ -3829,7 +3822,7 @@ ${weakConceptsText}
                         </div>
 
                         <div className="space-y-1">
-                          <label className="text-xs font-bold text-amber-300">ربط بكورس معين 📚</label>
+                          <label className="text-xs font-bold text-amber-300">ربط بكورس معين</label>
                           <select
                             value={editingPdf.associatedCourseId || ''}
                             onChange={e => setEditingPdf({ ...editingPdf, associatedCourseId: e.target.value || undefined })}
@@ -3926,7 +3919,8 @@ ${weakConceptsText}
                             rel="noreferrer"
                             className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-emerald-500/25 transition-all shadow-sm"
                           >
-                            <span>📱 إرسال واتساب</span>
+                            <MessageCircle className="h-3.5 w-3.5 text-emerald-400" />
+                            <span>إرسال واتساب</span>
                           </a>
                         </td>
                       </tr>
@@ -4199,7 +4193,7 @@ ${weakConceptsText}
                       </td>
                       <td className="py-3 px-4 font-bold text-white flex items-center gap-2">
                         {entry.studentName}
-                        {idx === 0 && <span className="text-xs">👑</span>}
+                        {idx === 0 && <Award className="h-4 w-4 text-amber-400 inline-block" />}
                       </td>
                       <td className="py-3 px-4 text-slate-400">
                         {entry.governorate || 'القاهرة'} • {entry.grade || '3 ثانوى'}
@@ -4366,7 +4360,7 @@ ${weakConceptsText}
                     setTestAiResult('جاري استدعاء محرك الذكاء الاصطناعي وإعداد الشرح الفيزيائي...');
                     try {
                       setTimeout(() => {
-                        setTestAiResult(`⚛️ **إجابة المساعد الفيزيائي الذكي:**\nقانون أوم للدوائر المغلقة ينص على أن:\n*شدة التيار الكلي (I) = Vb / (R_ext + r)*\n\n**العوامل المحددة لفرق الجهد بين قطبي البطارية (V):**\n1. **في حالة تفريغ البطارية:** V = Vb - I * r (يقل فرق الجهد عن القوة الدافعة بسبب المقاومة الداخلية).\n2. **في حالة فتح الدائرة (I = 0):** يصبح V = Vb تماماً.\n3. **في حالة شحن البطارية:** يصبح V = Vb + I * r.`);
+                        setTestAiResult(`**إجابة المساعد الفيزيائي الذكي:**\nقانون أوم للدوائر المغلقة ينص على أن:\n*شدة التيار الكلي (I) = Vb / (R_ext + r)*\n\n**العوامل المحددة لفرق الجهد بين قطبي البطارية (V):**\n1. **في حالة تفريغ البطارية:** V = Vb - I * r (يقل فرق الجهد عن القوة الدافعة بسبب المقاومة الداخلية).\n2. **في حالة فتح الدائرة (I = 0):** يصبح V = Vb تماماً.\n3. **في حالة شحن البطارية:** يصبح V = Vb + I * r.`);
                         setIsAiLoading(false);
                       }, 800);
                     } catch (e) {
@@ -4377,7 +4371,7 @@ ${weakConceptsText}
                   disabled={isAiLoading}
                   className="w-full rounded-xl bg-slate-800 border border-slate-700 py-2.5 text-xs font-bold text-cyan-300 hover:bg-slate-700"
                 >
-                  {isAiLoading ? 'جاري التحليل...' : 'اختبار الرد الآن ⚡'}
+                  {isAiLoading ? 'جاري التحليل...' : 'اختبار الرد الآن'}
                 </button>
               </div>
 
@@ -4432,9 +4426,9 @@ ${weakConceptsText}
                       onChange={e => setNotifForm({ ...notifForm, targetType: e.target.value as any })}
                       className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
                     >
-                      <option value="all">عام لجميع الطلاب 📢</option>
-                      <option value="grade">حسب الصف الدراسي 🎓</option>
-                      <option value="student">إشعار خاص بطالب محدد 🔒</option>
+                      <option value="all">عام لجميع الطلاب</option>
+                      <option value="grade">حسب الصف الدراسي</option>
+                      <option value="student">إشعار خاص بطالب محدد</option>
                     </select>
                   </div>
                 </div>
@@ -4457,7 +4451,7 @@ ${weakConceptsText}
 
                 {notifForm.targetType === 'student' && (
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-amber-300">اختر الطالب المستهدف بالإشعار الخاص 🔒</label>
+                    <label className="text-xs font-bold text-amber-300">اختر الطالب المستهدف بالإشعار الخاص</label>
                     <select
                       value={notifForm.targetStudentId}
                       onChange={e => setNotifForm({ ...notifForm, targetStudentId: e.target.value })}
@@ -4747,7 +4741,7 @@ ${weakConceptsText}
                   <Youtube className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-white">دليل إضافة وتشغيل الفيديوهات للدروس 🎬</h3>
+                  <h3 className="text-lg font-black text-white">دليل إضافة وتشغيل الفيديوهات للدروس</h3>
                   <p className="text-xs text-slate-400">أفضل وأسرع الطرق لتقديم شروحات بجودة عالية لطلابك بدون تقطيع</p>
                 </div>
               </div>
@@ -4823,7 +4817,7 @@ ${weakConceptsText}
                   <Stethoscope className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-white">تقرير تشخيص نقاط الضعف للطالب 🩺</h3>
+                  <h3 className="text-lg font-black text-white">تقرير تشخيص نقاط الضعف للطالب</h3>
                   <p className="text-xs text-slate-400">الطالب: {selectedWeaknessStudent.name} ({selectedWeaknessStudent.phone})</p>
                 </div>
               </div>
@@ -4855,7 +4849,7 @@ ${weakConceptsText}
                     <h4 className="font-bold text-xs text-slate-300 mb-2">المفاهيم الفيزيائية المحتاجة لمراجعة وحل تمارين:</h4>
                     {profile.weakPoints.length === 0 ? (
                       <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-center text-xs text-emerald-300">
-                        🎉 أداء ممتاز! لا توجد نقاط ضعف مسجلة لهذا الطالب في الاختبارات الأخيرة.
+                        أداء ممتاز! لا توجد نقاط ضعف مسجلة لهذا الطالب في الاختبارات الأخيرة.
                       </div>
                     ) : (
                       <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
@@ -4910,10 +4904,10 @@ ${weakConceptsText}
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 mt-1 flex items-center gap-3 flex-wrap">
-                    <span>📱 هاتف: <strong className="text-white font-mono" dir="ltr">{selectedAnalyticsStudent.phone}</strong></span>
-                    <span>👨‍👩‍👦 ولي الأمر: <strong className="text-white font-mono" dir="ltr">{selectedAnalyticsStudent.parentPhone || 'غير مسجل'}</strong></span>
-                    <span>🎓 المرحلة: <strong className="text-amber-400">{selectedAnalyticsStudent.grade}</strong></span>
-                    <span>📍 المحافظة: <strong className="text-slate-300">{selectedAnalyticsStudent.governorate || 'غير حددة'}</strong></span>
+                    <span>هاتف: <strong className="text-white font-mono" dir="ltr">{selectedAnalyticsStudent.phone}</strong></span>
+                    <span>ولي الأمر: <strong className="text-white font-mono" dir="ltr">{selectedAnalyticsStudent.parentPhone || 'غير مسجل'}</strong></span>
+                    <span>المرحلة: <strong className="text-amber-400">{selectedAnalyticsStudent.grade}</strong></span>
+                    <span>المحافظة: <strong className="text-slate-300">{selectedAnalyticsStudent.governorate || 'غير محددة'}</strong></span>
                   </p>
                 </div>
               </div>
@@ -4950,10 +4944,10 @@ ${weakConceptsText}
               let levelLabel = 'لم يختبر بعد';
               let levelColor = 'text-slate-400';
               if (studentAttempts.length > 0) {
-                if (avgScore >= 85) { levelLabel = 'ممتاز جداً 🌟'; levelColor = 'text-emerald-400'; }
-                else if (avgScore >= 75) { levelLabel = 'جيد جداً 👍'; levelColor = 'text-blue-400'; }
-                else if (avgScore >= 50) { levelLabel = 'مقبول ⚠️'; levelColor = 'text-amber-400'; }
-                else { levelLabel = 'يحتاج تكثيف ومتابعة 🔴'; levelColor = 'text-rose-400'; }
+                if (avgScore >= 85) { levelLabel = 'ممتاز جداً'; levelColor = 'text-emerald-400'; }
+                else if (avgScore >= 75) { levelLabel = 'جيد جداً'; levelColor = 'text-blue-400'; }
+                else if (avgScore >= 50) { levelLabel = 'مقبول'; levelColor = 'text-amber-400'; }
+                else { levelLabel = 'يحتاج تكثيف ومتابعة'; levelColor = 'text-rose-400'; }
               }
 
               return (
@@ -4966,27 +4960,27 @@ ${weakConceptsText}
                     </div>
 
                     <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-3.5 text-center space-y-1">
-                      <span className="text-[10px] font-bold text-emerald-400 block">الامتحانات الناجحة ✅</span>
+                      <span className="text-[10px] font-bold text-emerald-400 block">الامتحانات الناجحة</span>
                       <span className="text-xl font-black text-emerald-300">{passedAttempts.length}</span>
                     </div>
 
                     <div className="rounded-2xl border border-rose-500/30 bg-rose-950/20 p-3.5 text-center space-y-1">
-                      <span className="text-[10px] font-bold text-rose-400 block">الامتحانات الراسب فيها ❌</span>
+                      <span className="text-[10px] font-bold text-rose-400 block">الامتحانات الراسب فيها</span>
                       <span className="text-xl font-black text-rose-300">{failedAttempts.length}</span>
                     </div>
 
                     <div className="rounded-2xl border border-amber-500/30 bg-amber-950/20 p-3.5 text-center space-y-1">
-                      <span className="text-[10px] font-bold text-amber-400 block">متوسط درجاته 📈</span>
+                      <span className="text-[10px] font-bold text-amber-400 block">متوسط درجاته</span>
                       <span className="text-xl font-black text-amber-300">{avgScore}%</span>
                     </div>
 
                     <div className="rounded-2xl border border-blue-500/30 bg-blue-950/20 p-3.5 text-center space-y-1">
-                      <span className="text-[10px] font-bold text-blue-400 block">الكورسات المفعلة 📚</span>
+                      <span className="text-[10px] font-bold text-blue-400 block">الكورسات المفعلة</span>
                       <span className="text-xl font-black text-blue-300">{enrolledCourses.length}</span>
                     </div>
 
                     <div className="rounded-2xl border border-purple-500/30 bg-purple-950/20 p-3.5 text-center space-y-1">
-                      <span className="text-[10px] font-bold text-purple-400 block">رصيد المحفظة 💰</span>
+                      <span className="text-[10px] font-bold text-purple-400 block">رصيد المحفظة</span>
                       <span className="text-xl font-black text-purple-300">{selectedAnalyticsStudent.walletBalance || 0} ج.م</span>
                     </div>
                   </div>
@@ -5036,7 +5030,7 @@ ${weakConceptsText}
                               <div className="flex justify-between text-[11px] text-slate-300 font-bold">
                                 <span>{att.examTitle}</span>
                                 <span className={isPass ? 'text-emerald-400 font-mono' : 'text-rose-400 font-mono'}>
-                                  {att.score} / {att.maxScore || 50} ({att.percentage}%) {isPass ? '✅ ناجح' : '❌ راسب'}
+                                  {att.score} / {att.maxScore || 50} ({att.percentage}%) {isPass ? 'ناجح' : 'راسب'}
                                 </span>
                               </div>
                               <div className="h-2.5 w-full rounded-full bg-slate-800 overflow-hidden">
@@ -5084,7 +5078,7 @@ ${weakConceptsText}
                                     <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-black ${
                                       isPass ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
                                     }`}>
-                                      {isPass ? 'ناجح ✅' : 'راسب ❌'}
+                                      {isPass ? 'ناجح' : 'راسب'}
                                     </span>
                                   </td>
                                 </tr>
@@ -5148,7 +5142,7 @@ ${weakConceptsText}
                               StorageService.saveStudent(updated);
                               setSelectedAnalyticsStudent(updated);
                               StorageService.sendNotification({
-                                title: 'تم شحن رصيدك بنجاح 💰',
+                                title: 'تم شحن رصيدك بنجاح',
                                 message: `تم إضافة ${amt} ج.م إلى حسابك بقرار مباشر من إدارة المنصة.`,
                                 target: 'student',
                                 targetStudentId: updated.id
@@ -5187,7 +5181,7 @@ ${weakConceptsText}
                                 StorageService.saveStudent(updated);
                                 setSelectedAnalyticsStudent(updated);
                                 StorageService.sendNotification({
-                                  title: 'تم تفعيل كورس جديد لك! 🎁',
+                                  title: 'تم تفعيل كورس جديد لك',
                                   message: `تم تفعيل كورس "${course?.title || 'كورس فيزياء'}" لحسابك بقرار مباشر من إدارة المنصة.`,
                                   target: 'student',
                                   targetStudentId: updated.id
@@ -5236,7 +5230,7 @@ ${weakConceptsText}
 
                     {/* Send Direct Private Notification to Student */}
                     <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
-                      <label className="text-[11px] font-bold text-amber-300 block">إرسال إشعار خاص ومباشر لهذا الطالب 🔒</label>
+                      <label className="text-[11px] font-bold text-amber-300 block">إرسال إشعار خاص ومباشر لهذا الطالب</label>
                       <div className="flex gap-2">
                         <input
                           type="text"
@@ -5249,7 +5243,7 @@ ${weakConceptsText}
                           onClick={() => {
                             if (!quickPrivateNotifMsg.trim()) return;
                             StorageService.sendNotification({
-                              title: 'تنبيه إداري خاص 📢',
+                              title: 'تنبيه إداري خاص',
                               message: quickPrivateNotifMsg,
                               target: 'student',
                               targetStudentId: selectedAnalyticsStudent.id

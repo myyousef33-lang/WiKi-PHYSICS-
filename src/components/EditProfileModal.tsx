@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { X, User, Phone, Lock, Camera, Check, ShieldAlert, Sparkles, AlertCircle } from 'lucide-react';
+import { X, User, Phone, Lock, Camera, Check, Sparkles, AlertCircle, Atom, Zap, Cpu, Lightbulb, Award } from 'lucide-react';
 import { Student } from '../types';
 import { StorageService, verifyPassword, hashPassword } from '../services/storage';
-import { PRESET_AVATARS, getPresetAvatar } from '../utils/avatars';
+import { PRESET_AVATARS, getPresetAvatar, AvatarOption } from '../utils/avatars';
 
 interface EditProfileModalProps {
   student: Student;
@@ -10,6 +10,25 @@ interface EditProfileModalProps {
   onClose: () => void;
   onProfileUpdated?: (updatedStudent: Student) => void;
 }
+
+const renderPresetIcon = (iconName: string, className: string = "h-5 w-5") => {
+  switch (iconName) {
+    case 'Atom':
+      return <Atom className={className} />;
+    case 'Zap':
+      return <Zap className={className} />;
+    case 'Sparkles':
+      return <Sparkles className={className} />;
+    case 'Cpu':
+      return <Cpu className={className} />;
+    case 'Lightbulb':
+      return <Lightbulb className={className} />;
+    case 'Award':
+      return <Award className={className} />;
+    default:
+      return <Atom className={className} />;
+  }
+};
 
 export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   student,
@@ -201,7 +220,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       };
 
       StorageService.setCurrentStudent(updatedObj);
-      setSuccessMsg('تم حفظ وتحديث بياناتك الشخصية بنجاح! ✨');
+      setSuccessMsg('تم حفظ وتحديث بياناتك الشخصية بنجاح!');
 
       if (onProfileUpdated) {
         onProfileUpdated(updatedObj);
@@ -221,23 +240,23 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const activePreset = getPresetAvatar(avatarUrl);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-lg rounded-3xl border border-orange-500/30 bg-slate-900 p-6 shadow-2xl shadow-orange-500/10 text-right font-sans overflow-hidden max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-fadeIn">
+      <div className="relative w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl text-right font-sans overflow-hidden max-h-[90vh] overflow-y-auto">
         
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-5">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
           <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500/10 border border-orange-500/30 text-orange-400">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 border border-blue-200 text-[#1E4FD8]">
               <User className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-white">تعديل الملف الشخصي</h3>
-              <p className="text-xs text-slate-400">حدث بياناتك وصورتك الشخصية بكل سهولة</p>
+              <h3 className="text-lg font-black text-[#0D1B3E]">تعديل الملف الشخصي</h3>
+              <p className="text-xs text-[#6B7280]">حدث بياناتك وصورتك الشخصية بكل سهولة</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+            className="rounded-xl p-2 text-[#6B7280] hover:bg-slate-100 hover:text-[#0D1B3E] transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -245,15 +264,15 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 
         {/* Alerts */}
         {error && (
-          <div className="mb-4 flex items-center gap-2 rounded-2xl border border-red-500/40 bg-red-500/10 p-3.5 text-xs text-red-400 font-bold">
-            <AlertCircle className="h-4 w-4 shrink-0 text-red-400" />
+          <div className="mb-4 flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-700 font-bold">
+            <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
             <span>{error}</span>
           </div>
         )}
 
         {successMsg && (
-          <div className="mb-4 flex items-center gap-2 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-3.5 text-xs text-emerald-400 font-bold">
-            <Check className="h-4 w-4 shrink-0 text-emerald-400" />
+          <div className="mb-4 flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-700 font-bold">
+            <Check className="h-4 w-4 shrink-0 text-emerald-600" />
             <span>{successMsg}</span>
           </div>
         )}
@@ -261,21 +280,21 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         <form onSubmit={handleSaveProfile} className="space-y-5">
 
           {/* Avatar Section */}
-          <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
-            <label className="text-xs font-bold text-slate-300 block">الصورة الشخصية أو الأفاتار:</label>
+          <div className="space-y-3 rounded-2xl border border-slate-200 bg-[#F5F7FA] p-4">
+            <label className="text-xs font-bold text-[#0D1B3E] block">الصورة الشخصية أو الأفاتار:</label>
             <div className="flex items-center gap-4">
               
               {/* Current Avatar Display */}
               <div className="relative group shrink-0">
-                <div className={`h-20 w-20 rounded-2xl overflow-hidden border-2 flex items-center justify-center bg-slate-800 ${activePreset ? activePreset.borderColor : 'border-orange-500/50'}`}>
+                <div className={`h-20 w-20 rounded-2xl overflow-hidden border-2 flex items-center justify-center bg-white ${activePreset ? activePreset.borderColor : 'border-blue-200'}`}>
                   {avatarUrl && !avatarUrl.startsWith('preset:') ? (
                     <img src={avatarUrl} alt={name} className="h-full w-full object-cover" />
                   ) : activePreset ? (
-                    <div className={`h-full w-full flex items-center justify-center bg-gradient-to-br ${activePreset.bgGradient} text-orange-400 font-black text-2xl`}>
-                      {activePreset.name.split(' ')[1] || '⚛️'}
+                    <div className={`h-full w-full flex items-center justify-center bg-gradient-to-br ${activePreset.bgGradient} text-[#1E4FD8]`}>
+                      {renderPresetIcon(activePreset.iconName, "h-8 w-8 text-[#1E4FD8]")}
                     </div>
                   ) : (
-                    <User className="h-10 w-10 text-orange-400" />
+                    <User className="h-10 w-10 text-[#1E4FD8]" />
                   )}
                 </div>
 
@@ -294,7 +313,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               {/* Upload & Preset Options */}
               <div className="space-y-2 flex-1">
                 <div className="flex items-center gap-2">
-                  <label className="cursor-pointer rounded-xl bg-orange-500/15 border border-orange-500/30 px-3 py-1.5 text-xs font-bold text-orange-300 hover:bg-orange-500 hover:text-white transition-all inline-flex items-center gap-1.5">
+                  <label className="cursor-pointer rounded-xl bg-blue-50 border border-blue-200 px-3 py-1.5 text-xs font-bold text-[#1E4FD8] hover:bg-blue-100 transition-all inline-flex items-center gap-1.5 shadow-xs">
                     <Camera className="h-3.5 w-3.5" />
                     <span>{uploadProgress ? 'جاري المعالجة...' : 'رفع صورة شخصية'}</span>
                     <input
@@ -308,14 +327,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setAvatarUrl('')}
-                      className="text-[11px] font-bold text-slate-400 hover:text-red-400"
+                      className="text-[11px] font-bold text-[#6B7280] hover:text-red-600"
                     >
                       إزالة
                     </button>
                   )}
                 </div>
 
-                <p className="text-[10px] text-slate-400">
+                <p className="text-[10px] text-[#6B7280]">
                   حد أقصى 15 ميجابايت (يتم الضغط والقص الذكي تلقائياً). أو اختر أفاتار جاهز:
                 </p>
 
@@ -326,14 +345,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                       key={preset.id}
                       type="button"
                       onClick={() => setAvatarUrl(preset.id)}
-                      className={`h-8 w-8 rounded-xl border flex items-center justify-center text-sm transition-all ${
+                      className={`h-8 w-8 rounded-xl border flex items-center justify-center transition-all ${
                         avatarUrl === preset.id
-                          ? 'border-orange-500 bg-orange-500/20 scale-110 shadow-md shadow-orange-500/20'
-                          : 'border-slate-800 bg-slate-900 hover:border-slate-700'
+                          ? 'border-[#1E4FD8] bg-blue-100 scale-110 shadow-xs'
+                          : 'border-slate-200 bg-white hover:border-blue-300'
                       }`}
                       title={preset.name}
                     >
-                      {preset.name.split(' ')[1] || '⚛️'}
+                      {renderPresetIcon(preset.iconName, "h-4 w-4 text-[#1E4FD8]")}
                     </button>
                   ))}
                 </div>
@@ -343,7 +362,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 
           {/* Student Name */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-300 block">الاسم بالكامل:</label>
+            <label className="text-xs font-bold text-[#0D1B3E] block">الاسم بالكامل:</label>
             <div className="relative">
               <User className="absolute right-3.5 top-3 h-4 w-4 text-slate-400" />
               <input
@@ -351,7 +370,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="أدخل اسمك كاملاً"
-                className="w-full rounded-2xl border border-slate-800 bg-slate-950 pr-10 pl-4 py-2.5 text-xs text-white placeholder-slate-500 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none"
+                className="w-full rounded-2xl border border-slate-200 bg-[#F5F7FA] pr-10 pl-4 py-2.5 text-xs text-[#0D1B3E] placeholder-slate-400 focus:border-[#1E4FD8] focus:bg-white focus:outline-none"
                 required
               />
             </div>
@@ -360,7 +379,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
           {/* Phones Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300 block">رقم هاتف الطالب:</label>
+              <label className="text-xs font-bold text-[#0D1B3E] block">رقم هاتف الطالب:</label>
               <div className="relative">
                 <Phone className="absolute right-3.5 top-3 h-4 w-4 text-slate-400" />
                 <input
@@ -369,14 +388,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="01xxxxxxxxx"
                   dir="ltr"
-                  className="w-full rounded-2xl border border-slate-800 bg-slate-950 pr-10 pl-4 py-2.5 text-xs text-white placeholder-slate-500 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none text-right font-mono"
+                  className="w-full rounded-2xl border border-slate-200 bg-[#F5F7FA] pr-10 pl-4 py-2.5 text-xs text-[#0D1B3E] placeholder-slate-400 focus:border-[#1E4FD8] focus:bg-white focus:outline-none text-right font-mono"
                   required
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300 block">رقم هاتف ولي الأمر:</label>
+              <label className="text-xs font-bold text-[#0D1B3E] block">رقم هاتف ولي الأمر:</label>
               <div className="relative">
                 <Phone className="absolute right-3.5 top-3 h-4 w-4 text-slate-400" />
                 <input
@@ -385,7 +404,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   onChange={(e) => setParentPhone(e.target.value)}
                   placeholder="01xxxxxxxxx"
                   dir="ltr"
-                  className="w-full rounded-2xl border border-slate-800 bg-slate-950 pr-10 pl-4 py-2.5 text-xs text-white placeholder-slate-500 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none text-right font-mono"
+                  className="w-full rounded-2xl border border-slate-200 bg-[#F5F7FA] pr-10 pl-4 py-2.5 text-xs text-[#0D1B3E] placeholder-slate-400 focus:border-[#1E4FD8] focus:bg-white focus:outline-none text-right font-mono"
                   required
                 />
               </div>
@@ -393,54 +412,54 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
           </div>
 
           {/* Password Section */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4 space-y-3">
+          <div className="rounded-2xl border border-slate-200 bg-[#F5F7FA] p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                <Lock className="h-3.5 w-3.5 text-orange-400" />
+              <span className="text-xs font-bold text-[#0D1B3E] flex items-center gap-1.5">
+                <Lock className="h-3.5 w-3.5 text-[#1E4FD8]" />
                 تغيير كلمة المرور
               </span>
               <button
                 type="button"
                 onClick={() => setIsChangingPassword(!isChangingPassword)}
-                className="text-xs font-bold text-orange-400 hover:underline"
+                className="text-xs font-bold text-[#1E4FD8] hover:underline"
               >
                 {isChangingPassword ? 'إلغاء التغيير' : 'تغيير الباسورد؟'}
               </button>
             </div>
 
             {isChangingPassword && (
-              <div className="space-y-3 pt-2 border-t border-slate-800/80 animate-fadeIn">
+              <div className="space-y-3 pt-2 border-t border-slate-200 animate-fadeIn">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-400 block">كلمة المرور الحالية (مطلوبة للتحقق):</label>
+                  <label className="text-[11px] font-bold text-[#6B7280] block">كلمة المرور الحالية (مطلوبة للتحقق):</label>
                   <input
                     type="password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-white focus:border-orange-500 focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-[#0D1B3E] focus:border-[#1E4FD8] focus:outline-none"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-slate-400 block">كلمة المرور الجديدة:</label>
+                    <label className="text-[11px] font-bold text-[#6B7280] block">كلمة المرور الجديدة:</label>
                     <input
                       type="password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="6 أحرف/أرقام على الأقل"
-                      className="w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-white focus:border-orange-500 focus:outline-none"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-[#0D1B3E] focus:border-[#1E4FD8] focus:outline-none"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-slate-400 block">تأكيد كلمة المرور:</label>
+                    <label className="text-[11px] font-bold text-[#6B7280] block">تأكيد كلمة المرور:</label>
                     <input
                       type="password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="أعد إدخال الباسورد"
-                      className="w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-white focus:border-orange-500 focus:outline-none"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-[#0D1B3E] focus:border-[#1E4FD8] focus:outline-none"
                     />
                   </div>
                 </div>
@@ -453,16 +472,17 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-slate-800 px-4 py-2.5 text-xs font-bold text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-[#6B7280] hover:bg-slate-50 hover:text-[#0D1B3E] transition-colors"
             >
               إلغاء
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 px-6 py-2.5 text-xs font-black text-white shadow-lg shadow-orange-500/25 hover:from-orange-600 hover:to-amber-700 disabled:opacity-50 transition-all flex items-center gap-2"
+              className="rounded-xl bg-[#F5B301] px-6 py-2.5 text-xs font-black text-[#0D1B3E] hover:bg-[#e0a401] disabled:opacity-50 shadow-xs transition-all flex items-center gap-2"
             >
-              {loading ? 'جاري الحفظ...' : 'حفظ التغييرات ✨'}
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>{loading ? 'جاري الحفظ...' : 'حفظ التغييرات'}</span>
             </button>
           </div>
 
