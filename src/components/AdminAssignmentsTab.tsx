@@ -15,11 +15,15 @@ import {
   BookOpen,
   Send,
   Eye,
-  AlertCircle
+  AlertCircle,
+  Link,
+  ExternalLink,
+  FileCheck
 } from 'lucide-react';
 import { Assignment, AssignmentSubmission, Course, GradeLevel } from '../types';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { MediaStore } from '../services/mediaStore';
+import { extractGoogleDriveId } from '../utils/pdfHelper';
 import { AssignmentSolverModal } from './AssignmentSolverModal';
 
 export const AdminAssignmentsTab: React.FC = () => {
@@ -47,6 +51,7 @@ export const AdminAssignmentsTab: React.FC = () => {
   const [newDeadline, setNewDeadline] = useState<string>('');
   const [newPdfUrl, setNewPdfUrl] = useState<string>('');
   const [newDescription, setNewDescription] = useState<string>('');
+  const [pdfUploadMode, setPdfUploadMode] = useState<'drive' | 'file'>('drive');
   const [isUploading, setIsUploading] = useState<boolean>(false);
 
   useEffect(() => {
@@ -384,6 +389,31 @@ export const AdminAssignmentsTab: React.FC = () => {
                   <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2">{asgn.description}</p>
                 )}
 
+                {/* PDF Link Indicator & Actions */}
+                <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-50 dark:bg-[#0D1B3E] border border-slate-100 dark:border-[#24336A] text-[11px]">
+                  <span className="flex items-center gap-1 font-bold text-slate-600 dark:text-slate-300 truncate">
+                    {extractGoogleDriveId(asgn.pdfUrl) ? (
+                      <>
+                        <Link className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                        <span className="text-blue-600 dark:text-blue-400">Google Drive PDF</span>
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                        <span>ملف PDF مرفوع</span>
+                      </>
+                    )}
+                  </span>
+
+                  <button
+                    onClick={() => window.open(asgn.pdfUrl, '_blank')}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white dark:bg-[#16224D] border border-slate-200 dark:border-[#24336A] text-[10px] font-bold text-slate-700 dark:text-slate-200 hover:text-[#1E4FD8] shrink-0"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    <span>فتح المعاينة</span>
+                  </button>
+                </div>
+
                 <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-[#24336A] text-xs">
                   <span className="font-bold text-[#F5B301]">الدرجة: {asgn.maxGrade || 20}</span>
                   {asgn.deadline ? (
@@ -463,19 +493,114 @@ export const AdminAssignmentsTab: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="block font-bold text-[#0D1B3E] dark:text-white mb-1">ملف الـ PDF الخاص بالواجب *</label>
-                <div className="flex items-center gap-2">
-                  <label className="flex-1 cursor-pointer flex items-center justify-center gap-2 border-2 border-dashed border-slate-300 dark:border-[#24336A] rounded-xl p-3 bg-slate-50 dark:bg-[#0D1B3E] hover:bg-slate-100 transition-colors">
-                    <Upload className="h-4 w-4 text-[#1E4FD8]" />
-                    <span className="font-bold text-slate-600 dark:text-slate-300">
-                      {isUploading ? 'جاري الرفع...' : newPdfUrl ? 'تم اختيار الملف ✓' : 'اختر ملف PDF للرفع'}
-                    </span>
-                    <input type="file" accept="application/pdf" onChange={handleFileUpload} className="hidden" />
-                  </label>
+              {/* File Attachment Mode Switcher & Google Drive Link Input */}
+              <div className="space-y-2">
+                <label className="block font-bold text-[#0D1B3E] dark:text-white">
+                  ملف الـ PDF الخاص بالواجب *
+                </label>
+                
+                {/* Mode Selector Tabs */}
+                <div className="flex rounded-xl bg-slate-100 dark:bg-[#0D1B3E] p-1 border border-slate-200 dark:border-[#24336A]">
+                  <button
+                    type="button"
+                    onClick={() => setPdfUploadMode('drive')}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                      pdfUploadMode === 'drive'
+                        ? 'bg-[#1E4FD8] text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Link className="h-3.5 w-3.5" />
+                    <span>رابط Google Drive</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPdfUploadMode('file')}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                      pdfUploadMode === 'file'
+                        ? 'bg-[#1E4FD8] text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                    <span>رفع ملف من الجهاز</span>
+                  </button>
                 </div>
-                {newPdfUrl && (
-                  <p className="text-[10px] text-emerald-600 mt-1 font-bold">✓ الملف جاهز ومحفوظ بنجاح</p>
+
+                {pdfUploadMode === 'drive' ? (
+                  /* Google Drive URL Input Mode */
+                  <div className="space-y-2">
+                    <input
+                      type="url"
+                      value={newPdfUrl}
+                      onChange={e => setNewPdfUrl(e.target.value)}
+                      placeholder="ضع رابط ملف Google Drive هنا (مثال: https://drive.google.com/file/d/.../view)"
+                      className="w-full rounded-xl border border-slate-300 dark:border-[#24336A] bg-slate-50 dark:bg-[#0D1B3E] p-3 text-xs text-[#0D1B3E] dark:text-white focus:outline-none focus:border-[#1E4FD8] ltr text-left font-mono"
+                    />
+
+                    {/* Google Drive Status indicator */}
+                    {newPdfUrl.trim() ? (
+                      extractGoogleDriveId(newPdfUrl) ? (
+                        <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold">
+                          <span className="flex items-center gap-1.5">
+                            <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <span>تم التعرف على رابط Google Drive بنجاح (ID: {extractGoogleDriveId(newPdfUrl)})</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => window.open(newPdfUrl, '_blank')}
+                            className="text-emerald-800 dark:text-emerald-200 underline hover:opacity-80 flex items-center gap-1 text-[10px]"
+                          >
+                            <span>فتح للتأكد</span>
+                            <ExternalLink className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-[11px] font-bold">
+                          <span className="flex items-center gap-1.5">
+                            <CheckCircle2 className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                            <span>تم تسجيل الرابط المباشر للملف</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => window.open(newPdfUrl, '_blank')}
+                            className="text-blue-800 dark:text-blue-200 underline hover:opacity-80 flex items-center gap-1 text-[10px]"
+                          >
+                            <span>فتح الرابط</span>
+                            <ExternalLink className="h-3 w-3" />
+                          </button>
+                        </div>
+                      )
+                    ) : (
+                      <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-[11px] space-y-1">
+                        <p className="font-bold flex items-center gap-1">
+                          <span>📌 خطوات الحصول على رابط Google Drive:</span>
+                        </p>
+                        <ol className="list-decimal list-inside space-y-0.5 text-[10px] text-amber-900 dark:text-amber-200 leading-relaxed">
+                          <li>افتح ملف الواجب الـ PDF في Google Drive.</li>
+                          <li>اضغط زر <b>مشاركة (Share)</b> ثم حدد الإذن: <b>أي شخص لديه الرابط (Anyone with the link)</b>.</li>
+                          <li>اضغط <b>نسخ الرابط (Copy link)</b> والصقه في الخانة أعلاه.</li>
+                        </ol>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* Direct Local File Upload Mode */
+                  <div className="space-y-2">
+                    <label className="flex-1 cursor-pointer flex items-center justify-center gap-2 border-2 border-dashed border-slate-300 dark:border-[#24336A] rounded-xl p-3 bg-slate-50 dark:bg-[#0D1B3E] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                      <Upload className="h-4 w-4 text-[#1E4FD8]" />
+                      <span className="font-bold text-slate-600 dark:text-slate-300">
+                        {isUploading ? 'جاري الرفع...' : newPdfUrl && !newPdfUrl.startsWith('http') ? 'تم رفع الملف بنجاح ✓' : 'اختر ملف PDF من جهازك'}
+                      </span>
+                      <input type="file" accept="application/pdf" onChange={handleFileUpload} className="hidden" />
+                    </label>
+                    {newPdfUrl && !newPdfUrl.startsWith('http') && (
+                      <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        <span>تم رفع الملف وتجهيزه للواجب والتصحيح</span>
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
 
