@@ -90,8 +90,10 @@ export default function App() {
   }, []);
 
   const handleNavigate = (view: string, params: Record<string, any> = {}) => {
+    let targetView = view === 'courses' ? 'courses-catalog' : view;
+
     // If navigating to admin but not logged in as admin, trigger secret modal instead
-    if (view === 'admin') {
+    if (targetView === 'admin') {
       if (!StorageService.isAdminLoggedIn()) {
         setIsAdminSecretOpen(true);
         return;
@@ -102,7 +104,7 @@ export default function App() {
         window.history.replaceState(null, '', window.location.pathname);
       }
     }
-    setCurrentView(view);
+    setCurrentView(targetView);
     setViewParams(params);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -280,7 +282,10 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <Footer />
+      <Footer 
+        onNavigate={handleNavigate}
+        onOpenActivationModal={() => setIsActivationModalOpen(true)}
+      />
 
       {/* Global Modals */}
       <ActivationCodeModal

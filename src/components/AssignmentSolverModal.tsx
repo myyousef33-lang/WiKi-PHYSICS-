@@ -16,7 +16,8 @@ import {
   ChevronRight,
   ChevronLeft,
   ExternalLink,
-  Download
+  Download,
+  Lightbulb
 } from 'lucide-react';
 import { Assignment, AssignmentSubmission, Student } from '../types';
 import { StorageService } from '../services/storage';
@@ -708,8 +709,9 @@ export const AssignmentSolverModal: React.FC<AssignmentSolverModalProps> = ({
           ) : mode === 'solve' ? (
             /* Student Submit Controls */
             <div className="w-full flex items-center justify-between">
-              <p className="text-xs text-[#6B7280] dark:text-slate-400">
-                💡 يمكنك الرسم والكتابة مباشرة فوق ملف الـ PDF لاختيار الإجابات وتدوين الحلول.
+              <p className="text-xs text-[#6B7280] dark:text-slate-400 flex items-center gap-1.5">
+                <Lightbulb className="h-4 w-4 text-[#F5B301] shrink-0" />
+                <span>يمكنك الرسم والكتابة مباشرة فوق ملف الـ PDF لاختيار الإجابات وتدوين الحلول.</span>
               </p>
               
               <button

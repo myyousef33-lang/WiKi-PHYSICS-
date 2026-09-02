@@ -517,7 +517,7 @@ async function startServer() {
       });
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
+        model: 'gemini-3.8-flash',
         contents,
         config: {
           systemInstruction,
@@ -569,19 +569,19 @@ async function startServer() {
       }
 
       const reportMessage = `
-السلام عليكم ورحمة الله وبركاته 🌹
+السلام عليكم ورحمة الله وبركاته
 ولي أمر الطالب المحترم / ولي أمر ${studentName}،
 
-تحية طيبة من منصة *ويكيفزياء (WikiFizya)* ومستر الفيزياء 📚⚡
+تحية طيبة من منصة *ويكيفزياء (WikiFizya)* ومستر الفيزياء
 
 نشارك مع حضراتكم التقرير الدوري لمستوى والتزام الطالب في مادة الفيزياء (${grade || 'الثانوية العامة'}):
 
-📊 *ملخص الأداء والمتابعة:*
-- 👤 *اسم الطالب:* ${studentName}
-- 🎬 *الدروس المشاهدة والمكتملة:* ${completedLessons || 0} من إجمالي ${totalLessons || 0} درس (${attendanceRate || 0}%)
-- 📝 *متوسط درجات الامتحانات والواجبات:* ${examAverage || 0}%
-${latestExamScore ? `- 🎯 *آخر امتحان تم تسليمه:* ${latestExamScore}` : ''}
-- 💡 *ملاحظة المعلم:* ${teacherNote || 'طالب متميز وملتزم بالحصص والواجبات، نتمنى له دوام التفوق والدرجة النهائية بإذن الله.'}
+*ملخص الأداء والمتابعة:*
+- *اسم الطالب:* ${studentName}
+- *الدروس المشاهدة والمكتملة:* ${completedLessons || 0} من إجمالي ${totalLessons || 0} درس (${attendanceRate || 0}%)
+- *متوسط درجات الامتحانات والواجبات:* ${examAverage || 0}%
+${latestExamScore ? `- *آخر امتحان تم تسليمه:* ${latestExamScore}` : ''}
+- *ملاحظة المعلم:* ${teacherNote || 'طالب متميز وملتزم بالحصص والواجبات، نتمنى له دوام التفوق والدرجة النهائية بإذن الله.'}
 
 مع تحيات إدارة منصة ويكيفزياء التعليمية.
 `.trim();
@@ -660,7 +660,7 @@ ${JSON.stringify(courseSummaries, null, 2)}
 `;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
+        model: 'gemini-3.8-flash',
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: {
           temperature: 0.2,
@@ -699,16 +699,16 @@ ${JSON.stringify(courseSummaries, null, 2)}
       }
 
       const broadcastText = `
-📢 *إشعار هام من منصة ويكيفزياء (WikiFizya)* ⚡
-${targetGrade ? `🎯 الموجه إلى: *${targetGrade}*` : '🎯 لجميع طلاب الفيزياء'}
+*إشعار هام من منصة ويكيفزياء (WikiFizya)*
+${targetGrade ? `الموجه إلى: *${targetGrade}*` : 'لجميع طلاب الفيزياء'}
 
 *${title}*
 
 ${message}
 
-${linkUrl ? `🔗 للدخول مباشرة: ${linkUrl}` : ''}
+${linkUrl ? `للدخول مباشرة: ${linkUrl}` : ''}
 
-نتمنى لكم دوام التوفيق والتفوق المستمر 🌟
+نتمنى لكم دوام التوفيق والتفوق المستمر
 `.trim();
 
       const encoded = encodeURIComponent(broadcastText);

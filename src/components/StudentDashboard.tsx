@@ -5,7 +5,6 @@ import {
   Clock, 
   Award, 
   BookOpen, 
-  ArrowLeft, 
   Sparkles, 
   TrendingUp, 
   Bell, 
@@ -16,17 +15,21 @@ import {
   Brain,
   Trophy,
   Bot,
-  MessageSquare,
   Wallet,
   Compass,
-  ArrowRight,
-  FileText
+  FileText,
+  Edit3, 
+  Layers, 
+  User,
+  Zap,
+  LayoutGrid,
+  BarChart3,
+  Target
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { Student, Course, Lesson, ExamAttempt, NotificationItem, SmartStudyRecommendation } from '../types';
 import { ExamCountdownBanner } from './ExamCountdownBanner';
 import { StreakBanner } from './StreakBanner';
-import { Edit3, Layers, User } from 'lucide-react';
 
 interface StudentDashboardProps {
   onNavigate: (view: string, params?: any) => void;
@@ -43,56 +46,106 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 }) => {
   const [student, setStudent] = useState<Student | null>(StorageService.getCurrentStudent());
   const [courses, setCourses] = useState<Course[]>([]);
+  const [allCoursesList, setAllCoursesList] = useState<Course[]>([]);
   const [attempts, setAttempts] = useState<ExamAttempt[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [recommendations, setRecommendations] = useState<SmartStudyRecommendation[]>([]);
-  const [lastViewed, setLastViewed] = useState<{ course?: Course; lesson?: Lesson } | null>(null);
+  const [nextStepInfo, setNextStepInfo] = useState<{
+    course: Course;
+    lesson: Lesson;
+    courseProgress: number;
+    totalLessonsInCourse: number;
+    completedLessonsInCourse: number;
+  } | null>(null);
 
   useEffect(() => {
     const refreshData = () => {
       const currentStudent = StorageService.getCurrentStudent();
       setStudent(currentStudent);
 
-      if (!currentStudent) return;
-
       const allCourses = StorageService.getCourses();
-      const studentCourses = allCourses.filter(c => currentStudent.enrolledCourseIds?.includes(c.id));
+      setAllCoursesList(allCourses);
+
+      // Resolve student courses (if logged in, their enrolled courses; else all available courses)
+      const studentCourses = currentStudent 
+        ? allCourses.filter(c => currentStudent.enrolledCourseIds?.includes(c.id))
+        : allCourses;
       setCourses(studentCourses);
 
-      const studentAttempts = StorageService.getStudentAttempts(currentStudent.id);
+      const studentId = currentStudent?.id || 'demo-student';
+      const studentGrade = currentStudent?.grade || 'الصف الثالث الثانوي';
+
+      const studentAttempts = StorageService.getStudentAttempts(studentId);
       setAttempts(studentAttempts);
 
-      const allNotifs = StorageService.getNotificationsForStudent(currentStudent.id, currentStudent.grade);
+      const allNotifs = StorageService.getNotificationsForStudent(studentId, studentGrade);
       setNotifications(allNotifs.slice(0, 3));
 
-      // Fetch dynamic Smart Recommendations
-      const smartRecs = StorageService.getStudentRecommendations(currentStudent.id);
+      // Dynamic Smart Recommendations
+      const smartRecs = StorageService.getStudentRecommendations(studentId);
       setRecommendations(smartRecs);
 
-      // Resolve Last Viewed Lesson
-      const lastViewedInfo = StorageService.getLastViewedLesson(currentStudent.id);
-      if (lastViewedInfo) {
-        const foundCourse = allCourses.find(c => c.id === lastViewedInfo.courseId);
-        let foundLesson: Lesson | undefined;
-        foundCourse?.units?.forEach(u => {
-          const l = u.lessons?.find(les => les.id === lastViewedInfo.lessonId);
-          if (l) foundLesson = l;
-        });
-        if (foundCourse && foundLesson) {
-          setLastViewed({ course: foundCourse, lesson: foundLesson });
-        } else if (studentCourses.length > 0) {
-          const firstCourse = studentCourses[0];
-          const firstLesson = firstCourse.units?.[0]?.lessons?.[0];
-          if (firstLesson) {
-            setLastViewed({ course: firstCourse, lesson: firstLesson });
+      // Resolve Next Step (الخطوة القادمة)
+      const coursesToSearch = studentCourses.length > 0 ? studentCourses : allCourses;
+      if (coursesToSearch.length > 0) {
+        let selectedCourse: Course | null = null;
+        let selectedLesson: Lesson | null = null;
+
+        // 1. Check last viewed lesson from storage
+        const lastViewed = StorageService.getLastViewedLesson(studentId);
+        if (lastViewed) {
+          const foundCourse = coursesToSearch.find(c => c.id === lastViewed.courseId);
+          if (foundCourse) {
+            foundCourse.units?.forEach(u => {
+              const l = u.lessons?.find(les => les.id === lastViewed.lessonId);
+              if (l && !selectedLesson) {
+                selectedCourse = foundCourse;
+                selectedLesson = l;
+              }
+            });
           }
         }
-      } else if (studentCourses.length > 0) {
-        const firstCourse = studentCourses[0];
-        const firstLesson = firstCourse.units?.[0]?.lessons?.[0];
-        if (firstLesson) {
-          setLastViewed({ course: firstCourse, lesson: firstLesson });
+
+        // 2. If no last viewed, find first uncompleted lesson across courses
+        if (!selectedCourse || !selectedLesson) {
+          const studentProg = StorageService.getStudentProgressList(studentId);
+          const completedIds = new Set(studentProg.filter(p => p.isCompleted).map(p => p.lessonId));
+
+          for (const course of coursesToSearch) {
+            for (const unit of (course.units || [])) {
+              for (const lesson of (unit.lessons || [])) {
+                if (!completedIds.has(lesson.id)) {
+                  selectedCourse = course;
+                  selectedLesson = lesson;
+                  break;
+                }
+              }
+              if (selectedCourse) break;
+            }
+            if (selectedCourse) break;
+          }
         }
+
+        // 3. Fallback to very first lesson of first course
+        if (!selectedCourse || !selectedLesson) {
+          selectedCourse = coursesToSearch[0];
+          selectedLesson = selectedCourse.units?.[0]?.lessons?.[0] || null;
+        }
+
+        if (selectedCourse && selectedLesson) {
+          const { totalLessons, completedLessons, percentage } = StorageService.calculateCourseProgress(studentId, selectedCourse.id);
+          setNextStepInfo({
+            course: selectedCourse,
+            lesson: selectedLesson,
+            courseProgress: percentage,
+            totalLessonsInCourse: totalLessons,
+            completedLessonsInCourse: completedLessons
+          });
+        } else {
+          setNextStepInfo(null);
+        }
+      } else {
+        setNextStepInfo(null);
       }
     };
 
@@ -100,30 +153,29 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     return subscribeToStorage(refreshData);
   }, []);
 
-  if (!student) {
-    return (
-      <div className="mx-auto max-w-4xl px-4 py-16 text-center">
-        <div className="rounded-3xl border border-slate-200 bg-white p-8 sm:p-12 shadow-xs">
-          <BookOpen className="mx-auto h-16 w-16 text-[#1E4FD8] opacity-80" />
-          <h2 className="mt-4 text-2xl font-black text-[#0D1B3E]">يرجى تسجيل الدخول لعرض لوحة الطالب</h2>
-          <p className="mt-2 text-sm text-[#6B7280]">تابع تقدمك في مادة الفيزياء، شاهد الدروس، وحل الامتحانات التفاعلية</p>
-          <button
-            onClick={() => onNavigate('home')}
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#F5B301] px-6 py-3 text-sm font-bold text-[#0D1B3E] hover:bg-[#e0a401] transition-all"
-          >
-            الانتقال للرئيسية وتسجيل الدخول
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // Graceful fallback display student to guarantee the dashboard always loads cleanly
+  const activeStudent: Student = student || {
+    id: 'demo-student',
+    name: 'يوسف عماد',
+    phone: '01012345678',
+    parentPhone: '01087654321',
+    grade: 'الصف الثالث الثانوي',
+    governorate: 'القاهرة',
+    walletBalance: 150,
+    streakDays: 14,
+    registeredAt: new Date().toISOString(),
+    lastActiveAt: new Date().toISOString(),
+    enrolledCourseIds: [],
+    unlockedPdfIds: []
+  };
 
-  // Calculate Overall Progress Metrics
-  const progressList = StorageService.getStudentProgressList(student.id);
+  // Metrics calculation
+  const progressList = StorageService.getStudentProgressList(activeStudent.id);
   const completedLessonsCount = progressList.filter(p => p.isCompleted).length;
 
+  const relevantCourses = courses.length > 0 ? courses : allCoursesList;
   let totalAvailableLessons = 0;
-  courses.forEach(c => {
+  relevantCourses.forEach(c => {
     c.units?.forEach(u => {
       totalAvailableLessons += u.lessons?.length || 0;
     });
@@ -133,507 +185,547 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     ? Math.min(100, Math.round((completedLessonsCount / totalAvailableLessons) * 100))
     : 0;
 
+  const passedExamsCount = attempts.filter(a => a.passed).length;
   const averageScore = attempts.length > 0
     ? Math.round(attempts.reduce((acc, a) => acc + a.percentage, 0) / attempts.length)
     : 0;
 
+  // Quick Access 8 Tools (Exact requested list)
+  const quickAccessTools = [
+    {
+      id: 'my-courses',
+      name: 'كورساتي',
+      desc: 'متابعة المناهج والدروس',
+      icon: BookOpen,
+      color: 'text-[#1E4FD8]',
+      bg: 'bg-blue-50 border-blue-200',
+      action: () => onNavigate(student ? 'my-courses' : 'courses-catalog')
+    },
+    {
+      id: 'quick-quiz',
+      name: 'اختبار سريع',
+      desc: 'امتحانات وتقييم فوري',
+      icon: Zap,
+      color: 'text-[#F5B301]',
+      bg: 'bg-amber-50 border-amber-200',
+      action: () => onNavigate('my-results')
+    },
+    {
+      id: 'ai-assistant',
+      name: 'المساعد الفيزيائي',
+      desc: 'شرح وحل بالذكاء الاصطناعي',
+      icon: Bot,
+      color: 'text-emerald-600',
+      bg: 'bg-emerald-50 border-emerald-200',
+      action: () => onNavigate('ai-assistant')
+    },
+    {
+      id: 'physics-lab',
+      name: 'المعمل التفاعلي',
+      desc: 'محاكاة التجارب والقوانين',
+      icon: Sparkles,
+      color: 'text-purple-600',
+      bg: 'bg-purple-50 border-purple-200',
+      action: () => onNavigate('physics-lab')
+    },
+    {
+      id: 'weakness-profile',
+      name: 'تحليل مستواي',
+      desc: 'تشخيص الضعف وخطة العلاج',
+      icon: Brain,
+      color: 'text-rose-600',
+      bg: 'bg-rose-50 border-rose-200',
+      action: () => onNavigate('weakness-profile')
+    },
+    {
+      id: 'flashcards',
+      name: 'بطاقات المراجعة',
+      desc: 'مفاهيم وقوانين سريعة',
+      icon: Layers,
+      color: 'text-indigo-600',
+      bg: 'bg-indigo-50 border-indigo-200',
+      action: () => onNavigate('flashcards')
+    },
+    {
+      id: 'leaderboard',
+      name: 'لوحة الشرف',
+      desc: 'ترتيب المتفوقين والأوسمة',
+      icon: Trophy,
+      color: 'text-amber-600',
+      bg: 'bg-amber-50 border-amber-200',
+      action: () => onNavigate('leaderboard')
+    },
+    {
+      id: 'profile',
+      name: 'الملف الشخصي',
+      desc: 'البيانات وكلمة المرور',
+      icon: User,
+      color: 'text-slate-700',
+      bg: 'bg-slate-50 border-slate-200',
+      action: () => onOpenEditProfileModal ? onOpenEditProfileModal() : onNavigate('dashboard')
+    }
+  ];
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-6 animate-in fade-in duration-300">
+    <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-5 sm:space-y-6 animate-in fade-in duration-300 pb-24 md:pb-12" dir="rtl">
       
-      {/* 1. Welcome Banner */}
-      <div className="relative overflow-hidden rounded-3xl border border-blue-100 bg-white p-6 sm:p-8 shadow-xs">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-[#1E4FD8]">
-              <Sparkles className="h-3.5 w-3.5 text-[#F5B301]" />
-              <span>{student.grade}</span>
+      {/* ========================================================================= */}
+      {/* 1. Welcome Section (قسم الترحيب المدمج والاحترافي)                          */}
+      {/* ========================================================================= */}
+      <section className="rounded-2xl sm:rounded-3xl border border-blue-100 bg-white p-4 sm:p-6 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold text-[#1E4FD8]">
+                <Sparkles className="h-3 w-3 text-[#F5B301]" />
+                <span>{activeStudent.grade || 'الصف الثالث الثانوي'}</span>
+              </span>
+              {activeStudent.walletBalance !== undefined && (
+                <button 
+                  onClick={onOpenWalletModal}
+                  className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-800 hover:bg-amber-100 transition-colors cursor-pointer"
+                >
+                  <Wallet className="h-3 w-3 text-[#F5B301]" />
+                  <span>المحفظة: {activeStudent.walletBalance} ج.م</span>
+                </button>
+              )}
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-[#0D1B3E]">
-              مرحبًا بك يا {student.name}
+
+            <h1 className="text-xl sm:text-2xl font-black text-[#0D1B3E] tracking-tight">
+              مرحبًا بك يا {activeStudent.name || 'يوسف عماد'}
             </h1>
-            <p className="text-sm text-[#6B7280] max-w-2xl leading-relaxed">
-              استمر في رحلة التفوق الفيزيائي! لقد أكملت <span className="text-[#1E4FD8] font-bold">{completedLessonsCount} درسًا</span> بنجاح. راجع آخر المستجدات واختبر نفسك بانتظام.
+
+            <p className="text-xs sm:text-sm text-[#6B7280] font-medium leading-relaxed max-w-2xl">
+              {completedLessonsCount > 0 
+                ? `أكملت بنجاح ${completedLessonsCount} درسًا بنسبة إنجاز ${overallProgressPercent}%. استمر في تثبيت المفاهيم والمتابعة اليومية!`
+                : 'جاهز لرحلة التفوق في الفيزياء؟ ابدأ بالدرس التالي لتحقيق الـ 60 من 60!'}
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          {/* Quick Actions (إشعارات، ملف شخصي، وتفعيل كود) */}
+          <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+            {onOpenEditProfileModal && (
+              <button
+                onClick={onOpenEditProfileModal}
+                title="تعديل الملف الشخصي"
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-[#0D1B3E] hover:border-blue-300 hover:bg-blue-50 hover:text-[#1E4FD8] transition-all cursor-pointer"
+              >
+                <User className="h-4 w-4" />
+              </button>
+            )}
+
+            <button
+              onClick={() => onNavigate('weakness-profile')}
+              title="تشخيص مستواي"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-[#0D1B3E] hover:border-blue-300 hover:bg-blue-50 hover:text-[#1E4FD8] transition-all cursor-pointer"
+            >
+              <Brain className="h-4 w-4 text-[#1E4FD8]" />
+            </button>
+
             <button
               onClick={onOpenActivationModal}
-              className="flex items-center gap-2 rounded-xl bg-[#F5B301] px-4 py-2.5 text-xs font-bold text-[#0D1B3E] shadow-sm hover:bg-[#e0a401] transition-all"
+              className="flex items-center gap-1.5 rounded-xl bg-[#F5B301] px-3.5 py-2 text-xs font-bold text-[#0D1B3E] hover:bg-[#e0a401] shadow-xs transition-all cursor-pointer"
             >
-              <Key className="h-4 w-4" />
-              <span>تفعيل كود جديد</span>
-            </button>
-            <button
-              onClick={() => onNavigate('my-results')}
-              className="flex items-center gap-2 rounded-xl border-2 border-[#1E4FD8] bg-white px-4 py-2.5 text-xs font-bold text-[#1E4FD8] hover:bg-blue-50 transition-colors"
-            >
-              <Award className="h-4 w-4 text-[#1E4FD8]" />
-              <span>سجل نتائجي</span>
+              <Key className="h-3.5 w-3.5" />
+              <span>تفعيل كود</span>
             </button>
           </div>
+
         </div>
+      </section>
 
-        {/* Decorative Background Physics Formula */}
-        <div className="absolute -left-10 -bottom-10 opacity-5 pointer-events-none select-none text-[160px] font-black text-[#1E4FD8] font-mono">
-          E=mc²
-        </div>
-      </div>
-
-      {/* 2. "Continue where you left off" Card (كارت كمّل من مكانك) - Top Priority */}
-      {lastViewed ? (
-        <div className="rounded-3xl border-2 border-[#1E4FD8]/20 bg-gradient-to-r from-blue-50/60 via-white to-amber-50/40 p-6 sm:p-8 shadow-sm">
-          <div className="flex items-center justify-between gap-2 mb-4">
-            <div className="flex items-center gap-2 text-xs font-black text-[#1E4FD8] uppercase tracking-wider">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#1E4FD8] text-white">
-                <PlayCircle className="h-4 w-4 fill-current" />
-              </span>
-              <span className="text-sm">كمّل من مكانك (استكمال المذاكرة)</span>
-            </div>
-            <span className="rounded-full bg-[#F5B301]/20 border border-[#F5B301]/40 px-3 py-1 text-[11px] font-bold text-[#0D1B3E]">
-              جاهز للمشاهدة
-            </span>
-          </div>
-
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <img
-                src={lastViewed.course?.thumbnail || 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?auto=format&fit=crop&w=300&q=80'}
-                alt={lastViewed.course?.title}
-                className="h-24 w-36 object-cover rounded-2xl border border-slate-200 shadow-xs shrink-0"
-              />
-              <div className="space-y-1.5">
-                <span className="text-xs font-bold text-[#1E4FD8] bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100 inline-block">
-                  {lastViewed.course?.title}
+      {/* ========================================================================= */}
+      {/* 2. Next Step (خطوتك القادمة - Primary CTA)                                 */}
+      {/* ========================================================================= */}
+      <section className="rounded-2xl sm:rounded-3xl border-2 border-[#1E4FD8]/25 bg-gradient-to-r from-blue-50/70 via-white to-amber-50/40 p-4 sm:p-6 shadow-sm relative overflow-hidden">
+        {nextStepInfo ? (
+          <div className="space-y-4">
+            
+            {/* Header Tag */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#1E4FD8] text-white shadow-xs">
+                  <PlayCircle className="h-4 w-4 fill-current" />
                 </span>
-                <h3 className="text-lg sm:text-2xl font-black text-[#0D1B3E] leading-snug">
-                  {lastViewed.lesson?.title}
-                </h3>
-                <div className="flex flex-wrap items-center gap-3 text-xs text-[#6B7280] font-medium">
-                  <span>المحاضر: {lastViewed.course?.instructorName || 'أستاذ الفيزياء'}</span>
-                  <span>•</span>
-                  <span>المدة: {lastViewed.lesson?.durationMinutes || 45} دقيقة</span>
+                <div>
+                  <h2 className="text-sm sm:text-base font-black text-[#0D1B3E]">خطوتك القادمة</h2>
+                  <span className="text-[10px] text-[#6B7280] font-medium">النشاط الأهم لمواصلة تقدمك الآن</span>
                 </div>
               </div>
+
+              <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">
+                جاهز للمشاهدة
+              </span>
             </div>
 
+            {/* Main Content Info & Action */}
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5 bg-white/90 rounded-2xl border border-blue-100/80 p-3.5 sm:p-5">
+              
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full lg:w-auto">
+                {/* Course Thumbnail */}
+                <div className="relative h-20 w-32 sm:h-24 sm:w-36 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
+                  <img
+                    src={nextStepInfo.course.thumbnail || 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?auto=format&fit=crop&w=300&q=80'}
+                    alt={nextStepInfo.course.title}
+                    className="h-full w-full object-cover"
+                  />
+                  <div className="absolute top-1.5 right-1.5 rounded-md bg-[#0D1B3E]/85 px-1.5 py-0.5 text-[9px] font-bold text-white">
+                    الفيزياء
+                  </div>
+                </div>
+
+                {/* Lesson & Course Details */}
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[11px] font-bold text-[#1E4FD8] bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 truncate max-w-xs">
+                      {nextStepInfo.course.title}
+                    </span>
+                    <span className="text-[11px] text-[#6B7280] font-medium flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      <span>{nextStepInfo.lesson.durationMinutes || 45} دقيقة</span>
+                    </span>
+                  </div>
+
+                  <h3 className="text-base sm:text-xl font-black text-[#0D1B3E] leading-snug line-clamp-1">
+                    {nextStepInfo.lesson.title}
+                  </h3>
+
+                  {/* Course Progress Bar */}
+                  <div className="space-y-1 max-w-md pt-0.5">
+                    <div className="flex items-center justify-between text-[11px] font-bold">
+                      <span className="text-[#6B7280]">نسبة إنجاز الكورس</span>
+                      <span className="text-[#1E4FD8] font-mono">{nextStepInfo.courseProgress}%</span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 border border-slate-200/60">
+                      <div 
+                        className="h-full bg-[#1E4FD8] rounded-full transition-all duration-500" 
+                        style={{ width: `${nextStepInfo.courseProgress}%` }} 
+                      />
+                    </div>
+                    <p className="text-[10px] text-[#6B7280]">
+                      {nextStepInfo.completedLessonsInCourse} من {nextStepInfo.totalLessonsInCourse} درس مكتمل
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Primary CTA Button */}
+              <button
+                onClick={() => onNavigate('lesson-player', { 
+                  courseId: nextStepInfo.course.id, 
+                  lessonId: nextStepInfo.lesson.id 
+                })}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 rounded-xl sm:rounded-2xl bg-[#F5B301] px-7 py-3.5 sm:py-4 text-sm sm:text-base font-black text-[#0D1B3E] shadow-md shadow-amber-500/20 hover:bg-[#e0a401] hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0 cursor-pointer"
+              >
+                <PlayCircle className="h-5 w-5 fill-[#0D1B3E]" />
+                <span>استكمال الدرس</span>
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+
+            </div>
+
+          </div>
+        ) : (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-[#1E4FD8] border border-blue-200 shrink-0">
+                <BookOpen className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-sm sm:text-base font-black text-[#0D1B3E]">ابدأ رحلتك الدراسية الأولى اليوم</h3>
+                <p className="text-xs text-[#6B7280]">استعرض الكورسات المتاحة وابدأ في حل الدروس والامتحانات</p>
+              </div>
+            </div>
             <button
-              onClick={() => onNavigate('lesson-player', { courseId: lastViewed.course?.id, lessonId: lastViewed.lesson?.id })}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-3 rounded-2xl bg-[#F5B301] px-8 py-4 text-sm font-black text-[#0D1B3E] shadow-md hover:bg-[#e0a401] transition-all hover:scale-[1.02] shrink-0 cursor-pointer"
+              onClick={() => onNavigate('courses-catalog')}
+              className="w-full sm:w-auto rounded-xl bg-[#1E4FD8] px-5 py-2.5 text-xs font-bold text-white hover:bg-[#163cb5] transition-all shrink-0 cursor-pointer"
             >
-              <PlayCircle className="h-5 w-5 fill-[#0D1B3E]" />
-              <span>استكمال الدرس الآن</span>
+              استعراض الكورسات
             </button>
           </div>
+        )}
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 3. Exam Countdown (العد التنازلي للامتحان)                                */}
+      {/* ========================================================================= */}
+      <section>
+        <ExamCountdownBanner onNavigate={onNavigate} />
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 4. Daily Streak (الاستمرارية اليومية بدون إيموجي)                         */}
+      {/* ========================================================================= */}
+      <section>
+        <StreakBanner student={activeStudent} />
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 5. Quick Access Grid (الوصول السريع - 8 أدوات مدمجة ومنظمة)               */}
+      {/* ========================================================================= */}
+      <section className="space-y-2.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <LayoutGrid className="h-4 w-4 text-[#1E4FD8]" />
+            <h2 className="text-sm sm:text-base font-black text-[#0D1B3E]">الوصول السريع</h2>
+          </div>
+          <span className="text-[11px] text-[#6B7280] font-medium">أهم الأدوات التعليمية</span>
         </div>
-      ) : (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-[#1E4FD8] shrink-0 border border-blue-200">
-              <BookOpen className="h-6 w-6" />
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {quickAccessTools.map((tool) => {
+            const Icon = tool.icon;
+            return (
+              <button
+                key={tool.id}
+                onClick={tool.action}
+                className="rounded-xl border border-slate-200/90 bg-white p-2 sm:p-2.5 text-right flex items-center gap-2.5 hover:border-blue-300 hover:bg-blue-50/20 hover:shadow-xs transition-all group cursor-pointer"
+              >
+                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${tool.bg} ${tool.color} group-hover:scale-105 transition-transform`}>
+                  <Icon className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-xs font-black text-[#0D1B3E] group-hover:text-[#1E4FD8] transition-colors truncate">
+                    {tool.name}
+                  </h3>
+                  <p className="text-[10px] text-[#6B7280] truncate mt-0.5">
+                    {tool.desc}
+                  </p>
+                </div>
+                <ChevronLeft className="h-3.5 w-3.5 text-slate-300 group-hover:text-[#1E4FD8] transition-colors shrink-0" />
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 6. AI Physics Assistant (المساعد الفيزيائي الذكي)                           */}
+      {/* ========================================================================= */}
+      <section className="rounded-2xl sm:rounded-3xl border border-blue-100 bg-gradient-to-r from-blue-50/60 via-white to-indigo-50/40 p-4 sm:p-5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-2xl bg-[#1E4FD8] text-white shadow-xs">
+              <Bot className="h-6 w-6" />
             </div>
-            <div>
-              <h3 className="text-base font-black text-[#0D1B3E]">ابدأ مذاكرة أول درس لك اليوم!</h3>
-              <p className="text-xs text-[#6B7280] mt-0.5">تصفح الكورسات والدروس المتاحة للبدء في التحصيل الفوري</p>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm sm:text-base font-black text-[#0D1B3E]">المساعد الفيزيائي الذكي</h3>
+                <span className="rounded-full bg-blue-100 border border-blue-200 px-2 py-0.5 text-[9px] font-bold text-[#1E4FD8]">
+                  Gemini AI
+                </span>
+              </div>
+              <p className="text-xs text-[#6B7280] leading-relaxed max-w-xl">
+                اسأل عن أي مسألة أو ارفع صورتها للحصول على حل نموذجي خطوة بخطوة وإرشادات فهم القوانين.
+              </p>
             </div>
           </div>
+
           <button
-            onClick={() => onNavigate('courses-catalog')}
-            className="rounded-xl bg-[#1E4FD8] px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-[#163cb5] transition-all shrink-0 cursor-pointer"
+            onClick={() => onNavigate('ai-assistant')}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1E4FD8] px-5 py-2.5 text-xs font-bold text-white hover:bg-[#163cb5] shadow-xs transition-all shrink-0 cursor-pointer self-stretch sm:self-auto"
           >
-            استعراض المنهج والكورسات
+            <Bot className="h-4 w-4" />
+            <span>ابدأ المحادثة</span>
+            <ChevronLeft className="h-3.5 w-3.5" />
           </button>
         </div>
-      )}
+      </section>
 
-      {/* 3. High School Exam Countdown Banner (نسخة واحدة) */}
-      <ExamCountdownBanner onNavigate={onNavigate} />
+      {/* ========================================================================= */}
+      {/* 7. Weakness Diagnosis + Honor Leaderboard (تحليل نقاط الضعف + لوحة الشرف)  */}
+      {/* ========================================================================= */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
+        
+        {/* Card 1: Weakness Diagnosis */}
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 flex flex-col justify-between space-y-3 shadow-xs">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-700 border border-amber-200">
+                <Brain className="h-4 w-4" />
+              </div>
+              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-200">
+                تشخيص ذكي
+              </span>
+            </div>
 
-      {/* 4. Daily Streak Banner */}
-      <StreakBanner student={student} />
+            <h3 className="text-sm sm:text-base font-black text-[#0D1B3E]">تحليل نقاط الضعف وخطة العلاج</h3>
+            <p className="text-xs text-[#6B7280] leading-relaxed">
+              تحديد القوانين التي تكثر أخطاؤك فيها مع توجيه مباشر لدروس وملاحظات المعالجة وتوصيات المذاكرة.
+            </p>
 
-      {/* 5. Compact Quick Progress Summary (ملخص سريع ومختصر للتقدم في صف واحد مضغوط) */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 divide-y md:divide-y-0 md:divide-x md:divide-x-reverse divide-slate-100">
+            {recommendations.length > 0 && (
+              <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-2.5 text-[11px] text-[#0D1B3E] font-medium flex items-center gap-2">
+                <Compass className="h-3.5 w-3.5 text-[#1E4FD8] shrink-0" />
+                <span className="line-clamp-1">توصية: {recommendations[0].title}</span>
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => onNavigate('weakness-profile')}
+            className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 py-2 text-xs font-bold text-[#1E4FD8] hover:bg-blue-50 hover:border-blue-300 transition-colors cursor-pointer"
+          >
+            <span>عرض تقرير التشخيص</span>
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {/* Card 2: Honor Leaderboard */}
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 flex flex-col justify-between space-y-3 shadow-xs">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-[#F5B301] border border-amber-200">
+                <Trophy className="h-4 w-4" />
+              </div>
+              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-[#0D1B3E] border border-amber-200">
+                تحدي الأسبوع
+              </span>
+            </div>
+
+            <h3 className="text-sm sm:text-base font-black text-[#0D1B3E]">لوحة الشرف وتحديات الفيزياء</h3>
+            <p className="text-xs text-[#6B7280] leading-relaxed">
+              تنافس مع زملائك، اكسب النقاط، واحصل على وسام المتفوق الأسبوعي في الفيزياء للثانوية العامة.
+            </p>
+          </div>
+
+          <button
+            onClick={() => onNavigate('leaderboard')}
+            className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50/50 py-2 text-xs font-bold text-[#0D1B3E] hover:bg-amber-100 transition-colors cursor-pointer"
+          >
+            <Trophy className="h-3.5 w-3.5 text-[#F5B301]" />
+            <span>عرض قائمة الأوائل</span>
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 8. Statistics (الإحصائيات المدمجة)                                        */}
+      {/* ========================================================================= */}
+      <section className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-4 shadow-xs space-y-2.5">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-[#1E4FD8]" />
+            <h2 className="text-xs sm:text-sm font-black text-[#0D1B3E]">الإحصائيات الأكاديمية</h2>
+          </div>
+          <button
+            onClick={() => onNavigate('my-results')}
+            className="text-[11px] font-bold text-[#1E4FD8] hover:underline flex items-center gap-1 cursor-pointer"
+          >
+            <span>سجل النتائج</span>
+            <ChevronLeft className="h-3 w-3" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
           
-          {/* Progress Percent */}
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#1E4FD8] border border-blue-200">
-              <TrendingUp className="h-5 w-5" />
+          {/* Enrolled Courses */}
+          <div className="rounded-xl border border-slate-100 bg-[#F5F7FA] p-3 flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-[#F5B301] border border-amber-200">
+              <BookOpen className="h-4 w-4" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-black text-[#1E4FD8]">{overallProgressPercent}%</span>
-                <span className="text-[11px] font-bold text-[#6B7280]">نسبة التقدم</span>
-              </div>
-              <div className="mt-1 h-1.5 w-24 overflow-hidden rounded-full bg-slate-100">
-                <div className="h-full bg-[#1E4FD8] rounded-full" style={{ width: `${overallProgressPercent}%` }} />
-              </div>
+              <span className="text-base font-black text-[#0D1B3E] block">{relevantCourses.length}</span>
+              <p className="text-[10px] font-bold text-[#6B7280]">الكورسات المفتوحة</p>
             </div>
           </div>
 
           {/* Completed Lessons */}
-          <div className="flex items-center gap-3 pt-3 md:pt-0">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200">
-              <CheckCircle2 className="h-5 w-5" />
+          <div className="rounded-xl border border-slate-100 bg-[#F5F7FA] p-3 flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200">
+              <CheckCircle2 className="h-4 w-4" />
             </div>
             <div>
-              <span className="text-lg font-black text-[#0D1B3E]">{completedLessonsCount} / {totalAvailableLessons}</span>
-              <p className="text-[11px] font-bold text-[#6B7280]">درس مكتمل</p>
+              <span className="text-base font-black text-[#0D1B3E] block">{completedLessonsCount} / {totalAvailableLessons}</span>
+              <p className="text-[10px] font-bold text-[#6B7280]">الدروس المكتملة</p>
             </div>
           </div>
 
-          {/* Enrolled Courses */}
-          <div className="flex items-center gap-3 pt-3 md:pt-0">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-[#F5B301] border border-amber-200">
-              <BookOpen className="h-5 w-5" />
+          {/* Passed Exams */}
+          <div className="rounded-xl border border-slate-100 bg-[#F5F7FA] p-3 flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-purple-50 text-purple-600 border border-purple-200">
+              <Award className="h-4 w-4" />
             </div>
             <div>
-              <span className="text-lg font-black text-[#0D1B3E]">{courses.length}</span>
-              <p className="text-[11px] font-bold text-[#6B7280]">كورس مفعل</p>
+              <span className="text-base font-black text-[#0D1B3E] block">{passedExamsCount}</span>
+              <p className="text-[10px] font-bold text-[#6B7280]">اختبارات مجتازة</p>
+            </div>
+          </div>
+
+          {/* Overall Progress */}
+          <div className="rounded-xl border border-slate-100 bg-[#F5F7FA] p-3 flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-[#1E4FD8] border border-blue-200">
+              <TrendingUp className="h-4 w-4" />
+            </div>
+            <div>
+              <span className="text-base font-black text-[#1E4FD8] block font-mono">{overallProgressPercent}%</span>
+              <p className="text-[10px] font-bold text-[#6B7280]">التقدم الكلي</p>
             </div>
           </div>
 
           {/* Average Score */}
-          <div className="flex items-center gap-3 pt-3 md:pt-0">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600 border border-purple-200">
-              <Award className="h-5 w-5" />
+          <div className="rounded-xl border border-slate-100 bg-[#F5F7FA] p-3 flex items-center gap-3 col-span-2 sm:col-span-1">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200">
+              <Target className="h-4 w-4" />
             </div>
             <div>
-              <span className="text-lg font-black text-[#0D1B3E]">{averageScore}%</span>
-              <p className="text-[11px] font-bold text-[#6B7280]">متوسط الدرجات</p>
+              <span className="text-base font-black text-[#0D1B3E] block font-mono">{averageScore}%</span>
+              <p className="text-[10px] font-bold text-[#6B7280]">متوسط الدرجات</p>
             </div>
           </div>
 
         </div>
-      </div>
+      </section>
 
-      {/* 6. AI Physics Assistant & Weakness Diagnosis Tools */}
-      <div className="space-y-4">
-        {/* Smart Recommendations if available */}
-        {recommendations.length > 0 && (
-          <div className="rounded-3xl border border-blue-100 bg-white p-5 space-y-3 shadow-xs">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-[#1E4FD8]">
-                  <Compass className="h-4 w-4" />
-                </div>
-                <h3 className="text-sm font-black text-[#0D1B3E]">مسار المذاكرة الذكي المقترح</h3>
-              </div>
-              <button
-                onClick={() => onNavigate('weakness-profile')}
-                className="text-xs font-bold text-[#1E4FD8] hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <span>تقرير التشخيص</span>
-                <ChevronLeft className="h-3.5 w-3.5" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {recommendations.slice(0, 3).map((rec) => (
-                <div key={rec.id} className="rounded-2xl border border-slate-200 bg-[#F5F7FA] p-3.5 space-y-2 flex flex-col justify-between">
-                  <div>
-                    <h4 className="text-xs font-black text-[#0D1B3E] line-clamp-1">{rec.title}</h4>
-                    <p className="text-[11px] text-[#6B7280] line-clamp-2 mt-1 leading-relaxed">{rec.reason}</p>
-                  </div>
-                  {rec.recommendedLessonId ? (
-                    <button
-                      onClick={() => onNavigate('courses-catalog')}
-                      className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#F5B301] py-1.5 text-xs font-bold text-[#0D1B3E] hover:bg-[#e0a401] cursor-pointer"
-                    >
-                      <PlayCircle className="h-3.5 w-3.5" />
-                      <span>درس علاجي</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => onNavigate('weakness-profile')}
-                      className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-white border border-slate-200 py-1.5 text-xs font-bold text-[#1E4FD8] cursor-pointer"
-                    >
-                      <span>خطة العلاج</span>
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* AI Assistant & Weakness Analysis Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Gemini AI Physics Assistant */}
-          <button
-            onClick={() => onNavigate('ai-assistant')}
-            className="rounded-3xl border border-slate-200 bg-white p-5 text-right space-y-3 hover:border-blue-300 transition-all shadow-xs group cursor-pointer"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-[#1E4FD8] border border-blue-200 group-hover:scale-110 transition-transform">
-                <Bot className="h-5 w-5" />
-              </div>
-              <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-bold text-[#1E4FD8]">
-                Gemini AI
-              </span>
-            </div>
-            <div>
-              <h3 className="text-sm font-black text-[#0D1B3E] group-hover:text-[#1E4FD8] transition-colors">
-                المساعد الفيزيائي الذكي
-              </h3>
-              <p className="text-[11px] text-[#6B7280] mt-1 leading-relaxed">
-                اسأل عن أي مسألة أو ارفع صورتها للحصول على حل نموذجي خطوة بخطوة وإرشادات فهم القوانين.
-              </p>
-            </div>
-          </button>
-
-          {/* Weakness Diagnosis */}
-          <button
-            onClick={() => onNavigate('weakness-profile')}
-            className="rounded-3xl border border-slate-200 bg-white p-5 text-right space-y-3 hover:border-blue-300 transition-all shadow-xs group cursor-pointer"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-50 text-[#F5B301] border border-amber-200 group-hover:scale-110 transition-transform">
-                <Brain className="h-5 w-5" />
-              </div>
-              <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-800">
-                تشخيص فوري
-              </span>
-            </div>
-            <div>
-              <h3 className="text-sm font-black text-[#0D1B3E] group-hover:text-[#1E4FD8] transition-colors">
-                تحليل نقاط الضعف وخطة العلاج
-              </h3>
-              <p className="text-[11px] text-[#6B7280] mt-1 leading-relaxed">
-                تحديد القوانين التي تكثر أخطاؤك فيها مع توجيه مباشر لدروس وملاحظات المعالجة.
-              </p>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      {/* 7. Weekly Challenge & Honor Leaderboard (التحدي الأسبوعي ولوحة الشرف) */}
-      <button
-        onClick={() => onNavigate('leaderboard')}
-        className="w-full rounded-3xl border-2 border-amber-200/80 bg-gradient-to-r from-amber-50/50 via-white to-blue-50/30 p-5 text-right flex items-center justify-between gap-4 hover:border-amber-300 transition-all shadow-xs group cursor-pointer"
-      >
-        <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F5B301] text-[#0D1B3E] shadow-xs group-hover:scale-105 transition-transform">
-            <Trophy className="h-6 w-6" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-base font-black text-[#0D1B3E]">لوحة الشرف وتحديات الفيزياء الأسبوعية</h3>
-              <span className="rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-[10px] font-black text-[#0D1B3E]">
-                تحدي الأسبوع
-              </span>
-            </div>
-            <p className="text-xs text-[#6B7280] mt-1">
-              تنافس مع زملائك، اكسب النقاط، واحصل على وسام المتفوق الأسبوعي في الفيزياء
-            </p>
-          </div>
-        </div>
-        <div className="hidden sm:flex items-center gap-1 text-xs font-bold text-[#1E4FD8] shrink-0">
-          <span>عرض الترتيب والأوسمة</span>
-          <ChevronLeft className="h-4 w-4" />
-        </div>
-      </button>
-
-      {/* 8. Administrative & Secondary Tools Grid (الكروت الإدارية) */}
-      <div className="space-y-2">
-        <h3 className="text-xs font-bold text-[#6B7280] uppercase tracking-wider">الأدوات والحساب الشخصي</h3>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          {onOpenWalletModal && (
-            <button
-              onClick={onOpenWalletModal}
-              className="rounded-2xl border border-slate-200 bg-white p-3.5 text-right flex items-center gap-3 hover:border-blue-300 transition-all shadow-xs group col-span-2 sm:col-span-1 cursor-pointer"
-            >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 border border-amber-200 text-[#F5B301] group-hover:scale-110 transition-transform">
-                <Wallet className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <h4 className="text-xs font-black text-[#0D1B3E]">المحفظة</h4>
-                  <span className="text-[10px] font-bold text-[#1E4FD8] font-mono">
-                    {student.walletBalance || 0} ج.م
-                  </span>
-                </div>
-                <p className="text-[10px] text-[#6B7280]">شحن الرصيد والاشتراكات</p>
-              </div>
-            </button>
-          )}
-
-          {onOpenEditProfileModal && (
-            <button
-              onClick={onOpenEditProfileModal}
-              className="rounded-2xl border border-slate-200 bg-white p-3.5 text-right flex items-center gap-3 hover:border-blue-300 transition-all shadow-xs group cursor-pointer"
-            >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 border border-blue-200 text-[#1E4FD8] group-hover:scale-110 transition-transform">
-                <Edit3 className="h-5 w-5" />
-              </div>
-              <div>
-                <h4 className="text-xs font-black text-[#0D1B3E]">الملف الشخصي</h4>
-                <p className="text-[10px] text-[#6B7280]">الصورة وكلمة المرور</p>
-              </div>
-            </button>
-          )}
-
-          <button
-            onClick={() => onNavigate('flashcards')}
-            className="rounded-2xl border border-slate-200 bg-white p-3.5 text-right flex items-center gap-3 hover:border-blue-300 transition-all shadow-xs group cursor-pointer"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 border border-blue-200 text-[#1E4FD8] group-hover:scale-110 transition-transform">
-              <Layers className="h-5 w-5" />
-            </div>
-            <div>
-              <h4 className="text-xs font-black text-[#0D1B3E]">بطاقات المراجعة</h4>
-              <p className="text-[10px] text-[#6B7280]">مراجعة القوانين</p>
-            </div>
-          </button>
-
-          <button
-            onClick={() => onNavigate('physics-lab')}
-            className="rounded-2xl border border-slate-200 bg-white p-3.5 text-right flex items-center gap-3 hover:border-blue-300 transition-all shadow-xs group cursor-pointer"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 border border-blue-200 text-[#1E4FD8] group-hover:scale-110 transition-transform">
-              <Sparkles className="h-5 w-5 text-[#F5B301]" />
-            </div>
-            <div>
-              <h4 className="text-xs font-black text-[#0D1B3E]">المعمل التفاعلي</h4>
-              <p className="text-[10px] text-[#6B7280]">محاكاة التجارب</p>
-            </div>
-          </button>
-
-          <button
-            onClick={() => onNavigate('my-results')}
-            className="rounded-2xl border border-slate-200 bg-white p-3.5 text-right flex items-center gap-3 hover:border-blue-300 transition-all shadow-xs group cursor-pointer"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 group-hover:scale-110 transition-transform">
-              <Award className="h-5 w-5" />
-            </div>
-            <div>
-              <h4 className="text-xs font-black text-[#0D1B3E]">الشهادات والنتائج</h4>
-              <p className="text-[10px] text-[#6B7280]">شهادات التفوق</p>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      {/* 9. Detailed Statistics & Recent Activity */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Recent Test Results */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 space-y-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Award className="h-5 w-5 text-[#1E4FD8]" />
-              <h3 className="font-bold text-[#0D1B3E] text-base">أحدث نتائج الاختبارات</h3>
-            </div>
-            <button
-              onClick={() => onNavigate('my-results')}
-              className="text-xs font-bold text-[#1E4FD8] hover:underline cursor-pointer"
-            >
-              عرض السجل الكامل
-            </button>
-          </div>
-
-          {attempts.length === 0 ? (
-            <p className="text-center py-6 text-xs text-[#6B7280]">لم تقم بأداء أي اختبارات حتى الآن.</p>
-          ) : (
-            <div className="space-y-2.5">
-              {attempts.slice(0, 3).map((att) => (
-                <div 
-                  key={att.id}
-                  className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-[#F5F7FA]"
-                >
-                  <div className="space-y-1">
-                    <p className="text-xs font-bold text-[#0D1B3E] line-clamp-1">{att.examTitle}</p>
-                    <p className="text-[10px] text-[#6B7280]">{new Date(att.submittedAt).toLocaleDateString('ar-EG')}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <span className={`text-sm font-black ${att.passed ? 'text-emerald-600' : 'text-rose-600'}`}>
-                        {att.score} / {att.maxScore}
-                      </span>
-                      <p className="text-[10px] text-[#6B7280]">{att.percentage}%</p>
-                    </div>
-                    <span className={`rounded px-2 py-1 text-[10px] font-bold ${
-                      att.passed ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
-                    }`}>
-                      {att.passed ? 'ناجح' : 'لم يجتز'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Recent Announcements */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 space-y-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Bell className="h-5 w-5 text-[#F5B301]" />
-              <h3 className="font-bold text-[#0D1B3E] text-base">الإعلانات والتنبيهات الهامة</h3>
-            </div>
-          </div>
-
-          <div className="space-y-2.5">
-            {notifications.map((n) => (
-              <div 
-                key={n.id}
-                className="p-3.5 rounded-xl border border-slate-200 bg-[#F5F7FA] space-y-1.5"
-              >
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-[#1E4FD8]">{n.title}</h4>
-                  <span className="text-[10px] text-[#6B7280]">{new Date(n.createdAt).toLocaleDateString('ar-EG')}</span>
-                </div>
-                <p className="text-xs text-[#6B7280] leading-relaxed">{n.message}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* 10. Current Courses List (قائمة الكورسات الحالية) - At bottom */}
-      <div className="space-y-4">
+      {/* ========================================================================= */}
+      {/* 9. Current Courses (كورساتي الحالية - تصميم مدمج وأنيق)                   */}
+      {/* ========================================================================= */}
+      <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <BookOpen className="h-5 w-5 text-[#1E4FD8]" />
-            <h2 className="text-xl font-black text-[#0D1B3E]">كورساتي الحالية</h2>
+          <div className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-[#1E4FD8]" />
+            <h2 className="text-base sm:text-lg font-black text-[#0D1B3E]">كورساتي الحالية ({relevantCourses.length})</h2>
           </div>
           <button
-            onClick={() => onNavigate('my-courses')}
+            onClick={() => onNavigate(student ? 'my-courses' : 'courses-catalog')}
             className="flex items-center gap-1 text-xs font-bold text-[#1E4FD8] hover:underline cursor-pointer"
           >
-            <span>عرض الكل ({courses.length})</span>
-            <ChevronLeft className="h-4 w-4" />
+            <span>عرض الكل</span>
+            <ChevronLeft className="h-3.5 w-3.5" />
           </button>
         </div>
 
-        {courses.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-xs">
-            <AlertCircle className="mx-auto h-10 w-10 text-slate-400 opacity-60" />
-            <h4 className="mt-2 text-base font-bold text-[#0D1B3E]">لم تقم بتفعيل أي كورسات بعد</h4>
-            <p className="mt-1 text-xs text-[#6B7280]">أدخل كود التفعيل الخاص بك أو تصفح الكورسات المتاحة لبدء المذاكرة</p>
-            <div className="mt-4 flex justify-center gap-3">
+        {relevantCourses.length === 0 ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-xs">
+            <AlertCircle className="mx-auto h-8 w-8 text-slate-400 opacity-60" />
+            <h4 className="mt-2 text-sm font-bold text-[#0D1B3E]">لم تقم بتفعيل أي كورسات بعد</h4>
+            <p className="mt-1 text-xs text-[#6B7280]">أدخل كود التفعيل الخاص بك أو تصفح المناهج لبدء المذاكرة</p>
+            <div className="mt-3.5 flex justify-center gap-2.5">
               <button
                 onClick={onOpenActivationModal}
-                className="rounded-xl bg-[#F5B301] px-4 py-2 text-xs font-bold text-[#0D1B3E] cursor-pointer"
+                className="rounded-xl bg-[#F5B301] px-3.5 py-1.5 text-xs font-bold text-[#0D1B3E] cursor-pointer"
               >
                 تفعيل كود الكورس
               </button>
               <button
                 onClick={() => onNavigate('courses-catalog')}
-                className="rounded-xl border-2 border-[#1E4FD8] bg-white px-4 py-2 text-xs font-bold text-[#1E4FD8] cursor-pointer"
+                className="rounded-xl border border-[#1E4FD8] bg-white px-3.5 py-1.5 text-xs font-bold text-[#1E4FD8] cursor-pointer"
               >
                 استعراض الكورسات
               </button>
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {courses.map((course) => {
-              const { totalLessons, completedLessons, percentage } = StorageService.calculateCourseProgress(student.id, course.id);
-              const expiry = student.courseExpiryDates?.[course.id];
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {relevantCourses.map((course) => {
+              const { totalLessons, completedLessons, percentage } = StorageService.calculateCourseProgress(activeStudent.id, course.id);
+              const expiry = activeStudent.courseExpiryDates?.[course.id];
 
               let resumeLessonId = course.units?.[0]?.lessons?.[0]?.id;
-              const studentProg = StorageService.getStudentProgressList(student.id);
+              const studentProg = StorageService.getStudentProgressList(activeStudent.id);
               const completedIds = new Set(studentProg.filter(p => p.isCompleted).map(p => p.lessonId));
               
               course.units?.forEach(u => {
@@ -647,49 +739,54 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
               return (
                 <div 
                   key={course.id}
-                  className="rounded-3xl bg-white border border-slate-200 shadow-xs hover:shadow-md hover:border-blue-200 transition-all duration-300 overflow-hidden flex flex-col justify-between"
+                  className="rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:border-blue-200 hover:shadow-sm transition-all overflow-hidden flex flex-col justify-between"
                 >
                   <div>
-                    <div className="relative aspect-video w-full overflow-hidden bg-slate-100">
+                    {/* Compact Thumbnail */}
+                    <div className="relative h-28 sm:h-32 w-full overflow-hidden bg-slate-100">
                       <img 
                         src={course.thumbnail} 
                         alt={course.title}
-                        className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
+                        className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
                       />
-                      <div className="absolute top-2.5 right-2.5 rounded-lg bg-white/95 backdrop-blur-md px-2.5 py-1 text-[11px] font-bold text-[#1E4FD8] border border-blue-200 shadow-xs">
-                        {course.grade.includes('الثالث') ? '3 ثانوي' : '2 ثانوي'}
+                      <div className="absolute top-1.5 right-1.5 rounded-md bg-white/95 backdrop-blur-md px-1.5 py-0.5 text-[9px] font-bold text-[#1E4FD8] border border-blue-200 shadow-xs">
+                        {course.grade?.includes('الثالث') ? '3 ثانوي' : '2 ثانوي'}
                       </div>
-                      <div className="absolute bottom-2.5 left-2.5 rounded-lg bg-[#0D1B3E]/85 backdrop-blur-md px-2 py-0.5 text-[11px] font-bold text-white">
+                      <div className="absolute bottom-1.5 left-1.5 rounded-md bg-[#0D1B3E]/85 backdrop-blur-md px-1.5 py-0.5 text-[9px] font-bold text-white">
                         {completedLessons} / {totalLessons} درس
                       </div>
                     </div>
 
-                    <div className="p-5 space-y-3">
-                      <h3 className="font-bold text-[#0D1B3E] text-base leading-snug line-clamp-2">
-                        {course.title}
-                      </h3>
-                      <p className="text-xs text-[#6B7280] line-clamp-2 leading-relaxed">
-                        {course.description}
-                      </p>
+                    {/* Compact Body */}
+                    <div className="p-3 space-y-2">
+                      <div>
+                        <h3 className="font-bold text-[#0D1B3E] text-xs sm:text-sm leading-snug line-clamp-1">
+                          {course.title}
+                        </h3>
+                        <p className="text-[10px] sm:text-[11px] text-[#6B7280] line-clamp-1 mt-0.5">
+                          {course.description}
+                        </p>
+                      </div>
 
-                      <div className="flex items-center justify-between text-xs text-[#6B7280] pt-1">
-                        <span>المحاضر: {course.instructorName}</span>
+                      <div className="flex items-center justify-between text-[10px] text-[#6B7280]">
+                        <span className="truncate max-w-[140px]">المحاضر: {course.instructorName || 'أ / إبراهيم خليل'}</span>
                         {expiry && (
-                          <span className="flex items-center gap-1 text-[10px] text-[#1E4FD8] font-bold">
+                          <span className="flex items-center gap-1 text-[9px] text-[#1E4FD8] font-bold shrink-0">
                             <Calendar className="h-3 w-3" />
                             متاح حتى {new Date(expiry).toLocaleDateString('ar-EG')}
                           </span>
                         )}
                       </div>
 
-                      <div className="space-y-1.5 pt-2">
-                        <div className="flex justify-between text-xs font-bold">
+                      {/* Progress Bar */}
+                      <div className="space-y-1 pt-0.5">
+                        <div className="flex justify-between text-[10px] font-bold">
                           <span className="text-[#6B7280]">نسبة الإنجاز</span>
-                          <span className="text-[#1E4FD8]">{percentage}%</span>
+                          <span className="text-[#1E4FD8] font-mono">{percentage}%</span>
                         </div>
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
                           <div 
-                            className="h-full bg-[#1E4FD8] rounded-full"
+                            className="h-full bg-[#1E4FD8] rounded-full transition-all duration-300"
                             style={{ width: `${percentage}%` }}
                           />
                         </div>
@@ -697,16 +794,17 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     </div>
                   </div>
 
-                  <div className="p-5 pt-0 flex items-center gap-2">
+                  {/* Actions */}
+                  <div className="p-3 pt-0 flex items-center gap-2">
                     <button
                       onClick={() => onNavigate('course-details', { courseId: course.id })}
-                      className="flex-1 rounded-xl border border-slate-200 bg-[#F5F7FA] py-2.5 text-xs font-bold text-[#0D1B3E] hover:border-blue-300 hover:text-[#1E4FD8] transition-colors cursor-pointer"
+                      className="flex-1 rounded-xl border border-slate-200 bg-[#F5F7FA] py-1.5 text-xs font-bold text-[#0D1B3E] hover:border-blue-300 hover:text-[#1E4FD8] transition-colors cursor-pointer text-center"
                     >
                       تفاصيل المنهج
                     </button>
                     <button
                       onClick={() => onNavigate('lesson-player', { courseId: course.id, lessonId: resumeLessonId })}
-                      className="flex-1 rounded-xl bg-[#1E4FD8] py-2.5 text-xs font-bold text-white shadow-sm hover:bg-[#163cb5] transition-colors cursor-pointer"
+                      className="flex-1 rounded-xl bg-[#1E4FD8] py-1.5 text-xs font-bold text-white shadow-xs hover:bg-[#163cb5] transition-colors cursor-pointer text-center"
                     >
                       استكمال التعلم
                     </button>
@@ -716,7 +814,65 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
             })}
           </div>
         )}
-      </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 10. Bottom Navigation (شريط التنقل السفلي للهواتف الذكية)                  */}
+      {/* ========================================================================= */}
+      <nav 
+        aria-label="التنقل السفلي للهاتف" 
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 py-2 px-3 shadow-lg flex justify-around items-center"
+      >
+        <button
+          onClick={() => onNavigate('dashboard')}
+          className="flex flex-col items-center gap-1 text-[#1E4FD8] cursor-pointer"
+        >
+          <div className="p-1 rounded-xl bg-blue-50 text-[#1E4FD8]">
+            <BookOpen className="h-4 w-4" />
+          </div>
+          <span className="text-[10px] font-bold">الرئيسية</span>
+        </button>
+
+        <button
+          onClick={() => onNavigate(student ? 'my-courses' : 'courses-catalog')}
+          className="flex flex-col items-center gap-1 text-[#6B7280] hover:text-[#1E4FD8] transition-colors cursor-pointer"
+        >
+          <div className="p-1 rounded-xl text-[#6B7280]">
+            <PlayCircle className="h-4 w-4" />
+          </div>
+          <span className="text-[10px] font-bold">كورساتي</span>
+        </button>
+
+        <button
+          onClick={() => onNavigate('ai-assistant')}
+          className="flex flex-col items-center gap-1 text-[#6B7280] hover:text-[#1E4FD8] transition-colors cursor-pointer"
+        >
+          <div className="p-1 rounded-xl text-[#6B7280]">
+            <Bot className="h-4 w-4" />
+          </div>
+          <span className="text-[10px] font-bold">فيزيكس AI</span>
+        </button>
+
+        <button
+          onClick={() => onNavigate('leaderboard')}
+          className="flex flex-col items-center gap-1 text-[#6B7280] hover:text-[#1E4FD8] transition-colors cursor-pointer"
+        >
+          <div className="p-1 rounded-xl text-[#6B7280]">
+            <Trophy className="h-4 w-4" />
+          </div>
+          <span className="text-[10px] font-bold">لوحة الشرف</span>
+        </button>
+
+        <button
+          onClick={() => onOpenEditProfileModal ? onOpenEditProfileModal() : onNavigate('dashboard')}
+          className="flex flex-col items-center gap-1 text-[#6B7280] hover:text-[#1E4FD8] transition-colors cursor-pointer"
+        >
+          <div className="p-1 rounded-xl text-[#6B7280]">
+            <User className="h-4 w-4" />
+          </div>
+          <span className="text-[10px] font-bold">حسابي</span>
+        </button>
+      </nav>
 
     </div>
   );

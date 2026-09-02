@@ -201,9 +201,10 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
           {attempt.courseId && (
             <button
               onClick={() => onNavigate('course-details', { courseId: attempt.courseId })}
-              className="rounded-xl bg-[#F5B301] px-6 py-2.5 text-xs font-bold text-[#0D1B3E] hover:bg-[#e0a401] transition-all shadow-xs"
+              className="flex items-center gap-1.5 rounded-xl bg-[#F5B301] px-6 py-2.5 text-xs font-bold text-[#0D1B3E] hover:bg-[#e0a401] transition-all shadow-xs"
             >
-              العودة لمنهج الكورس
+              <BookOpen className="h-4 w-4 text-[#0D1B3E]" />
+              <span>العودة لمنهج الكورس</span>
             </button>
           )}
 
@@ -223,16 +224,6 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
             <MessageSquare className="h-4 w-4 text-emerald-600" />
             <span>{isSendingWhatsApp ? 'جارٍ تجهيز التقرير...' : 'إرسال تقرير واتساب لولي الأمر'}</span>
           </button>
-
-          {attempt.courseId && (
-            <button
-              onClick={() => onNavigate('course-details', { courseId: attempt.courseId })}
-              className="flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-5 py-2.5 text-xs font-bold text-[#1E4FD8] hover:bg-blue-100 transition-colors shadow-xs"
-            >
-              <BookOpen className="h-4 w-4 text-[#1E4FD8]" />
-              <span>العودة لصفحة الكورس</span>
-            </button>
-          )}
 
           <button
             onClick={() => onNavigate('my-results')}

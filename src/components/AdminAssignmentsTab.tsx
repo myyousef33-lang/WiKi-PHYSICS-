@@ -18,7 +18,9 @@ import {
   AlertCircle,
   Link,
   ExternalLink,
-  FileCheck
+  FileCheck,
+  X,
+  Info
 } from 'lucide-react';
 import { Assignment, AssignmentSubmission, Course, GradeLevel } from '../types';
 import { StorageService, subscribeToStorage } from '../services/storage';
@@ -437,7 +439,7 @@ export const AdminAssignmentsTab: React.FC = () => {
             
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#24336A] pb-3">
               <h3 className="font-black text-base text-[#0D1B3E] dark:text-white">إضافة واجب دراسي جديد (PDF)</h3>
-              <button onClick={() => setIsCreateOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+              <button onClick={() => setIsCreateOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white"><X className="h-5 w-5" /></button>
             </div>
 
             <form onSubmit={handleCreateAssignment} className="space-y-4 text-xs">
@@ -573,8 +575,9 @@ export const AdminAssignmentsTab: React.FC = () => {
                       )
                     ) : (
                       <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-[11px] space-y-1">
-                        <p className="font-bold flex items-center gap-1">
-                          <span>📌 خطوات الحصول على رابط Google Drive:</span>
+                        <p className="font-bold flex items-center gap-1.5">
+                          <Info className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                          <span>خطوات الحصول على رابط Google Drive:</span>
                         </p>
                         <ol className="list-decimal list-inside space-y-0.5 text-[10px] text-amber-900 dark:text-amber-200 leading-relaxed">
                           <li>افتح ملف الواجب الـ PDF في Google Drive.</li>
@@ -590,7 +593,7 @@ export const AdminAssignmentsTab: React.FC = () => {
                     <label className="flex-1 cursor-pointer flex items-center justify-center gap-2 border-2 border-dashed border-slate-300 dark:border-[#24336A] rounded-xl p-3 bg-slate-50 dark:bg-[#0D1B3E] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                       <Upload className="h-4 w-4 text-[#1E4FD8]" />
                       <span className="font-bold text-slate-600 dark:text-slate-300">
-                        {isUploading ? 'جاري الرفع...' : newPdfUrl && !newPdfUrl.startsWith('http') ? 'تم رفع الملف بنجاح ✓' : 'اختر ملف PDF من جهازك'}
+                        {isUploading ? 'جاري الرفع...' : newPdfUrl && !newPdfUrl.startsWith('http') ? 'تم رفع الملف بنجاح' : 'اختر ملف PDF من جهازك'}
                       </span>
                       <input type="file" accept="application/pdf" onChange={handleFileUpload} className="hidden" />
                     </label>

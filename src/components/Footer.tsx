@@ -3,7 +3,12 @@ import { Send, Phone, ShieldCheck, Zap, Sparkles, Code2, Heart } from 'lucide-re
 import { StorageService } from '../services/storage';
 import { Logo } from './Logo';
 
-export const Footer: React.FC = () => {
+interface FooterProps {
+  onNavigate?: (view: string, params?: any) => void;
+  onOpenActivationModal?: () => void;
+}
+
+export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenActivationModal }) => {
   const settings = StorageService.getSettings();
 
   return (
@@ -36,11 +41,51 @@ export const Footer: React.FC = () => {
           <div className="space-y-3">
             <h4 className="text-sm font-bold text-[#0D1B3E] uppercase tracking-wider">محتوى المنهج</h4>
             <ul className="space-y-2 text-sm">
-              <li><span className="text-[#6B7280] hover:text-[#1E4FD8] transition-colors cursor-pointer">فيزياء الصف الثالث الثانوي (3ث)</span></li>
-              <li><span className="text-[#6B7280] hover:text-[#1E4FD8] transition-colors cursor-pointer">فيزياء الصف الثاني الثانوي (2ث)</span></li>
-              <li><span className="text-[#6B7280] hover:text-[#1E4FD8] transition-colors cursor-pointer">فيزياء الصف الأول الثانوي (1ث)</span></li>
-              <li><span className="text-[#6B7280] hover:text-[#1E4FD8] transition-colors cursor-pointer">مذكرات الشرح وبنوك الأسئلة</span></li>
-              <li><span className="text-[#6B7280] hover:text-[#1E4FD8] transition-colors cursor-pointer">الامتحانات الشاملة والتجريبية</span></li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => onNavigate?.('courses-catalog')}
+                  className="text-[#6B7280] hover:text-[#1E4FD8] transition-colors cursor-pointer text-right"
+                >
+                  فيزياء الصف الثالث الثانوي (3ث)
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => onNavigate?.('courses-catalog')}
+                  className="text-[#6B7280] hover:text-[#1E4FD8] transition-colors cursor-pointer text-right"
+                >
+                  فيزياء الصف الثاني الثانوي (2ث)
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => onNavigate?.('courses-catalog')}
+                  className="text-[#6B7280] hover:text-[#1E4FD8] transition-colors cursor-pointer text-right"
+                >
+                  فيزياء الصف الأول الثانوي (1ث)
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => onNavigate?.('pdf-library')}
+                  className="text-[#6B7280] hover:text-[#1E4FD8] transition-colors cursor-pointer text-right"
+                >
+                  مذكرات الشرح وبنوك الأسئلة
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => onNavigate?.('courses-catalog')}
+                  className="text-[#6B7280] hover:text-[#1E4FD8] transition-colors cursor-pointer text-right"
+                >
+                  الامتحانات الشاملة والتجريبية
+                </button>
+              </li>
             </ul>
           </div>
 

@@ -1754,7 +1754,7 @@ export const StorageService = {
 
     // Send in-platform notification to student
     this.sendNotification({
-      title: 'طلب شحن رصيد جديد ⏳',
+      title: 'طلب شحن رصيد جديد',
       message: `تم استلام طلب شحن رصيد محفظتك بمبلغ ${data.amount} ج.م وجارٍ مراجعته وتأكيده من قبل الإدارة.`,
       target: 'student',
       targetStudentId: data.studentId

@@ -1572,7 +1572,7 @@ ${weakConceptsText}
                   <div className="rounded-2xl border border-[#F5B301]/40 bg-[#F5B301]/10 p-3.5 flex items-center justify-between text-xs text-[#0D1B3E] animate-in fade-in">
                     <div className="flex items-center gap-2">
                       <Sparkles className="h-4 w-4 shrink-0 text-[#1E4FD8]" />
-                      <span>وضع التخصيص مفعّل: استخدم أزرار السهمين (⬆ / ⬇) لنقل أي قسم لأعلى أو لأسفل، وسيتم حفظ الترتيب تلقائياً.</span>
+                      <span>وضع التخصيص مفعّل: استخدم أزرار النقل لنقل أي قسم لأعلى أو لأسفل، وسيتم حفظ الترتيب تلقائياً.</span>
                     </div>
                     <button 
                       onClick={() => setIsCustomizeLayoutMode(false)}

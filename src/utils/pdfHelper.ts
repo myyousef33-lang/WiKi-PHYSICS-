@@ -77,7 +77,7 @@ export function generateSamplePhysicsWorksheetDataUrl(title = 'شيت أسئلة
 
   <!-- Instructions Banner -->
   <rect x="40" y="145" width="720" height="40" fill="#EFF6FF" rx="10" stroke="#BFDBFE" />
-  <text x="740" y="170" font-size="13" font-weight="700" fill="#1E4FD8" text-anchor="end">📌 تعليمات الواجب: يمكنك الكتابة والرسم مباشرة بالقلم فوق هذا المستند للحل والتسليم.</text>
+  <text x="740" y="170" font-size="13" font-weight="700" fill="#1E4FD8" text-anchor="end">تعليمات الواجب: يمكنك الكتابة والرسم مباشرة بالقلم فوق هذا المستند للحل والتسليم.</text>
 
   <!-- Question 1 -->
   <g transform="translate(40, 200)">
@@ -93,7 +93,7 @@ export function generateSamplePhysicsWorksheetDataUrl(title = 'شيت أسئلة
 
     <!-- Answer Box -->
     <rect x="30" y="185" width="660" height="60" class="answer-box" />
-    <text x="670" y="220" font-size="13" fill="#94A3B8" text-anchor="end">✍️ مساحة كتابة الخطوات والناتج النهائي بالـ Volts هنا...</text>
+    <text x="670" y="220" font-size="13" fill="#94A3B8" text-anchor="end">مساحة كتابة الخطوات والناتج النهائي بالـ Volts هنا...</text>
   </g>
 
   <!-- Question 2 -->
@@ -110,7 +110,7 @@ export function generateSamplePhysicsWorksheetDataUrl(title = 'شيت أسئلة
 
     <!-- Answer Box -->
     <rect x="30" y="185" width="660" height="60" class="answer-box" />
-    <text x="670" y="220" font-size="13" fill="#94A3B8" text-anchor="end">✍️ اكتب قيمة القوة المغناطيسية بوحدة النيوتن (Newton)...</text>
+    <text x="670" y="220" font-size="13" fill="#94A3B8" text-anchor="end">اكتب قيمة القوة المغناطيسية بوحدة النيوتن (Newton)...</text>
   </g>
 
   <!-- Question 3 -->
@@ -121,7 +121,7 @@ export function generateSamplePhysicsWorksheetDataUrl(title = 'شيت أسئلة
     <text x="700" y="90" class="q-text" text-anchor="end">واذكر تطبيقاً تكنولوجياً يعتمد على الطبيعة الموجية للإلكترون.</text>
 
     <rect x="30" y="110" width="660" height="110" class="answer-box" />
-    <text x="670" y="145" font-size="13" fill="#94A3B8" text-anchor="end">✍️ اكتب استنتاج معادلة دي برولي وتطبيق الميكروسكوب الإلكتروني هنا...</text>
+    <text x="670" y="145" font-size="13" fill="#94A3B8" text-anchor="end">اكتب استنتاج معادلة دي برولي وتطبيق الميكروسكوب الإلكتروني هنا...</text>
   </g>
 
   <!-- Footer -->

@@ -13,6 +13,13 @@
     transition: background-color 0.25s ease, color 0.25s ease;
   }
 
+  /* Disable pinch-to-zoom on touchscreen/mobile devices only */
+  @media (hover: none) and (pointer: coarse) {
+    html, body {
+      touch-action: pan-x pan-y;
+    }
+  }
+
   #root {
     overflow-x: hidden !important;
     max-width: 100vw !important;
