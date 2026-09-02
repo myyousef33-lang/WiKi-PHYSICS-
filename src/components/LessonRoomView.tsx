@@ -27,9 +27,10 @@ import {
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { MediaStore } from '../services/mediaStore';
-import { Course, Lesson, Student, QuizExam } from '../types';
+import { Course, Lesson, Student, QuizExam, Assignment, AssignmentSubmission } from '../types';
 import { AIPhysicsAssistant } from './AIPhysicsAssistant';
 import { PdfViewerModal } from './PdfViewerModal';
+import { AssignmentSolverModal } from './AssignmentSolverModal';
 
 interface LessonRoomViewProps {
   courseId: string;
@@ -57,6 +58,14 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [showAIAssistant, setShowAIAssistant] = useState<boolean>(false);
   const [showPdfModal, setShowPdfModal] = useState<boolean>(false);
+
+  // Assignment Modal States
+  const [assignments, setAssignments] = useState<Assignment[]>(StorageService.getAssignmentsByCourse(courseId));
+  const [submissions, setSubmissions] = useState<AssignmentSubmission[]>(
+    student ? StorageService.getStudentAssignmentSubmissions(student.id) : []
+  );
+  const [selectedAssignmentModal, setSelectedAssignmentModal] = useState<Assignment | null>(null);
+  const [assignmentModalOpen, setAssignmentModalOpen] = useState<boolean>(false);
   
   // Security Anti-Screenshot & Anti-Recording DRM States
   const [isCaptureBlocked, setIsCaptureBlocked] = useState<boolean>(false);
@@ -127,6 +136,10 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
       setCourse(c);
       setStudent(s);
       setExams(StorageService.getExams());
+      setAssignments(StorageService.getAssignmentsByCourse(courseId));
+      if (s) {
+        setSubmissions(StorageService.getStudentAssignmentSubmissions(s.id));
+      }
 
       if (c) {
         const flatLessons: Lesson[] = [];
@@ -584,6 +597,57 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
             </div>
           )}
 
+          {/* Assignments associated with this course / lesson */}
+          {assignments.length > 0 && (
+            <div className="space-y-3">
+              {assignments.map(asgn => {
+                const sub = submissions.find(s => s.assignmentId === asgn.id);
+                return (
+                  <div key={asgn.id} className="rounded-2xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/40 dark:bg-[#16224D] p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+                    <div className="flex items-center gap-3.5">
+                      <div className="rounded-xl bg-[#F5B301]/20 p-3 text-[#0D1B3E] dark:text-white shrink-0">
+                        <FileText className="h-6 w-6 text-[#1E4FD8] dark:text-[#4C7CFF]" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-black uppercase bg-[#1E4FD8] text-white px-2 py-0.5 rounded-md">
+                            واجب تطبيقات الـ PDF
+                          </span>
+                          {sub && (
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                              sub.status === 'graded' 
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' 
+                                : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                            }`}>
+                              {sub.status === 'graded' ? `تم التصحيح: ${sub.grade}/${sub.maxGrade || 20}` : 'تم التسليم - قيد المراجعة'}
+                            </span>
+                          )}
+                        </div>
+                        <h4 className="font-bold text-sm text-[#0D1B3E] dark:text-white">{asgn.title}</h4>
+                        <p className="text-xs text-[#6B7280] dark:text-slate-400">
+                          الدرجة الكلية: {asgn.maxGrade || 20} درجة
+                          {asgn.deadline && ` • آخر موعد: ${new Date(asgn.deadline).toLocaleDateString('ar-EG')}`}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedAssignmentModal(asgn);
+                        setAssignmentModalOpen(true);
+                      }}
+                      className="inline-flex items-center gap-2 rounded-xl bg-[#1E4FD8] dark:bg-[#4C7CFF] px-5 py-2.5 text-xs font-black text-white hover:bg-blue-700 shadow-xs transition-all self-end sm:self-auto"
+                    >
+                      <FileText className="h-4 w-4" />
+                      <span>{sub ? 'عرض ورقة الحل والتصحيح' : 'فتح وتأدية الواجب الآن'}</span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {/* Lesson Quiz Card if present */}
           {lessonQuiz && (
             <div className="rounded-3xl border border-blue-200 bg-blue-50/50 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
@@ -692,6 +756,23 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
           pdfUrl={currentLesson.pdfUrl}
           category="مذكرة الدرس"
           grade={course.grade}
+        />
+      )}
+
+      {/* Assignment Solver / Viewer Modal */}
+      {assignmentModalOpen && selectedAssignmentModal && (
+        <AssignmentSolverModal
+          isOpen={assignmentModalOpen}
+          onClose={() => setAssignmentModalOpen(false)}
+          assignment={selectedAssignmentModal}
+          student={student}
+          submission={submissions.find(s => s.assignmentId === selectedAssignmentModal.id)}
+          mode={submissions.find(s => s.assignmentId === selectedAssignmentModal.id) ? 'view' : 'solve'}
+          onSuccess={() => {
+            if (student) {
+              setSubmissions(StorageService.getStudentAssignmentSubmissions(student.id));
+            }
+          }}
         />
       )}
 

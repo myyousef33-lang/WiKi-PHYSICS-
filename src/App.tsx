@@ -11,8 +11,12 @@ import { QuizExamView } from './components/QuizExamView';
 import { ExamResultView } from './components/ExamResultView';
 import { MyResultsView } from './components/MyResultsView';
 import { PdfLibraryView } from './components/PdfLibraryView';
-import { AdminDashboard } from './components/AdminDashboard';
 import { LeaderboardView } from './components/LeaderboardView';
+
+// Code Splitting: Lazy load the heavy AdminDashboard component
+const AdminDashboard = React.lazy(() =>
+  import('./components/AdminDashboard').then(module => ({ default: module.AdminDashboard }))
+);
 import { WeaknessAnalysisView } from './components/WeaknessAnalysisView';
 import { AIPhysicsAssistant } from './components/AIPhysicsAssistant';
 import { ActivationCodeModal } from './components/ActivationCodeModal';
@@ -261,9 +265,17 @@ export default function App() {
         )}
 
         {currentView === 'admin' && (
-          <AdminDashboard
-            onNavigate={handleNavigate}
-          />
+          <React.Suspense fallback={
+            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-white p-6" dir="rtl">
+              <div className="h-12 w-12 rounded-full border-4 border-amber-400 border-t-transparent animate-spin mb-4" />
+              <p className="font-bold text-lg text-slate-200">جاري تحميل لوحة الإدارة والشرف...</p>
+              <p className="text-xs text-slate-400 mt-1">ويكيفزياء | نظام التحكم المتكامل</p>
+            </div>
+          }>
+            <AdminDashboard
+              onNavigate={handleNavigate}
+            />
+          </React.Suspense>
         )}
       </main>
 

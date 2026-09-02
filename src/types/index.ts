@@ -380,6 +380,41 @@ export interface LeaderboardEntry {
   lastActive: string;
 }
 
+export interface Assignment {
+  id: string;
+  courseId: string;
+  courseTitle?: string;
+  unitId?: string;
+  lessonId?: string;
+  lessonTitle?: string;
+  title: string;
+  description?: string;
+  pdfUrl: string;
+  deadline?: string; // ISO string
+  maxGrade: number;
+  gradeLevel?: GradeLevel | string;
+  createdAt: string;
+}
+
+export interface AssignmentSubmission {
+  id: string;
+  assignmentId: string;
+  assignmentTitle: string;
+  courseId: string;
+  studentId: string;
+  studentName: string;
+  studentPhone?: string;
+  studentGrade?: string;
+  submittedAt: string;
+  annotatedPdfData: string; // JSON string of drawing layers or PDF URL with annotations
+  status: 'pending' | 'graded'; // قيد المراجعة | تم التصحيح
+  grade?: number;
+  maxGrade?: number;
+  teacherNotes?: string;
+  teacherAnnotatedData?: string;
+  gradedAt?: string;
+}
+
 export interface AIChatMessage {
   id: string;
   role: 'user' | 'assistant';

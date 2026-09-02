@@ -22,7 +22,9 @@ import {
   WalletTransaction,
   AdminAuditLogEntry,
   LessonComment,
-  SmartStudyRecommendation
+  SmartStudyRecommendation,
+  Assignment,
+  AssignmentSubmission
 } from '../types';
 import { db, doc, getDoc, setDoc, onSnapshot } from './firebase';
 
@@ -49,7 +51,9 @@ const STORAGE_KEYS = {
   WALLET_TRANSACTIONS: 'wikifizya_db_wallet_transactions_v4',
   AUDIT_LOGS: 'wikifizya_db_audit_logs_v4',
   LESSON_COMMENTS: 'wikifizya_db_lesson_comments_v4',
-  STUDY_RECOMMENDATIONS: 'wikifizya_db_study_recommendations_v4'
+  STUDY_RECOMMENDATIONS: 'wikifizya_db_study_recommendations_v4',
+  ASSIGNMENTS: 'wikifizya_db_assignments_v4',
+  ASSIGNMENT_SUBMISSIONS: 'wikifizya_db_assignment_submissions_v4'
 };
 
 // Cryptographic Password Hashing (SHA-256 with Salt)
@@ -133,7 +137,9 @@ const syncKeys = [
   STORAGE_KEYS.WALLET_TRANSACTIONS,
   STORAGE_KEYS.AUDIT_LOGS,
   STORAGE_KEYS.LESSON_COMMENTS,
-  STORAGE_KEYS.STUDY_RECOMMENDATIONS
+  STORAGE_KEYS.STUDY_RECOMMENDATIONS,
+  STORAGE_KEYS.ASSIGNMENTS,
+  STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS
 ];
 
 // Firebase Firestore Cloud Sync Helpers
@@ -279,29 +285,7 @@ const initFirestoreSync = () => {
         }
       };
 
-      // 1. Initial fast pull from Firestore on startup
-      try {
-        const snap = await getDoc(docRef);
-        if (snap.exists()) {
-          const remoteData = snap.data()?.data;
-          const remoteUpdatedAt = snap.data()?.updatedAt;
-          await processRemoteData(remoteData, remoteUpdatedAt);
-        } else {
-          const localStr = localStorage.getItem(key);
-          if (localStr) {
-            try {
-              const localVal = JSON.parse(localStr);
-              if (key === STORAGE_KEYS.SETTINGS || (Array.isArray(localVal) && localVal.length > 0)) {
-                await setDoc(docRef, { data: sanitizeForFirestore(localVal), updatedAt: new Date().toISOString() });
-              }
-            } catch (_) {}
-          }
-        }
-      } catch (e) {
-        console.warn(`Initial fetch warning for ${key}:`, e);
-      }
-
-      // 2. Real-time active snapshot listener
+      // Active snapshot listener (automatically emits initial state on attach)
       onSnapshot(docRef, (snapshot) => {
         // Ignore uncommitted local snapshot events to avoid race conditions
         if (snapshot.metadata && snapshot.metadata.hasPendingWrites) {
@@ -312,6 +296,17 @@ const initFirestoreSync = () => {
           const remoteData = snapshot.data()?.data;
           const remoteUpdatedAt = snapshot.data()?.updatedAt;
           processRemoteData(remoteData, remoteUpdatedAt).catch(() => {});
+        } else {
+          // If remote doc does not exist yet, push local cache to Firestore if present
+          const localStr = localStorage.getItem(key);
+          if (localStr) {
+            try {
+              const localVal = JSON.parse(localStr);
+              if (key === STORAGE_KEYS.SETTINGS || (Array.isArray(localVal) && localVal.length > 0)) {
+                setDoc(docRef, { data: sanitizeForFirestore(localVal), updatedAt: new Date().toISOString() }).catch(() => {});
+              }
+            } catch (_) {}
+          }
         }
       }, (err) => {
         console.warn('Firestore listener warning for', key, err);
@@ -2080,6 +2075,111 @@ export const StorageService = {
     stored[studentId] = recommendations;
     setStored(STORAGE_KEYS.STUDY_RECOMMENDATIONS, stored);
     return recommendations;
+  },
+
+  // === Assignments & Submissions ===
+  getAssignments(): Assignment[] {
+    const data = localStorage.getItem(STORAGE_KEYS.ASSIGNMENTS);
+    if (!data) return [];
+    try {
+      return JSON.parse(data);
+    } catch {
+      return [];
+    }
+  },
+
+  getAssignmentsByCourse(courseId: string): Assignment[] {
+    const list = this.getAssignments();
+    return list.filter(a => a.courseId === courseId);
+  },
+
+  saveAssignment(assignment: Assignment): Assignment {
+    const list = this.getAssignments();
+    const idx = list.findIndex(a => a.id === assignment.id);
+    if (idx !== -1) {
+      list[idx] = assignment;
+    } else {
+      list.unshift(assignment);
+    }
+    localStorage.setItem(STORAGE_KEYS.ASSIGNMENTS, JSON.stringify(list));
+    localStorage.setItem(STORAGE_KEYS.ASSIGNMENTS + '_updated_at', new Date().toISOString());
+    notifyListeners();
+    syncToFirestore(STORAGE_KEYS.ASSIGNMENTS, list);
+    return assignment;
+  },
+
+  deleteAssignment(id: string): void {
+    let list = this.getAssignments();
+    list = list.filter(a => a.id !== id);
+    localStorage.setItem(STORAGE_KEYS.ASSIGNMENTS, JSON.stringify(list));
+    localStorage.setItem(STORAGE_KEYS.ASSIGNMENTS + '_updated_at', new Date().toISOString());
+    notifyListeners();
+    syncToFirestore(STORAGE_KEYS.ASSIGNMENTS, list);
+  },
+
+  getAssignmentSubmissions(): AssignmentSubmission[] {
+    const data = localStorage.getItem(STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS);
+    if (!data) return [];
+    try {
+      return JSON.parse(data);
+    } catch {
+      return [];
+    }
+  },
+
+  getStudentAssignmentSubmissions(studentId: string): AssignmentSubmission[] {
+    const list = this.getAssignmentSubmissions();
+    return list.filter(s => s.studentId === studentId);
+  },
+
+  saveAssignmentSubmission(submission: AssignmentSubmission): AssignmentSubmission {
+    const list = this.getAssignmentSubmissions();
+    const idx = list.findIndex(s => s.id === submission.id);
+    if (idx !== -1) {
+      list[idx] = submission;
+    } else {
+      list.unshift(submission);
+    }
+    localStorage.setItem(STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS, JSON.stringify(list));
+    localStorage.setItem(STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS + '_updated_at', new Date().toISOString());
+    notifyListeners();
+    syncToFirestore(STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS, list);
+    return submission;
+  },
+
+  gradeAssignmentSubmission(submissionId: string, grade: number, teacherNotes?: string, teacherAnnotatedData?: string): AssignmentSubmission | null {
+    const list = this.getAssignmentSubmissions();
+    const idx = list.findIndex(s => s.id === submissionId);
+    if (idx === -1) return null;
+
+    const sub = list[idx];
+    sub.status = 'graded';
+    sub.grade = grade;
+    if (teacherNotes !== undefined) sub.teacherNotes = teacherNotes;
+    if (teacherAnnotatedData !== undefined) sub.teacherAnnotatedData = teacherAnnotatedData;
+    sub.gradedAt = new Date().toISOString();
+
+    list[idx] = sub;
+    localStorage.setItem(STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS, JSON.stringify(list));
+    localStorage.setItem(STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS + '_updated_at', new Date().toISOString());
+    notifyListeners();
+    syncToFirestore(STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS, list);
+
+    try {
+      this.sendNotification({
+        id: 'notif_sub_' + Date.now(),
+        title: 'تم تصحيح الواجب الدراسي',
+        message: `تم تصحيح واجبك: "${sub.assignmentTitle}". الدرجة المستحقة: ${grade}/${sub.maxGrade || 20}${teacherNotes ? ` - ملاحظات المعلم: ${teacherNotes}` : ''}`,
+        target: 'student',
+        targetStudentId: sub.studentId,
+        createdAt: new Date().toISOString(),
+        priority: 'urgent'
+      });
+    } catch (e) {
+      console.warn('Failed to send assignment notification:', e);
+    }
+
+    return sub;
   },
 
   // === Database Reset / Clean Slate ===

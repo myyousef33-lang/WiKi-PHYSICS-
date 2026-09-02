@@ -69,6 +69,7 @@ import { AdminWalletTab } from './AdminWalletTab';
 import { AdminAuditLogTab } from './AdminAuditLogTab';
 import { AdminCommentsTab } from './AdminCommentsTab';
 import { AdminReportsExportTab } from './AdminReportsExportTab';
+import { AdminAssignmentsTab } from './AdminAssignmentsTab';
 import { downloadPdfFile, resolvePdfUrl } from '../utils/pdfHelper';
 import { 
   Student, 
@@ -110,6 +111,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     | 'audit-admin'
     | 'comments-admin'
     | 'reports-export'
+    | 'assignments-admin'
   >('overview');
   
   // Data State
@@ -1089,6 +1091,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       title: 'المحتوى والملازم والتعليقات',
       items: [
         { id: 'courses', label: 'الكورسات والدروس', icon: BookOpen, badge: courses.length },
+        { id: 'assignments-admin', label: 'واجبات الـ PDF والتصحيح', icon: Edit3, badge: StorageService.getAssignmentSubmissions().filter(s => s.status === 'pending').length || null },
         { id: 'comments-admin', label: 'استفسارات الطلاب', icon: MessageSquare, badge: commentsCount > 0 ? commentsCount : null },
         { id: 'exams', label: 'بنك الأسئلة والامتحانات', icon: HelpCircle, badge: exams.length },
         { id: 'pdfs', label: 'المذكرات والملازم PDF', icon: FileText, badge: pdfs.length }
@@ -4842,6 +4845,10 @@ ${weakConceptsText}
 
       {activeTab === 'reports-export' && (
         <AdminReportsExportTab />
+      )}
+
+      {activeTab === 'assignments-admin' && (
+        <AdminAssignmentsTab />
       )}
 
           </main>
