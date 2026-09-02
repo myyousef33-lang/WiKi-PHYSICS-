@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BookOpen, PlayCircle, Key, Calendar, CheckCircle2, ChevronLeft, Search, Filter } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { Student, Course, Lesson } from '../types';
+import { CourseRatingBadge } from './CourseRatingBadge';
 
 interface MyCoursesViewProps {
   onNavigate: (view: string, params?: any) => void;
@@ -181,15 +182,24 @@ export const MyCoursesView: React.FC<MyCoursesViewProps> = ({
                       alt={course.title}
                       className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
                     />
-                    <div className="absolute top-2.5 right-2.5 rounded-lg bg-slate-950/85 backdrop-blur-md px-2.5 py-1 text-[11px] font-bold text-amber-400 border border-amber-500/20">
+                    <div className="absolute top-2.5 right-2.5 rounded-lg bg-slate-950/85 backdrop-blur-md px-2.5 py-1 text-[11px] font-bold text-amber-400 border border-amber-500/20 z-10">
                       {course.grade.includes('الثالث') ? '3 ثانوي' : '2 ثانوي'}
                     </div>
+
                     {percentage >= 100 && (
-                      <div className="absolute top-2.5 left-2.5 rounded-lg bg-emerald-500/90 text-slate-950 px-2 py-0.5 text-[10px] font-black flex items-center gap-1">
+                      <div className="absolute top-2.5 left-2.5 rounded-lg bg-emerald-500/90 text-slate-950 px-2 py-0.5 text-[10px] font-black flex items-center gap-1 z-10 shadow-xs">
                         <CheckCircle2 className="h-3 w-3" />
                         <span>مكتمل 100%</span>
                       </div>
                     )}
+
+                    {/* Edge Rating Badge on Corner/Side of Screen Image */}
+                    <CourseRatingBadge 
+                      rating={course.rating} 
+                      ratingCount={course.ratingCount} 
+                      size="sm" 
+                      position="bottom-left" 
+                    />
                   </div>
 
                   {/* Body */}

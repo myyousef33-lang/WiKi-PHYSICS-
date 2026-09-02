@@ -33,7 +33,7 @@ export const Logo: React.FC<LogoProps> = ({
         <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-[#2E86FF]/40 via-[#FFB020]/30 to-[#2E86FF]/40 blur-sm opacity-70 group-hover:opacity-100 transition-opacity" />
         
         {/* Inner Badge Frame */}
-        <div className={`relative flex ${iconSizes[size]} items-center justify-center rounded-2xl bg-white border-2 border-[#1E4FD8]/40 shadow-md overflow-hidden`}>
+        <div className={`relative flex ${iconSizes[size]} items-center justify-center rounded-2xl bg-white dark:bg-[#16224D] border-2 border-[#1E4FD8]/40 dark:border-[#3B82F6]/60 shadow-md overflow-hidden shrink-0`}>
           
           {/* Subtle Atomic Orbit SVG in Background */}
           <svg className="absolute inset-0 h-full w-full opacity-60 animate-[spin_12s_linear_infinite]" viewBox="0 0 100 100">
@@ -43,7 +43,7 @@ export const Logo: React.FC<LogoProps> = ({
           </svg>
 
           {/* Central Greek Psi Symbol (Ψ) + Quantum Spark */}
-          <div className="relative z-10 flex items-center justify-center font-black text-transparent bg-clip-text bg-gradient-to-b from-[#0D1B3E] to-[#1E4FD8] drop-shadow-sm">
+          <div className="relative z-10 flex items-center justify-center font-black text-transparent bg-clip-text bg-gradient-to-b from-[#0D1B3E] to-[#1E4FD8] dark:from-white dark:to-[#60A5FA] drop-shadow-sm">
             <span>Ψ</span>
           </div>
 
@@ -52,20 +52,20 @@ export const Logo: React.FC<LogoProps> = ({
         </div>
       </div>
 
-      {/* Typography: ويكيفزياء */}
+      {/* Typography: ويكي فيزياء */}
       <div className="flex flex-col text-right">
         <div className="flex items-center gap-1.5">
-          <span className={`${titleSizes[size]} font-black tracking-tight text-[#0D1B3E] flex items-center gap-1`}>
+          <span className={`${titleSizes[size]} font-black tracking-tight text-[#0D1B3E] dark:text-white flex items-center gap-1 whitespace-nowrap`}>
             <span>ويكي</span>
-            <span className="text-[#1E4FD8]">فزياء</span>
+            <span className="text-[#1E4FD8] dark:text-[#38BDF8]">فيزياء</span>
           </span>
-          <span className="rounded-md bg-[#1E4FD8]/10 border border-[#1E4FD8]/25 px-1.5 py-0.5 text-[10px] font-extrabold text-[#1E4FD8] shadow-sm">
+          <span className="rounded-md bg-[#1E4FD8]/10 dark:bg-[#1E4FD8]/30 border border-[#1E4FD8]/25 dark:border-[#38BDF8]/40 px-1.5 py-0.5 text-[10px] font-extrabold text-[#1E4FD8] dark:text-[#38BDF8] shadow-sm whitespace-nowrap">
             PHYSICS
           </span>
         </div>
         
         {showSubtitle && (
-          <span className="text-[10px] sm:text-xs font-semibold text-[#6B7280]">
+          <span className="text-[10px] sm:text-xs font-semibold text-[#6B7280] dark:text-slate-300 whitespace-nowrap hidden sm:block">
             المنصة الأولى لفيزياء الثانوية العامة
           </span>
         )}

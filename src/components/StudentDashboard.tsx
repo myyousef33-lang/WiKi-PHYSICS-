@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { Student, Course, Lesson, ExamAttempt, NotificationItem, SmartStudyRecommendation } from '../types';
+import { CourseRatingBadge } from './CourseRatingBadge';
 import { ExamCountdownBanner } from './ExamCountdownBanner';
 import { StreakBanner } from './StreakBanner';
 
@@ -749,10 +750,17 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         alt={course.title}
                         className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
                       />
-                      <div className="absolute top-1.5 right-1.5 rounded-md bg-white/95 backdrop-blur-md px-1.5 py-0.5 text-[9px] font-bold text-[#1E4FD8] border border-blue-200 shadow-xs">
+                      <div className="absolute top-1.5 right-1.5 rounded-md bg-white/95 backdrop-blur-md px-1.5 py-0.5 text-[9px] font-bold text-[#1E4FD8] border border-blue-200 shadow-xs z-10">
                         {course.grade?.includes('الثالث') ? '3 ثانوي' : '2 ثانوي'}
                       </div>
-                      <div className="absolute bottom-1.5 left-1.5 rounded-md bg-[#0D1B3E]/85 backdrop-blur-md px-1.5 py-0.5 text-[9px] font-bold text-white">
+                      <CourseRatingBadge 
+                        rating={course.rating} 
+                        ratingCount={course.ratingCount} 
+                        size="sm" 
+                        position="top-left" 
+                        className="!top-1.5 !left-1.5 !px-1.5 !py-0.5 !text-[9px]"
+                      />
+                      <div className="absolute bottom-1.5 right-1.5 rounded-md bg-[#0D1B3E]/85 backdrop-blur-md px-1.5 py-0.5 text-[9px] font-bold text-white z-10">
                         {completedLessons} / {totalLessons} درس
                       </div>
                     </div>

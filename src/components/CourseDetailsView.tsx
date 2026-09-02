@@ -15,13 +15,16 @@ import {
   ArrowRight,
   HelpCircle,
   Wallet,
-  Check
+  Check,
+  Star
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { Course, Student, Unit, Lesson, QuizExam, PdfMaterial, Assignment, AssignmentSubmission } from '../types';
 import { downloadPdfFile } from '../utils/pdfHelper';
 import { AssignmentSolverModal } from './AssignmentSolverModal';
+import { CourseRatingBadge } from './CourseRatingBadge';
+import { CourseReviewModal } from './CourseReviewModal';
 
 interface CourseDetailsViewProps {
   courseId: string;
@@ -49,6 +52,7 @@ export const CourseDetailsView: React.FC<CourseDetailsViewProps> = ({
   );
   const [selectedAssignmentModal, setSelectedAssignmentModal] = useState<Assignment | null>(null);
   const [assignmentModalOpen, setAssignmentModalOpen] = useState<boolean>(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState<boolean>(false);
 
   const handleWalletPurchase = () => {
     if (!student) {
@@ -144,6 +148,7 @@ export const CourseDetailsView: React.FC<CourseDetailsViewProps> = ({
               <span className="rounded-full bg-blue-50 border border-blue-200 px-3 py-1 text-xs font-bold text-[#1E4FD8]">
                 {course.grade}
               </span>
+
               {isEnrolled ? (
                 <span className="rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-700 flex items-center gap-1">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
@@ -196,6 +201,14 @@ export const CourseDetailsView: React.FC<CourseDetailsViewProps> = ({
                 src={course.thumbnail} 
                 alt={course.title}
                 className="h-full w-full object-cover"
+              />
+              {/* Corner Edge Rating Badge on Side of Screen Image */}
+              <CourseRatingBadge 
+                rating={course.rating} 
+                ratingCount={course.ratingCount} 
+                position="bottom-left"
+                size="md"
+                onClick={() => setIsReviewModalOpen(true)}
               />
             </div>
 
@@ -709,6 +722,21 @@ export const CourseDetailsView: React.FC<CourseDetailsViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* Course Review Modal */}
+      {isReviewModalOpen && course && (
+        <CourseReviewModal
+          isOpen={isReviewModalOpen}
+          onClose={() => setIsReviewModalOpen(false)}
+          course={course}
+          student={student}
+          onOpenAuthModal={onOpenAuthModal}
+          onReviewSubmitted={() => {
+            const updated = StorageService.getCourseById(course.id);
+            if (updated) setCourse(updated);
+          }}
+        />
+      )}
 
       {/* Assignment Solver / Viewer Modal */}
       {assignmentModalOpen && selectedAssignmentModal && (

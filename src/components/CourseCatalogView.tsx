@@ -3,6 +3,7 @@ import { BookOpen, CheckCircle2, Key, Sparkles, Filter, PlayCircle, ShieldCheck,
 import confetti from 'canvas-confetti';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { Course, Student, GradeLevel } from '../types';
+import { CourseRatingBadge } from './CourseRatingBadge';
 
 interface CourseCatalogViewProps {
   onNavigate: (view: string, params?: any) => void;
@@ -130,16 +131,25 @@ export const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({
                       alt={course.title}
                       className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
                     />
-                    <div className="absolute top-2.5 right-2.5 rounded-lg bg-white/95 backdrop-blur-md px-2.5 py-1 text-[11px] font-bold text-[#1E4FD8] border border-blue-200 shadow-xs">
+                    <div className="absolute top-2.5 right-2.5 rounded-lg bg-white/95 backdrop-blur-md px-2.5 py-1 text-[11px] font-bold text-[#1E4FD8] border border-blue-200 shadow-xs z-10">
                       {course.grade}
                     </div>
+
                     {isEnrolled && (
-                      <div className="absolute top-2.5 left-2.5 rounded-lg bg-emerald-500 text-white px-2.5 py-1 text-[10px] font-black flex items-center gap-1 shadow-sm">
+                      <div className="absolute top-2.5 left-2.5 rounded-lg bg-emerald-500 text-white px-2.5 py-1 text-[10px] font-black flex items-center gap-1 shadow-sm z-10">
                         <CheckCircle2 className="h-3 w-3" />
                         <span>مشترك بالفعل</span>
                       </div>
                     )}
-                    <div className="absolute bottom-2.5 left-2.5 rounded-lg bg-[#0D1B3E]/85 backdrop-blur-md px-2.5 py-0.5 text-[11px] font-bold text-white">
+
+                    {/* Edge Rating Badge on Corner/Side of Screen Image */}
+                    <CourseRatingBadge 
+                      rating={course.rating} 
+                      ratingCount={course.ratingCount} 
+                      position="bottom-left"
+                    />
+
+                    <div className="absolute bottom-2.5 right-2.5 rounded-lg bg-[#0D1B3E]/85 backdrop-blur-md px-2.5 py-0.5 text-[11px] font-bold text-white z-10">
                       {course.units?.length || 0} فصول • {totalLessons} درس
                     </div>
                   </div>

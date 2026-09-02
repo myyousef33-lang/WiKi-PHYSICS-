@@ -1,6 +1,7 @@
 import {
   Student,
   Course,
+  CourseReview,
   Unit,
   Lesson,
   QuizExam,
@@ -689,6 +690,55 @@ export const StorageService = {
   },
   reorderCourses(orderedCourses: Course[]): void {
     setStored(STORAGE_KEYS.COURSES, orderedCourses);
+  },
+
+  // Course Reviews & Ratings
+  addCourseReview(
+    courseId: string,
+    reviewData: { studentId: string; studentName: string; studentAvatar?: string; rating: number; comment?: string }
+  ): { success: boolean; message: string; rating?: number; ratingCount?: number } {
+    const course = this.getCourseById(courseId);
+    if (!course) return { success: false, message: 'الكورس غير موجود' };
+
+    const reviews = course.reviews || [];
+    const existingIndex = reviews.findIndex(r => r.studentId === reviewData.studentId);
+
+    const newReview: CourseReview = {
+      id: existingIndex !== -1 ? reviews[existingIndex].id : 'rev-' + Date.now(),
+      courseId,
+      studentId: reviewData.studentId,
+      studentName: reviewData.studentName,
+      studentAvatar: reviewData.studentAvatar,
+      rating: Math.max(1, Math.min(5, Math.round(reviewData.rating))),
+      comment: reviewData.comment?.trim() || '',
+      createdAt: new Date().toISOString()
+    };
+
+    if (existingIndex !== -1) {
+      reviews[existingIndex] = newReview;
+    } else {
+      reviews.unshift(newReview);
+    }
+
+    const totalScore = reviews.reduce((sum, r) => sum + r.rating, 0);
+    const avg = Number((totalScore / reviews.length).toFixed(1));
+
+    course.reviews = reviews;
+    course.rating = avg;
+    course.ratingCount = reviews.length;
+
+    this.saveCourse(course);
+    return {
+      success: true,
+      message: existingIndex !== -1 ? 'تم تحديث تقييمك للكورس بنجاح!' : 'شكرًا لك! تم تسجيل تقييمك للكورس بنجاح.',
+      rating: avg,
+      ratingCount: reviews.length
+    };
+  },
+
+  getCourseReviews(courseId: string): CourseReview[] {
+    const course = this.getCourseById(courseId);
+    return course?.reviews || [];
   },
 
   // Unit & Lesson Helpers

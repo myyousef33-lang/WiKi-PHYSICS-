@@ -40,6 +40,17 @@ export interface Student {
   walletBalance?: number;
 }
 
+export interface CourseReview {
+  id: string;
+  courseId: string;
+  studentId: string;
+  studentName: string;
+  studentAvatar?: string;
+  rating: number; // 1 to 5
+  comment?: string;
+  createdAt: string;
+}
+
 export interface Course {
   id: string;
   title: string;
@@ -53,6 +64,9 @@ export interface Course {
   createdAt: string;
   units: Unit[];
   order?: number;
+  rating?: number;
+  ratingCount?: number;
+  reviews?: CourseReview[];
 }
 
 export interface Unit {

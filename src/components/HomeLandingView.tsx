@@ -25,6 +25,7 @@ import {
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { PresenceService } from '../services/presence';
 import { Course, PdfMaterial, Student } from '../types';
+import { CourseRatingBadge } from './CourseRatingBadge';
 import { ExamCountdownBanner } from './ExamCountdownBanner';
 import teacherCutout from '../assets/images/teacher-cutout.png';
 
@@ -471,18 +472,27 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                         </div>
                       </div>
 
-                      {/* Grade Badge */}
-                      <div className="absolute top-3 right-3 rounded-xl bg-white/95 backdrop-blur-md px-3 py-1 text-xs font-bold text-[#1E4FD8] border border-blue-200 shadow-sm">
-                        {course.grade}
+                      {/* Corner Grade Badge */}
+                      <div className="absolute top-3 right-3 z-10">
+                        <span className="rounded-xl bg-white/95 backdrop-blur-md px-3 py-1 text-xs font-bold text-[#1E4FD8] border border-blue-200 shadow-sm">
+                          {course.grade}
+                        </span>
                       </div>
 
                       {/* Price Badge */}
-                      <div className="absolute top-3 left-3 rounded-xl bg-[#F5B301] px-3 py-1 text-xs font-bold text-[#0D1B3E] shadow-sm">
+                      <div className="absolute top-3 left-3 rounded-xl bg-[#F5B301] px-3 py-1 text-xs font-bold text-[#0D1B3E] shadow-sm z-10">
                         {course.price > 0 ? `${course.price} ج.م` : 'مجاني'}
                       </div>
 
+                      {/* Rating Badge on the Corner/Side of the Screen Image */}
+                      <CourseRatingBadge 
+                        rating={course.rating} 
+                        ratingCount={course.ratingCount} 
+                        position="bottom-left" 
+                      />
+
                       {/* Bottom Badge: Lesson Count */}
-                      <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-lg bg-black/75 backdrop-blur-md px-2.5 py-1 text-xs font-bold text-white">
+                      <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-lg bg-black/75 backdrop-blur-md px-2.5 py-1 text-xs font-bold text-white z-10">
                         <PlayCircle className="h-3.5 w-3.5 text-[#F5B301]" />
                         <span>{totalLessons} درس • {course.units?.length || 0} فصول</span>
                       </div>
@@ -549,15 +559,27 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                         </div>
                       </div>
 
-                      <div className="absolute top-3 right-3 rounded-xl bg-white/95 backdrop-blur-md px-3 py-1 text-xs font-bold text-[#1E4FD8] border border-blue-200 shadow-sm">
-                        {course.grade}
+                      {/* Corner Grade Badge */}
+                      <div className="absolute top-3 right-3 z-10">
+                        <span className="rounded-xl bg-white/95 backdrop-blur-md px-3 py-1 text-xs font-bold text-[#1E4FD8] border border-blue-200 shadow-sm">
+                          {course.grade}
+                        </span>
                       </div>
 
-                      <div className="absolute top-3 left-3 rounded-xl bg-[#F5B301] px-3 py-1 text-xs font-bold text-[#0D1B3E] shadow-sm">
+                      {/* Price Badge */}
+                      <div className="absolute top-3 left-3 rounded-xl bg-[#F5B301] px-3 py-1 text-xs font-bold text-[#0D1B3E] shadow-sm z-10">
                         {course.price > 0 ? `${course.price} ج.م` : 'مجاني'}
                       </div>
 
-                      <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-lg bg-black/75 backdrop-blur-md px-2.5 py-1 text-xs font-bold text-white">
+                      {/* Rating Badge on Corner/Side of Screen Image */}
+                      <CourseRatingBadge 
+                        rating={course.rating} 
+                        ratingCount={course.ratingCount} 
+                        position="bottom-left" 
+                      />
+
+                      {/* Bottom Badge: Lesson Count */}
+                      <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-lg bg-black/75 backdrop-blur-md px-2.5 py-1 text-xs font-bold text-white z-10">
                         <PlayCircle className="h-3.5 w-3.5 text-[#F5B301]" />
                         <span>{totalLessons} درس • {course.units?.length || 0} فصول</span>
                       </div>
