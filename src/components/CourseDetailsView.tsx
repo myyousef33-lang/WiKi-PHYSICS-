@@ -19,8 +19,9 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { StorageService, subscribeToStorage } from '../services/storage';
-import { Course, Student, Unit, Lesson, QuizExam, PdfMaterial } from '../types';
+import { Course, Student, Unit, Lesson, QuizExam, PdfMaterial, Assignment, AssignmentSubmission } from '../types';
 import { downloadPdfFile } from '../utils/pdfHelper';
+import { AssignmentSolverModal } from './AssignmentSolverModal';
 
 interface CourseDetailsViewProps {
   courseId: string;
@@ -40,6 +41,14 @@ export const CourseDetailsView: React.FC<CourseDetailsViewProps> = ({
   const [openUnits, setOpenUnits] = useState<Record<string, boolean>>({});
   const [exams, setExams] = useState<QuizExam[]>(StorageService.getExams());
   const [purchaseMsg, setPurchaseMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Assignments States
+  const [assignments, setAssignments] = useState<Assignment[]>(StorageService.getAssignmentsByCourse(courseId));
+  const [submissions, setSubmissions] = useState<AssignmentSubmission[]>(
+    student ? StorageService.getStudentAssignmentSubmissions(student.id) : []
+  );
+  const [selectedAssignmentModal, setSelectedAssignmentModal] = useState<Assignment | null>(null);
+  const [assignmentModalOpen, setAssignmentModalOpen] = useState<boolean>(false);
 
   const handleWalletPurchase = () => {
     if (!student) {
@@ -63,9 +72,14 @@ export const CourseDetailsView: React.FC<CourseDetailsViewProps> = ({
   useEffect(() => {
     const update = () => {
       const c = StorageService.getCourseById(courseId);
+      const s = StorageService.getCurrentStudent();
       setCourse(c);
-      setStudent(StorageService.getCurrentStudent());
+      setStudent(s);
       setExams(StorageService.getExams());
+      setAssignments(StorageService.getAssignmentsByCourse(courseId));
+      if (s) {
+        setSubmissions(StorageService.getStudentAssignmentSubmissions(s.id));
+      }
 
       // Open all units by default if not set
       if (c?.units && Object.keys(openUnits).length === 0) {
@@ -305,14 +319,13 @@ export const CourseDetailsView: React.FC<CourseDetailsViewProps> = ({
                           {attempt.score} / {attempt.maxScore || 50} ({attempt.percentage}%) {attempt.passed ? '(ناجح)' : '(راسب)'}
                         </span>
                       </div>
-                      {isEnrolled && (
-                        <button
-                          onClick={() => onNavigate('exam-runner', { examId: ex.id, courseId: course.id })}
-                          className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-[#1E4FD8] hover:bg-blue-100 transition-all"
-                        >
-                          إعادة الامتحان
-                        </button>
-                      )}
+                      <button
+                        onClick={() => onNavigate('exam-result', { attemptId: attempt.id })}
+                        className="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 px-3.5 py-1.5 text-xs font-bold hover:bg-emerald-100 transition-all flex items-center gap-1.5 shadow-xs"
+                      >
+                        <Award className="h-4 w-4 text-emerald-600" />
+                        <span>عرض النتيجة والتقرير</span>
+                      </button>
                     </div>
                   ) : (
                     <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
@@ -333,6 +346,88 @@ export const CourseDetailsView: React.FC<CourseDetailsViewProps> = ({
                       )}
                     </div>
                   )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Course Assignments & PDF Applications Section */}
+      <div className="space-y-4 pt-4 border-t border-slate-200">
+        <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="rounded-xl bg-amber-50 border border-amber-200 p-2 text-[#0D1B3E] dark:text-[#F5B301]">
+              <FileText className="h-6 w-6 text-[#1E4FD8] dark:text-[#60A5FA]" />
+            </div>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-black text-[#0D1B3E] dark:text-white">واجبات الكورس وتطبيقات الـ PDF والتصحيح</h2>
+              <p className="text-xs text-[#6B7280] dark:text-slate-400">واجبات تفاعلية يمكن إجابتها مباشرة فوق الـ PDF بالرسم والكتابة لتصحيحها من قبل المعلم</p>
+            </div>
+          </div>
+          <span className="rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-bold text-[#0D1B3E] dark:text-[#F5B301]">
+            {assignments.length} واجبات
+          </span>
+        </div>
+
+        {assignments.length === 0 ? (
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#16224D] p-6 text-center text-[#6B7280] dark:text-slate-400 text-xs">
+            لا توجد واجبات PDF مرفقة بهذا الكورس حتى الآن.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {assignments.map(asgn => {
+              const sub = submissions.find(s => s.assignmentId === asgn.id);
+              return (
+                <div 
+                  key={asgn.id} 
+                  className="rounded-2xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/40 dark:bg-[#16224D] p-5 space-y-3 relative overflow-hidden shadow-xs hover:border-amber-300 transition-all flex flex-col justify-between"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase bg-[#1E4FD8] text-white px-2.5 py-0.5 rounded-md">
+                        واجب تطبيقات الـ PDF
+                      </span>
+                      {sub && (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                          sub.status === 'graded' 
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' 
+                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                        }`}>
+                          {sub.status === 'graded' ? `تم التصحيح: ${sub.grade}/${sub.maxGrade || 20}` : 'تم التسليم - قيد المراجعة'}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="font-bold text-base text-[#0D1B3E] dark:text-white leading-snug">{asgn.title}</h3>
+                    <p className="text-xs text-[#6B7280] dark:text-slate-400 line-clamp-2">
+                      {asgn.description || 'قم بفتح كراسة الواجب الـ PDF والحل باستخدام القلم الرقمي أو الكتابة للتسليم مباشرة.'}
+                    </p>
+                  </div>
+
+                  <div className="pt-3 border-t border-amber-200/60 dark:border-amber-900/40 flex items-center justify-between">
+                    <span className="text-xs text-[#6B7280] dark:text-slate-400">
+                      الدرجة: <strong className="text-[#0D1B3E] dark:text-white">{asgn.maxGrade || 20}</strong> درجة
+                    </span>
+
+                    {isEnrolled ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedAssignmentModal(asgn);
+                          setAssignmentModalOpen(true);
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-[#1E4FD8] dark:bg-[#3B82F6] px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 shadow-xs transition-all"
+                      >
+                        <FileText className="h-4 w-4" />
+                        <span>{sub ? 'عرض ورقة الحل والتصحيح' : 'فتح وتأدية الواجب الآن'}</span>
+                      </button>
+                    ) : (
+                      <span className="text-xs text-[#6B7280] flex items-center gap-1 bg-white dark:bg-[#0D1B3E] px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800">
+                        <Lock className="h-3.5 w-3.5 text-slate-400" />
+                        متاح بعد الاشتراك
+                      </span>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -577,19 +672,33 @@ export const CourseDetailsView: React.FC<CourseDetailsViewProps> = ({
                             </div>
                           </div>
 
-                          {isEnrolled ? (
-                            <button
-                              onClick={() => onNavigate('exam-runner', { examId: unitExam.id, courseId: course.id })}
-                              className="rounded-xl bg-[#1E4FD8] px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-blue-700 transition-all self-end sm:self-auto"
-                            >
-                              بدء الامتحان
-                            </button>
-                          ) : (
-                            <span className="text-xs text-[#6B7280] flex items-center gap-1">
-                              <Lock className="h-3.5 w-3.5" />
-                              متاح للمشتركين فقط
-                            </span>
-                          )}
+                          {(() => {
+                            const unitAttempt = student ? StorageService.getStudentAttempts(student.id).find(a => a.examId === unitExam.id) : undefined;
+                            if (unitAttempt) {
+                              return (
+                                <button
+                                  onClick={() => onNavigate('exam-result', { attemptId: unitAttempt.id })}
+                                  className="rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-800 px-4 py-2 text-xs font-bold hover:bg-emerald-100 transition-all flex items-center gap-1.5 self-end sm:self-auto"
+                                >
+                                  <Award className="h-4 w-4 text-emerald-600" />
+                                  <span>عرض النتيجة والتقرير</span>
+                                </button>
+                              );
+                            }
+                            return isEnrolled ? (
+                              <button
+                                onClick={() => onNavigate('exam-runner', { examId: unitExam.id, courseId: course.id })}
+                                className="rounded-xl bg-[#1E4FD8] px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-blue-700 transition-all self-end sm:self-auto"
+                              >
+                                بدء الامتحان
+                              </button>
+                            ) : (
+                              <span className="text-xs text-[#6B7280] flex items-center gap-1">
+                                <Lock className="h-3.5 w-3.5" />
+                                متاح للمشتركين فقط
+                              </span>
+                            );
+                          })()}
                         </div>
                       )}
                     </div>
@@ -600,6 +709,23 @@ export const CourseDetailsView: React.FC<CourseDetailsViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* Assignment Solver / Viewer Modal */}
+      {assignmentModalOpen && selectedAssignmentModal && (
+        <AssignmentSolverModal
+          isOpen={assignmentModalOpen}
+          onClose={() => setAssignmentModalOpen(false)}
+          assignment={selectedAssignmentModal}
+          student={student}
+          submission={submissions.find(s => s.assignmentId === selectedAssignmentModal.id)}
+          mode={submissions.find(s => s.assignmentId === selectedAssignmentModal.id) ? 'view' : 'solve'}
+          onSuccess={() => {
+            if (student) {
+              setSubmissions(StorageService.getStudentAssignmentSubmissions(student.id));
+            }
+          }}
+        />
+      )}
 
     </div>
   );

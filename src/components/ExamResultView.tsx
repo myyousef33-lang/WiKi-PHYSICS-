@@ -224,13 +224,15 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
             <span>{isSendingWhatsApp ? 'جارٍ تجهيز التقرير...' : 'إرسال تقرير واتساب لولي الأمر'}</span>
           </button>
 
-          <button
-            onClick={() => onNavigate('exam-runner', { examId: exam.id, courseId: attempt.courseId })}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-bold text-[#0D1B3E] hover:bg-slate-50 transition-colors shadow-xs"
-          >
-            <RotateCcw className="h-3.5 w-3.5 text-[#1E4FD8]" />
-            <span>إعادة المحاولة</span>
-          </button>
+          {attempt.courseId && (
+            <button
+              onClick={() => onNavigate('course-details', { courseId: attempt.courseId })}
+              className="flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-5 py-2.5 text-xs font-bold text-[#1E4FD8] hover:bg-blue-100 transition-colors shadow-xs"
+            >
+              <BookOpen className="h-4 w-4 text-[#1E4FD8]" />
+              <span>العودة لصفحة الكورس</span>
+            </button>
+          )}
 
           <button
             onClick={() => onNavigate('my-results')}

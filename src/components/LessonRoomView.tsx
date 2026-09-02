@@ -650,27 +650,59 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
 
           {/* Lesson Quiz Card if present */}
           {lessonQuiz && (
-            <div className="rounded-3xl border border-blue-200 bg-blue-50/50 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+            <div className="rounded-3xl border border-blue-200 bg-blue-50/50 dark:bg-[#16224D] dark:border-blue-900/40 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
               <div className="flex items-center gap-4">
-                <div className="rounded-2xl bg-blue-100 p-3 text-[#1E4FD8]">
+                <div className="rounded-2xl bg-blue-100 dark:bg-blue-950/80 p-3 text-[#1E4FD8] dark:text-[#60A5FA]">
                   <HelpCircle className="h-7 w-7" />
                 </div>
                 <div className="space-y-1">
-                  <span className="text-[11px] font-bold text-[#1E4FD8] uppercase tracking-wider">كويز تقييم الفهم</span>
-                  <h3 className="font-bold text-base text-[#0D1B3E]">{lessonQuiz.title}</h3>
-                  <p className="text-xs text-[#4B5563]">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold text-[#1E4FD8] dark:text-[#60A5FA] uppercase tracking-wider">كويز تقييم الفهم</span>
+                    {(() => {
+                      const quizAtt = student ? StorageService.getStudentAttempts(student.id).find(a => a.examId === lessonQuiz.id) : undefined;
+                      if (!quizAtt) return null;
+                      return (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                          quizAtt.passed 
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' 
+                            : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+                        }`}>
+                          تم الأداء ({quizAtt.score}/{quizAtt.maxScore})
+                        </span>
+                      );
+                    })()}
+                  </div>
+                  <h3 className="font-bold text-base text-[#0D1B3E] dark:text-white">{lessonQuiz.title}</h3>
+                  <p className="text-xs text-[#4B5563] dark:text-slate-400">
                     المدة: {lessonQuiz.durationMinutes} دقيقة • {lessonQuiz.questions?.length || 0} أسئلة اختيار من متعدد
                   </p>
                 </div>
               </div>
 
-              <button
-                onClick={() => onNavigate('exam-runner', { examId: lessonQuiz.id, courseId: course.id, lessonId: currentLesson.id })}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#1E4FD8] px-6 py-3 text-xs font-bold text-white shadow-xs hover:bg-blue-700 transition-colors"
-              >
-                <PlayCircle className="h-4 w-4" />
-                <span>بدء الكويز الآن</span>
-              </button>
+              {(() => {
+                const quizAtt = student ? StorageService.getStudentAttempts(student.id).find(a => a.examId === lessonQuiz.id) : undefined;
+                if (quizAtt) {
+                  return (
+                    <button
+                      onClick={() => onNavigate('exam-result', { attemptId: quizAtt.id })}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-6 py-3 text-xs font-bold text-emerald-800 dark:text-emerald-300 shadow-xs hover:bg-emerald-100 transition-colors"
+                    >
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      <span>عرض نتيجة الكويز والتقرير</span>
+                    </button>
+                  );
+                }
+
+                return (
+                  <button
+                    onClick={() => onNavigate('exam-runner', { examId: lessonQuiz.id, courseId: course.id, lessonId: currentLesson.id })}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#1E4FD8] dark:bg-[#3B82F6] px-6 py-3 text-xs font-bold text-white shadow-xs hover:bg-blue-700 transition-colors"
+                  >
+                    <PlayCircle className="h-4 w-4" />
+                    <span>بدء الكويز الآن</span>
+                  </button>
+                );
+              })()}
             </div>
           )}
 
