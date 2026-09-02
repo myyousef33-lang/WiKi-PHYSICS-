@@ -167,18 +167,18 @@ export const AdminWalletTab: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Tab Header & Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
-          <h2 className="text-xl font-black text-white flex items-center gap-2">
-            <Wallet className="h-6 w-6 text-amber-400" />
+          <h2 className="text-xl font-black text-[#0D1B3E] flex items-center gap-2">
+            <Wallet className="h-6 w-6 text-[#1E4FD8]" />
             <span>إدارة المحفظة الإلكترونية وبوابات الدفع</span>
             {pendingDeposits.length > 0 && (
-              <span className="rounded-full bg-rose-500/20 px-2.5 py-0.5 text-xs font-black text-rose-400 border border-rose-500/30 animate-pulse">
+              <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-black text-rose-700 border border-rose-300 animate-pulse">
                 {pendingDeposits.length} طلبات شحن جديدة
               </span>
             )}
           </h2>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 mt-1">
             مراجعة طلبات شحن الطلاب، إعداد محافظ فودافون كاش وإنستاباي وفوري، ومتابعة سجل العمليات المالية
           </p>
         </div>
@@ -188,8 +188,8 @@ export const AdminWalletTab: React.FC = () => {
             onClick={() => setSubTab('requests')}
             className={`rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
               subTab === 'requests'
-                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                ? 'bg-[#1E4FD8] text-white shadow-sm'
+                : 'bg-white border border-slate-200 text-[#0D1B3E] hover:border-[#1E4FD8]'
             }`}
           >
             طلبات الشحن ({pendingDeposits.length})
@@ -198,8 +198,8 @@ export const AdminWalletTab: React.FC = () => {
             onClick={() => setSubTab('transactions')}
             className={`rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
               subTab === 'transactions'
-                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                ? 'bg-[#1E4FD8] text-white shadow-sm'
+                : 'bg-white border border-slate-200 text-[#0D1B3E] hover:border-[#1E4FD8]'
             }`}
           >
             سجل كافة المعاملات
@@ -208,8 +208,8 @@ export const AdminWalletTab: React.FC = () => {
             onClick={() => setSubTab('methods')}
             className={`rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
               subTab === 'methods'
-                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                ? 'bg-[#1E4FD8] text-white shadow-sm'
+                : 'bg-white border border-slate-200 text-[#0D1B3E] hover:border-[#1E4FD8]'
             }`}
           >
             طرق وبوابات الدفع ({methods.length})
@@ -218,8 +218,8 @@ export const AdminWalletTab: React.FC = () => {
             onClick={() => setSubTab('manual')}
             className={`rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
               subTab === 'manual'
-                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                ? 'bg-[#F5B301] text-[#0D1B3E] shadow-sm'
+                : 'bg-white border border-slate-200 text-[#0D1B3E] hover:border-[#1E4FD8]'
             }`}
           >
             + شحن يدوي مباشر
@@ -231,11 +231,11 @@ export const AdminWalletTab: React.FC = () => {
         <div
           className={`p-4 rounded-2xl text-xs font-bold flex items-center gap-2 border ${
             feedback.type === 'success'
-              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-              : 'bg-rose-500/10 text-rose-300 border-rose-500/30'
+              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+              : 'bg-rose-50 text-rose-800 border-rose-200'
           }`}
         >
-          {feedback.type === 'success' ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+          {feedback.type === 'success' ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <XCircle className="h-4 w-4 text-rose-600" />}
           <span>{feedback.text}</span>
         </div>
       )}
@@ -245,27 +245,27 @@ export const AdminWalletTab: React.FC = () => {
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="relative w-full sm:w-80">
-              <Search className="absolute right-3.5 top-2.5 h-4 w-4 text-slate-500" />
+              <Search className="absolute right-3.5 top-2.5 h-4 w-4 text-slate-400" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="بحث باسم الطالب، الهاتف، أو كود العملية..."
-                className="w-full rounded-xl border border-slate-800 bg-slate-950 pr-10 pl-4 py-2 text-xs text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
+                className="w-full rounded-xl border border-slate-200 bg-white pr-10 pl-4 py-2 text-xs text-[#0D1B3E] placeholder-slate-400 focus:border-[#1E4FD8] focus:outline-none"
               />
             </div>
 
             {subTab === 'requests' && (
               <div className="flex items-center gap-1.5 self-end sm:self-auto">
-                <Filter className="h-4 w-4 text-slate-500" />
+                <Filter className="h-4 w-4 text-slate-400" />
                 {(['pending', 'approved', 'rejected', 'all'] as const).map((st) => (
                   <button
                     key={st}
                     onClick={() => setFilterStatus(st)}
                     className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all ${
                       filterStatus === st
-                        ? 'bg-amber-500 text-slate-950'
-                        : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
+                        ? 'bg-[#1E4FD8] text-white'
+                        : 'bg-white border border-slate-200 text-slate-600 hover:text-[#0D1B3E]'
                     }`}
                   >
                     {st === 'pending' ? 'المعلقة' : st === 'approved' ? 'المقبولة' : st === 'rejected' ? 'المرفوضة' : 'الكل'}
@@ -276,7 +276,7 @@ export const AdminWalletTab: React.FC = () => {
           </div>
 
           {filteredTransactions.length === 0 ? (
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-12 text-center text-xs text-slate-400">
+            <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-xs text-slate-500 shadow-xs">
               لا توجد معاملات مطابقة للبحث حالياً.
             </div>
           ) : (
@@ -290,41 +290,41 @@ export const AdminWalletTab: React.FC = () => {
                 return (
                   <div
                     key={tx.id}
-                    className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 rounded-2xl border border-slate-800 bg-slate-900/70 p-4"
+                    className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs hover:border-[#1E4FD8]/40 transition-all"
                   >
                     <div className="flex items-start sm:items-center gap-3">
                       <div
                         className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border ${
                           isDeposit
-                            ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
-                            : 'bg-blue-500/15 border-blue-500/30 text-blue-400'
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
+                            : 'bg-blue-50 border-blue-200 text-[#1E4FD8]'
                         }`}
                       >
                         {isDeposit ? <ArrowDownLeft className="h-5 w-5" /> : <ArrowUpRight className="h-5 w-5" />}
                       </div>
                       <div className="space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h4 className="text-sm font-black text-white">{tx.studentName}</h4>
-                          <span className="text-xs text-slate-400 font-mono">({tx.studentPhone})</span>
+                          <h4 className="text-sm font-black text-[#0D1B3E]">{tx.studentName}</h4>
+                          <span className="text-xs text-slate-500 font-mono">({tx.studentPhone})</span>
                           <span
                             className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                               isApproved
-                                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                 : isPending
-                                ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-                                : 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                : 'bg-rose-50 text-rose-700 border-rose-200'
                             }`}
                           >
                             {isApproved ? 'مكتمل' : isPending ? 'قيد المراجعة' : 'مرفوض'}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-300">
+                        <p className="text-xs text-slate-600">
                           {isDeposit ? `شحن عبر: ${tx.methodName}` : `شراء: ${tx.courseTitle || tx.pdfTitle || 'محتوى'}`}
                           {tx.transactionRefNumber && (
-                            <span className="text-amber-400 font-mono mr-2">#{tx.transactionRefNumber}</span>
+                            <span className="text-[#1E4FD8] font-mono mr-2 font-bold">#{tx.transactionRefNumber}</span>
                           )}
                         </p>
-                        <span className="text-[10px] text-slate-500 block">
+                        <span className="text-[10px] text-slate-400 block">
                           {new Date(tx.createdAt).toLocaleDateString('ar-EG', {
                             year: 'numeric',
                             month: 'long',
@@ -336,11 +336,11 @@ export const AdminWalletTab: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-between lg:justify-end border-t lg:border-t-0 pt-3 lg:pt-0 border-slate-800">
+                    <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-between lg:justify-end border-t lg:border-t-0 pt-3 lg:pt-0 border-slate-100">
                       <div className="text-right lg:text-left">
                         <span
                           className={`text-base font-black font-mono block ${
-                            isDeposit ? 'text-emerald-400' : 'text-rose-400'
+                            isDeposit ? 'text-emerald-600' : 'text-rose-600'
                           }`}
                         >
                           {isDeposit ? `+${tx.amount}` : `-${tx.amount}`} ج.م
@@ -350,9 +350,9 @@ export const AdminWalletTab: React.FC = () => {
                       {tx.receiptImageUrl && (
                         <button
                           onClick={() => setPreviewReceiptUrl(tx.receiptImageUrl!)}
-                          className="flex items-center gap-1 rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700"
+                          className="flex items-center gap-1 rounded-xl bg-blue-50 border border-blue-200 px-3 py-2 text-xs font-bold text-[#1E4FD8] hover:bg-blue-100 transition-colors"
                         >
-                          <Eye className="h-4 w-4 text-amber-400" />
+                          <Eye className="h-4 w-4 text-[#1E4FD8]" />
                           <span>معاينة الإيصال</span>
                         </button>
                       )}
@@ -361,14 +361,14 @@ export const AdminWalletTab: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleApprove(tx.id)}
-                            className="flex items-center gap-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3.5 py-2 text-xs font-black shadow-md shadow-emerald-500/20"
+                            className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 text-xs font-black shadow-xs transition-colors"
                           >
                             <Check className="h-4 w-4" />
                             <span>موافقة وإضافة الرصيد</span>
                           </button>
                           <button
                             onClick={() => handleReject(tx.id)}
-                            className="flex items-center gap-1.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 hover:bg-rose-500 hover:text-white px-3 py-2 text-xs font-bold"
+                            className="flex items-center gap-1.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 px-3 py-2 text-xs font-bold transition-colors"
                           >
                             <X className="h-4 w-4" />
                             <span>رفض</span>
@@ -388,7 +388,7 @@ export const AdminWalletTab: React.FC = () => {
       {subTab === 'methods' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white">البوابات والمحافظ المتاحة للطلاب:</h3>
+            <h3 className="text-sm font-bold text-[#0D1B3E]">البوابات والمحافظ المتاحة للطلاب:</h3>
             <button
               onClick={() => {
                 setEditingMethod(null);
@@ -402,7 +402,7 @@ export const AdminWalletTab: React.FC = () => {
                 });
                 setIsMethodModalOpen(true);
               }}
-              className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400"
+              className="flex items-center gap-2 rounded-xl bg-[#F5B301] px-4 py-2 text-xs font-black text-[#0D1B3E] hover:bg-[#e0a401] shadow-xs transition-all"
             >
               <Plus className="h-4 w-4" />
               <span>إضافة طريقة دفع جديدة</span>
@@ -413,18 +413,18 @@ export const AdminWalletTab: React.FC = () => {
             {methods.map((m) => (
               <div
                 key={m.id}
-                className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-4 flex flex-col justify-between"
+                className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4 flex flex-col justify-between shadow-xs hover:border-[#1E4FD8]/40 transition-all"
               >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 border border-blue-200 text-[#1E4FD8]">
                       <Smartphone className="h-5 w-5" />
                     </div>
                     <span
                       className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                         m.isActive
-                          ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                          : 'bg-slate-800 text-slate-400 border-slate-700'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-slate-100 text-slate-500 border-slate-200'
                       }`}
                     >
                       {m.isActive ? 'مفعلة وتظهر للطلاب' : 'معطلة'}
@@ -432,21 +432,21 @@ export const AdminWalletTab: React.FC = () => {
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-black text-white">{m.name}</h4>
-                    <p className="text-xs text-amber-400 font-mono mt-0.5 select-all">{m.accountNumber}</p>
+                    <h4 className="text-sm font-black text-[#0D1B3E]">{m.name}</h4>
+                    <p className="text-xs text-[#1E4FD8] font-mono font-bold mt-0.5 select-all">{m.accountNumber}</p>
                     {m.accountName && (
-                      <p className="text-[11px] text-slate-400 mt-0.5">الاسم: {m.accountName}</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">الاسم: {m.accountName}</p>
                     )}
                   </div>
 
                   {m.instructions && (
-                    <p className="text-[11px] text-slate-300 bg-slate-950/60 p-2.5 rounded-xl border border-slate-850 line-clamp-3">
+                    <p className="text-[11px] text-slate-600 bg-[#F5F7FA] p-2.5 rounded-xl border border-slate-200 line-clamp-3">
                       {m.instructions}
                     </p>
                   )}
                 </div>
 
-                <div className="flex items-center justify-between border-t border-slate-800 pt-3">
+                <div className="flex items-center justify-between border-t border-slate-100 pt-3">
                   <button
                     onClick={() => {
                       setEditingMethod(m);
@@ -460,7 +460,7 @@ export const AdminWalletTab: React.FC = () => {
                       });
                       setIsMethodModalOpen(true);
                     }}
-                    className="flex items-center gap-1.5 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-300 hover:bg-slate-700"
+                    className="flex items-center gap-1.5 rounded-lg bg-blue-50 border border-blue-200 px-3 py-1.5 text-xs font-bold text-[#1E4FD8] hover:bg-blue-100 transition-colors"
                   >
                     <Edit3 className="h-3.5 w-3.5" />
                     <span>تعديل</span>
@@ -468,7 +468,7 @@ export const AdminWalletTab: React.FC = () => {
 
                   <button
                     onClick={() => handleDeleteMethod(m.id)}
-                    className="flex items-center gap-1.5 rounded-lg bg-rose-500/10 px-3 py-1.5 text-xs font-bold text-rose-400 hover:bg-rose-500/20"
+                    className="flex items-center gap-1.5 rounded-lg bg-rose-50 border border-rose-200 px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 transition-colors"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                     <span>حذف</span>
@@ -482,25 +482,25 @@ export const AdminWalletTab: React.FC = () => {
 
       {/* Subtab: Manual Credit */}
       {subTab === 'manual' && (
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6 max-w-xl mx-auto space-y-5">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 max-w-xl mx-auto space-y-5 shadow-xs">
           <div>
-            <h3 className="text-base font-black text-white flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-amber-400" />
+            <h3 className="text-base font-black text-[#0D1B3E] flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-[#1E4FD8]" />
               <span>شحن رصيد يدوي مباشر لطالب</span>
             </h3>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-slate-500 mt-1">
               استخدم هذه الخاصية لشحن رصيد الطالب فوراً عند الدفع النقدي في السنتر أو الحالات الخاصة.
             </p>
           </div>
 
           <form onSubmit={handleManualCredit} className="space-y-4">
             <div>
-              <label className="text-xs font-bold text-slate-300 block mb-1.5">اختر الطالب *</label>
+              <label className="text-xs font-bold text-[#0D1B3E] block mb-1.5">اختر الطالب *</label>
               <select
                 value={manualStudentId}
                 onChange={(e) => setManualStudentId(e.target.value)}
                 required
-                className="w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-2.5 text-xs font-bold text-white focus:border-amber-500 focus:outline-none"
+                className="w-full rounded-xl border border-slate-200 bg-[#F5F7FA] px-4 py-2.5 text-xs font-bold text-[#0D1B3E] focus:bg-white focus:border-[#1E4FD8] focus:outline-none"
               >
                 <option value="">-- اختر طالباً من القائمة --</option>
                 {students.map((s) => (
@@ -512,7 +512,7 @@ export const AdminWalletTab: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-300 block mb-1.5">المبلغ المراد إضافته (ج.م) *</label>
+              <label className="text-xs font-bold text-[#0D1B3E] block mb-1.5">المبلغ المراد إضافته (ج.م) *</label>
               <input
                 type="number"
                 min="1"
@@ -520,18 +520,18 @@ export const AdminWalletTab: React.FC = () => {
                 value={manualAmount}
                 onChange={(e) => setManualAmount(e.target.value)}
                 required
-                className="w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-2.5 text-sm font-bold text-white focus:border-amber-500 focus:outline-none"
+                className="w-full rounded-xl border border-slate-200 bg-[#F5F7FA] px-4 py-2.5 text-sm font-bold text-[#0D1B3E] focus:bg-white focus:border-[#1E4FD8] focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-300 block mb-1.5">ملاحظات العملية (اختياري)</label>
+              <label className="text-xs font-bold text-[#0D1B3E] block mb-1.5">ملاحظات العملية (اختياري)</label>
               <input
                 type="text"
                 value={manualNotes}
                 onChange={(e) => setManualNotes(e.target.value)}
                 placeholder="مثال: دفع نقدي في السنتر"
-                className="w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-2.5 text-xs text-white focus:border-amber-500 focus:outline-none"
+                className="w-full rounded-xl border border-slate-200 bg-[#F5F7FA] px-4 py-2.5 text-xs text-[#0D1B3E] focus:bg-white focus:border-[#1E4FD8] focus:outline-none"
               />
             </div>
 
@@ -547,15 +547,15 @@ export const AdminWalletTab: React.FC = () => {
 
       {/* Edit/Create Method Modal */}
       {isMethodModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-lg rounded-3xl border border-slate-800 bg-slate-900 p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-base font-black text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-fadeIn">
+          <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <h3 className="text-base font-black text-[#0D1B3E]">
                 {editingMethod ? 'تعديل بوابة الدفع' : 'إضافة طريقة دفع جديدة'}
               </h3>
               <button
                 onClick={() => setIsMethodModalOpen(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-[#0D1B3E] rounded-lg p-1"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -563,23 +563,23 @@ export const AdminWalletTab: React.FC = () => {
 
             <form onSubmit={handleSaveMethod} className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-slate-300 block mb-1">اسم الطريقة *</label>
+                <label className="text-xs font-bold text-[#0D1B3E] block mb-1">اسم الطريقة *</label>
                 <input
                   type="text"
                   value={methodForm.name}
                   onChange={(e) => setMethodForm({ ...methodForm, name: e.target.value })}
                   placeholder="مثال: فودافون كاش - الحساب الرسمي"
                   required
-                  className="w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 bg-[#F5F7FA] px-4 py-2 text-xs text-[#0D1B3E] focus:bg-white focus:border-[#1E4FD8] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-300 block mb-1">النوع</label>
+                <label className="text-xs font-bold text-[#0D1B3E] block mb-1">النوع</label>
                 <select
                   value={methodForm.type}
                   onChange={(e) => setMethodForm({ ...methodForm, type: e.target.value as any })}
-                  className="w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 bg-[#F5F7FA] px-4 py-2 text-xs text-[#0D1B3E] focus:bg-white focus:border-[#1E4FD8] focus:outline-none"
                 >
                   <option value="vodafone_cash">فودافون كاش / أورانج / اتصالات / وي كاش</option>
                   <option value="instapay">إنستاباي (InstaPay)</option>
@@ -591,36 +591,36 @@ export const AdminWalletTab: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-bold text-slate-300 block mb-1">رقم المحفظة / الحساب *</label>
+                  <label className="text-xs font-bold text-[#0D1B3E] block mb-1">رقم المحفظة / الحساب *</label>
                   <input
                     type="text"
                     value={methodForm.accountNumber}
                     onChange={(e) => setMethodForm({ ...methodForm, accountNumber: e.target.value })}
                     placeholder="01012345678"
                     required
-                    className="w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 bg-[#F5F7FA] px-4 py-2 text-xs text-[#0D1B3E] focus:bg-white focus:border-[#1E4FD8] focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-slate-300 block mb-1">اسم صاحب الحساب</label>
+                  <label className="text-xs font-bold text-[#0D1B3E] block mb-1">اسم صاحب الحساب</label>
                   <input
                     type="text"
                     value={methodForm.accountName}
                     onChange={(e) => setMethodForm({ ...methodForm, accountName: e.target.value })}
                     placeholder="مستر فيزياء"
-                    className="w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 bg-[#F5F7FA] px-4 py-2 text-xs text-[#0D1B3E] focus:bg-white focus:border-[#1E4FD8] focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-300 block mb-1">تعليمات التحويل للطلاب</label>
+                <label className="text-xs font-bold text-[#0D1B3E] block mb-1">تعليمات التحويل للطلاب</label>
                 <textarea
                   value={methodForm.instructions}
                   onChange={(e) => setMethodForm({ ...methodForm, instructions: e.target.value })}
                   rows={3}
                   placeholder="اكتب الخطوات التي يجب على الطالب اتباعها عند التحويل..."
-                  className="w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 bg-[#F5F7FA] px-4 py-2 text-xs text-[#0D1B3E] focus:bg-white focus:border-[#1E4FD8] focus:outline-none"
                 />
               </div>
 
@@ -630,24 +630,24 @@ export const AdminWalletTab: React.FC = () => {
                   id="isActiveToggle"
                   checked={methodForm.isActive}
                   onChange={(e) => setMethodForm({ ...methodForm, isActive: e.target.checked })}
-                  className="rounded border-slate-800 bg-slate-950 text-amber-500"
+                  className="rounded border-slate-300 text-[#1E4FD8]"
                 />
-                <label htmlFor="isActiveToggle" className="text-xs text-slate-300 font-bold cursor-pointer">
+                <label htmlFor="isActiveToggle" className="text-xs text-[#0D1B3E] font-bold cursor-pointer">
                   تفعيل الطريقة وإظهارها للطلاب في تطبيق المحفظة
                 </label>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setIsMethodModalOpen(false)}
-                  className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-bold text-slate-300"
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 hover:text-[#0D1B3E]"
                 >
                   إلغاء
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-amber-500 px-5 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400"
+                  className="rounded-xl bg-[#F5B301] hover:bg-[#e0a401] px-5 py-2 text-xs font-black text-[#0D1B3E]"
                 >
                   حفظ بوابة الدفع
                 </button>
@@ -659,22 +659,22 @@ export const AdminWalletTab: React.FC = () => {
 
       {/* Receipt Image Preview Modal */}
       {previewReceiptUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 p-4 backdrop-blur-md animate-fadeIn">
-          <div className="relative max-w-2xl w-full rounded-3xl border border-slate-800 bg-slate-900 p-4 space-y-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 p-4 backdrop-blur-xs animate-fadeIn">
+          <div className="relative max-w-2xl w-full rounded-3xl border border-slate-200 bg-white p-4 space-y-3 shadow-2xl">
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-bold text-white">إيصال التحويل المرفق من الطالب</h4>
+              <h4 className="text-sm font-bold text-[#0D1B3E]">إيصال التحويل المرفق من الطالب</h4>
               <button
                 onClick={() => setPreviewReceiptUrl(null)}
-                className="rounded-xl bg-slate-800 p-2 text-slate-400 hover:text-white"
+                className="rounded-xl bg-slate-100 p-2 text-slate-600 hover:text-[#0D1B3E]"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="max-h-[75vh] overflow-auto rounded-2xl border border-slate-800 bg-black flex items-center justify-center p-2">
+            <div className="max-h-[75vh] overflow-auto rounded-2xl border border-slate-200 bg-[#F5F7FA] flex items-center justify-center p-2">
               <img
                 src={previewReceiptUrl}
                 alt="Receipt Full Preview"
-                className="max-h-[70vh] object-contain rounded-xl"
+                className="max-h-[70vh] object-contain rounded-xl shadow-xs"
               />
             </div>
           </div>

@@ -113,9 +113,9 @@ export const AdminSecretModal: React.FC<AdminSecretModalProps> = ({
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#1E4FD8] py-3 text-sm font-black text-white shadow-md hover:bg-blue-700 transition-all active:scale-[0.98] disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#F5B301] py-3 text-sm font-black text-[#0D1B3E] shadow-sm hover:bg-[#e0a401] transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
           >
-            <Lock className="h-4 w-4" />
+            <Lock className="h-4 w-4 text-[#0D1B3E]" />
             <span>{loading ? 'جاري التحقق...' : 'فتح لوحة التحكم'}</span>
           </button>
         </form>

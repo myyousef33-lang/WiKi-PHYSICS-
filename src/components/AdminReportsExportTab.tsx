@@ -4,12 +4,7 @@ import {
   Download, 
   Users, 
   Award, 
-  Wallet, 
-  BookOpen, 
-  CheckCircle2, 
-  FileText,
-  Calendar,
-  Sparkles
+  Wallet
 } from 'lucide-react';
 import { StorageService } from '../services/storage';
 
@@ -105,12 +100,12 @@ export const AdminReportsExportTab: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="border-b border-slate-800 pb-5">
-        <h2 className="text-xl font-black text-white flex items-center gap-2">
-          <FileSpreadsheet className="h-6 w-6 text-amber-400" />
+      <div className="border-b border-slate-200 pb-5">
+        <h2 className="text-xl font-black text-[#0D1B3E] flex items-center gap-2">
+          <FileSpreadsheet className="h-6 w-6 text-[#1E4FD8]" />
           <span>تصدير التقارير وسجلات المنصة (Excel / CSV)</span>
         </h2>
-        <p className="text-xs text-slate-400 mt-1">
+        <p className="text-xs text-slate-500 mt-1">
           تصدير جداول البيانات متوافقة 100% مع برامج مايكروسوفت إكسيل وجوجل شيتس مع دعم كامل للغة العربية UTF-8
         </p>
       </div>
@@ -118,13 +113,13 @@ export const AdminReportsExportTab: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         
         {/* Export Students */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 space-y-4 flex flex-col justify-between hover:border-amber-500/40 transition-colors">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-4 flex flex-col justify-between hover:border-[#1E4FD8]/40 shadow-xs transition-colors">
           <div className="space-y-2">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/15 border border-blue-500/30 text-blue-400">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 border border-blue-200 text-[#1E4FD8]">
               <Users className="h-6 w-6" />
             </div>
-            <h3 className="text-base font-black text-white">سجل بيانات الطلاب الكامل</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <h3 className="text-base font-black text-[#0D1B3E]">سجل بيانات الطلاب الكامل</h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
               يشمل أسماء الطلاب، أرقام هواتفهم، هواتف أولياء الأمور، المحافظات، رصيد المحفظة، وعدد الكورسات المفعلة.
             </p>
           </div>
@@ -132,7 +127,7 @@ export const AdminReportsExportTab: React.FC = () => {
           <button
             onClick={exportStudents}
             disabled={downloadingType === 'students'}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white py-3 text-xs font-black transition-all shadow-md shadow-blue-500/20 disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#1E4FD8] hover:bg-blue-700 text-white py-3 text-xs font-black transition-all shadow-xs disabled:opacity-50"
           >
             <Download className="h-4 w-4" />
             <span>{downloadingType === 'students' ? 'جارٍ التصدير...' : 'تصدير شيت الطلاب (CSV)'}</span>
@@ -140,13 +135,13 @@ export const AdminReportsExportTab: React.FC = () => {
         </div>
 
         {/* Export Exams Results */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 space-y-4 flex flex-col justify-between hover:border-amber-500/40 transition-colors">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-4 flex flex-col justify-between hover:border-[#1E4FD8]/40 shadow-xs transition-colors">
           <div className="space-y-2">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 border border-amber-200 text-[#F5B301]">
               <Award className="h-6 w-6" />
             </div>
-            <h3 className="text-base font-black text-white">تقرير نتائج الاختبارات</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <h3 className="text-base font-black text-[#0D1B3E]">تقرير نتائج الاختبارات</h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
               يشمل درجات كل امتحان، النسب المئوية، حالات الاجتياز، وتواريخ التسليم للتحليل الإحصائي والتكريم.
             </p>
           </div>
@@ -154,7 +149,7 @@ export const AdminReportsExportTab: React.FC = () => {
           <button
             onClick={exportExamsResults}
             disabled={downloadingType === 'exams'}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 py-3 text-xs font-black transition-all shadow-md shadow-amber-500/20 disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#F5B301] hover:bg-[#e0a401] text-[#0D1B3E] py-3 text-xs font-black transition-all shadow-xs disabled:opacity-50"
           >
             <Download className="h-4 w-4" />
             <span>{downloadingType === 'exams' ? 'جارٍ التصدير...' : 'تصدير شيت النتائج (CSV)'}</span>
@@ -162,13 +157,13 @@ export const AdminReportsExportTab: React.FC = () => {
         </div>
 
         {/* Export Wallet Transactions */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 space-y-4 flex flex-col justify-between hover:border-amber-500/40 transition-colors">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-4 flex flex-col justify-between hover:border-[#1E4FD8]/40 shadow-xs transition-colors">
           <div className="space-y-2">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600">
               <Wallet className="h-6 w-6" />
             </div>
-            <h3 className="text-base font-black text-white">سجل العمليات المالية والمحفظة</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <h3 className="text-base font-black text-[#0D1B3E]">سجل العمليات المالية والمحفظة</h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
               يشمل جميع طلبات شحن المحفظة، عمليات شراء الكورسات والمذكرات، أرقام العمليات، والمبالغ المحصلة.
             </p>
           </div>
@@ -176,7 +171,7 @@ export const AdminReportsExportTab: React.FC = () => {
           <button
             onClick={exportWalletTransactions}
             disabled={downloadingType === 'wallet'}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white py-3 text-xs font-black transition-all shadow-md shadow-emerald-500/20 disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white py-3 text-xs font-black transition-all shadow-xs disabled:opacity-50"
           >
             <Download className="h-4 w-4" />
             <span>{downloadingType === 'wallet' ? 'جارٍ التصدير...' : 'تصدير شيت المالية (CSV)'}</span>
