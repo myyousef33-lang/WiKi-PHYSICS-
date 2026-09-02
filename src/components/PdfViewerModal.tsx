@@ -6,15 +6,12 @@ import {
   ExternalLink, 
   Maximize2, 
   Minimize2, 
-  RotateCw, 
   ZoomIn, 
   ZoomOut, 
   AlertCircle,
-  RefreshCw,
-  Sparkles,
-  BookOpen
+  RefreshCw
 } from 'lucide-react';
-import { resolvePdfUrl, downloadPdfFile } from '../utils/pdfHelper';
+import { resolvePdfUrl, downloadPdfFile, getEmbedPdfSource } from '../utils/pdfHelper';
 
 interface PdfViewerModalProps {
   isOpen?: boolean;
@@ -84,21 +81,10 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
     }
   };
 
-  // Compose the iframe/object embed source with viewer parameters
-  const getEmbedSource = () => {
-    if (!resolvedUrl) return '';
-    if (resolvedUrl.includes('drive.google.com')) {
-      return resolvedUrl;
-    }
-    // Append standard pdf parameters if normal URL or relative uploads URL
-    if (resolvedUrl.startsWith('blob:') || resolvedUrl.startsWith('http') || resolvedUrl.startsWith('/')) {
-      return `${resolvedUrl}#toolbar=1&navpanes=0&scrollbar=1&view=FitH`;
-    }
-    return resolvedUrl;
-  };
+  const embedSource = getEmbedPdfSource(resolvedUrl);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-2 sm:p-4 lg:p-6 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-2 sm:p-4 lg:p-6 animate-in fade-in duration-200" dir="rtl">
       
       <div 
         className={`relative flex flex-col w-full bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden transition-all duration-300 ${
@@ -234,24 +220,19 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
           {/* Renderable PDF Frame */}
           {!hasError && resolvedUrl && (
             <div 
-              className="w-full h-full rounded-2xl overflow-hidden bg-white shadow-2xl transition-transform duration-200"
+              className="w-full h-full rounded-2xl overflow-hidden bg-white shadow-2xl transition-transform duration-200 relative"
               style={{
                 transform: zoomLevel !== 100 ? `scale(${zoomLevel / 100})` : undefined,
                 transformOrigin: 'top center'
               }}
             >
-              <object
-                data={getEmbedSource()}
-                type="application/pdf"
-                className="w-full h-full"
-              >
-                <iframe
-                  src={getEmbedSource()}
-                  title={title}
-                  className="w-full h-full border-0 bg-white"
-                  allow="fullscreen"
-                />
-              </object>
+              <iframe
+                src={embedSource}
+                title={title}
+                className="w-full h-full border-0 bg-white"
+                allow="fullscreen"
+                onError={() => setHasError(true)}
+              />
             </div>
           )}
 

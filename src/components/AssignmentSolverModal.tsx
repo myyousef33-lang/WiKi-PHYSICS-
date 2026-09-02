@@ -14,11 +14,13 @@ import {
   Award,
   MessageSquare,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  ExternalLink,
+  Download
 } from 'lucide-react';
 import { Assignment, AssignmentSubmission, Student } from '../types';
 import { StorageService } from '../services/storage';
-import { resolvePdfUrl } from '../utils/pdfHelper';
+import { resolvePdfUrl, getEmbedPdfSource, downloadPdfFile } from '../utils/pdfHelper';
 
 interface DrawPoint {
   x: number;
@@ -66,11 +68,11 @@ export const AssignmentSolverModal: React.FC<AssignmentSolverModalProps> = ({
   onSuccess
 }) => {
   const [resolvedPdfUrl, setResolvedPdfUrl] = useState<string>('');
+  const [isLoadingPdf, setIsLoadingPdf] = useState<boolean>(true);
   const [activeTool, setActiveTool] = useState<'pen' | 'text' | 'eraser'>('pen');
   const [penColor, setPenColor] = useState<string>(mode === 'grade' ? '#EF4444' : '#1E4FD8'); // Default red for teacher, blue for student
   const [penSize, setPenSize] = useState<number>(3);
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [totalPages, setTotalPages] = useState<number>(1);
 
   // Page annotations state: Map<pageNumber, PageAnnotationData>
   const [pageAnnotations, setPageAnnotations] = useState<Record<number, PageAnnotationData>>({
@@ -86,15 +88,24 @@ export const AssignmentSolverModal: React.FC<AssignmentSolverModalProps> = ({
   const [inputText, setInputText] = useState<string>('');
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const isDrawing = useRef<boolean>(false);
   const currentStroke = useRef<DrawStroke | null>(null);
 
   // Load PDF URL
   useEffect(() => {
-    if (isOpen && assignment.pdfUrl) {
-      resolvePdfUrl(assignment.pdfUrl).then(url => setResolvedPdfUrl(url));
+    if (isOpen) {
+      setIsLoadingPdf(true);
+      resolvePdfUrl(assignment?.pdfUrl)
+        .then(url => {
+          setResolvedPdfUrl(url);
+          setIsLoadingPdf(false);
+        })
+        .catch(() => {
+          setIsLoadingPdf(false);
+        });
     }
-  }, [isOpen, assignment.pdfUrl]);
+  }, [isOpen, assignment?.pdfUrl]);
 
   // Load existing submission data if viewing or grading
   useEffect(() => {
@@ -118,10 +129,19 @@ export const AssignmentSolverModal: React.FC<AssignmentSolverModalProps> = ({
     }
   }, [submission, mode]);
 
+  // Handle Canvas Resizing
+  useEffect(() => {
+    const handleResize = () => {
+      redrawCanvas();
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [currentPage, pageAnnotations]);
+
   // Redraw Canvas whenever currentPage or pageAnnotations change
   useEffect(() => {
     redrawCanvas();
-  }, [currentPage, pageAnnotations, mode]);
+  }, [currentPage, pageAnnotations, mode, resolvedPdfUrl]);
 
   const getActivePageData = (): PageAnnotationData => {
     return pageAnnotations[currentPage] || { strokes: [], texts: [] };
@@ -152,7 +172,7 @@ export const AssignmentSolverModal: React.FC<AssignmentSolverModalProps> = ({
       
       if (stroke.type === 'eraser') {
         ctx.globalCompositeOperation = 'destination-out';
-        ctx.lineWidth = stroke.size * 5;
+        ctx.lineWidth = stroke.size * 6;
       } else {
         ctx.globalCompositeOperation = 'source-over';
         ctx.strokeStyle = stroke.color;
@@ -179,7 +199,7 @@ export const AssignmentSolverModal: React.FC<AssignmentSolverModalProps> = ({
       // Subtle background box for text legibility
       ctx.save();
       const textMetrics = ctx.measureText(item.text);
-      ctx.fillStyle = mode === 'dark' ? 'rgba(13, 27, 62, 0.85)' : 'rgba(255, 255, 255, 0.9)';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
       ctx.fillRect(px - 4, py - 18, textMetrics.width + 8, 24);
       ctx.strokeStyle = item.color;
       ctx.lineWidth = 1;
@@ -260,7 +280,7 @@ export const AssignmentSolverModal: React.FC<AssignmentSolverModalProps> = ({
 
     if (stroke.type === 'eraser') {
       ctx.globalCompositeOperation = 'destination-out';
-      ctx.lineWidth = stroke.size * 5;
+      ctx.lineWidth = stroke.size * 6;
     } else {
       ctx.globalCompositeOperation = 'source-over';
       ctx.strokeStyle = stroke.color;
@@ -413,6 +433,8 @@ export const AssignmentSolverModal: React.FC<AssignmentSolverModalProps> = ({
 
   if (!isOpen) return null;
 
+  const embedSource = getEmbedPdfSource(resolvedPdfUrl, true);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-2 sm:p-4 lg:p-6 animate-in fade-in duration-200" dir="rtl">
       
@@ -440,29 +462,53 @@ export const AssignmentSolverModal: React.FC<AssignmentSolverModalProps> = ({
             </div>
           </div>
 
-          {/* Submission Status Badge if exists */}
-          {submission && (
-            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold">
-              {submission.status === 'graded' ? (
-                <span className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800 px-3 py-1 rounded-xl">
-                  <CheckCircle2 className="h-4 w-4" />
-                  تم التصحيح: {submission.grade} / {submission.maxGrade || 20}
-                </span>
-              ) : (
-                <span className="flex items-center gap-1.5 text-amber-600 bg-amber-50 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800 px-3 py-1 rounded-xl">
-                  <Clock className="h-4 w-4" />
-                  قيد المراجعة
-                </span>
-              )}
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Download / External Links */}
+            {resolvedPdfUrl && (
+              <div className="hidden sm:flex items-center gap-1.5">
+                <button
+                  onClick={() => window.open(resolvedPdfUrl, '_blank')}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-300 dark:border-[#24336A] bg-white dark:bg-[#16224D] text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100"
+                  title="فتح ملف الـ PDF في تبويب جديد"
+                >
+                  <ExternalLink className="h-3.5 w-3.5 text-blue-500" />
+                  <span>تبويب جديد</span>
+                </button>
+                <button
+                  onClick={() => downloadPdfFile(assignment.pdfUrl || resolvedPdfUrl, `${assignment.title}.pdf`)}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-xs font-bold text-slate-950"
+                  title="تحميل الواجب"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  <span>تحميل</span>
+                </button>
+              </div>
+            )}
 
-          <button
-            onClick={onClose}
-            className="rounded-xl border border-slate-200 dark:border-[#24336A] bg-white dark:bg-[#16224D] p-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
+            {/* Submission Status Badge if exists */}
+            {submission && (
+              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold">
+                {submission.status === 'graded' ? (
+                  <span className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800 px-3 py-1 rounded-xl">
+                    <CheckCircle2 className="h-4 w-4" />
+                    تم التصحيح: {submission.grade} / {submission.maxGrade || 20}
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5 text-amber-600 bg-amber-50 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800 px-3 py-1 rounded-xl">
+                    <Clock className="h-4 w-4" />
+                    قيد المراجعة
+                  </span>
+                )}
+              </div>
+            )}
+
+            <button
+              onClick={onClose}
+              className="rounded-xl border border-slate-200 dark:border-[#24336A] bg-white dark:bg-[#16224D] p-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         {/* Editing Toolbar Controls (Interactive Drawing Controls) */}
@@ -582,19 +628,21 @@ export const AssignmentSolverModal: React.FC<AssignmentSolverModalProps> = ({
         )}
 
         {/* Main Viewing & Canvas Drawing Container */}
-        <div className="relative flex-1 w-full bg-slate-900 overflow-hidden flex items-center justify-center">
+        <div ref={containerRef} className="relative flex-1 w-full bg-slate-900 overflow-hidden flex items-center justify-center">
           
-          {/* Background PDF iframe preview */}
-          {resolvedPdfUrl ? (
-            <iframe
-              src={`${resolvedPdfUrl}#toolbar=0&navpanes=0&scrollbar=1`}
-              className="w-full h-full border-none pointer-events-none select-none"
-              title="ملف الواجب الدراسي"
-            />
-          ) : (
+          {/* Background PDF iframe or SVG preview */}
+          {isLoadingPdf ? (
             <div className="flex flex-col items-center justify-center text-slate-400 p-8">
               <div className="h-10 w-10 border-4 border-amber-400 border-t-transparent rounded-full animate-spin mb-3" />
               <p className="text-xs font-bold">جاري تحميل ملف الواجب الـ PDF...</p>
+            </div>
+          ) : (
+            <div className="w-full h-full relative overflow-hidden bg-white">
+              <iframe
+                src={embedSource}
+                className="w-full h-full border-none select-none"
+                title="ملف الواجب الدراسي"
+              />
             </div>
           )}
 
@@ -608,7 +656,7 @@ export const AssignmentSolverModal: React.FC<AssignmentSolverModalProps> = ({
             onTouchStart={startDrawing}
             onTouchMove={draw}
             onTouchEnd={stopDrawing}
-            className={`absolute inset-0 w-full h-full z-10 ${
+            className={`absolute inset-0 w-full h-full z-20 ${
               mode === 'view' ? 'pointer-events-none' : 'cursor-crosshair'
             }`}
           />
