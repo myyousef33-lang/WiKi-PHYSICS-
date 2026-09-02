@@ -25,6 +25,7 @@ import { StorageService, subscribeToStorage } from '../services/storage';
 import { Student } from '../types';
 import { Logo } from './Logo';
 import { getPresetAvatar } from '../utils/avatars';
+import { ThemeToggle } from './ThemeToggle';
 
 interface NavbarProps {
   currentView: string;
@@ -244,6 +245,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span>تفعيل كود</span>
           </button>
 
+          {/* Theme Toggle Button */}
+          <ThemeToggle />
+
           {/* Notifications Button */}
           <button
             onClick={onOpenNotificationModal}
@@ -377,6 +381,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               </button>
             )}
+
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-between px-2">
+              <span className="text-xs font-bold text-[#0D1B3E]">المظهر والوضع الليلي:</span>
+              <ThemeToggle showText={true} />
+            </div>
 
             <button
               onClick={() => {

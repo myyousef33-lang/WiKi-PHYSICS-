@@ -63,6 +63,7 @@ import {
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { MediaStore } from '../services/mediaStore';
 import { Logo } from './Logo';
+import { ThemeToggle } from './ThemeToggle';
 import { PdfViewerModal } from './PdfViewerModal';
 import { AdminWalletTab } from './AdminWalletTab';
 import { AdminAuditLogTab } from './AdminAuditLogTab';
@@ -1210,8 +1211,10 @@ ${weakConceptsText}
               </div>
             </div>
 
-            {/* Left in RTL: Action Buttons (Firestore Sync, Student View, Logout) */}
+            {/* Left in RTL: Action Buttons (Firestore Sync, Theme Toggle, Student View, Logout) */}
             <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+              <ThemeToggle />
+
               <button
                 onClick={handleForceSyncCloud}
                 disabled={isSyncingCloud}

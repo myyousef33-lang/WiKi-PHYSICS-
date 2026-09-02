@@ -10,6 +10,7 @@
     width: 100% !important;
     margin: 0;
     padding: 0;
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
 
   #root {
@@ -19,7 +20,143 @@
     background-color: #F5F7FA;
     min-height: 100vh;
     color: #0D1B3E;
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
+}
+
+/* =========================================================
+   DARK MODE SYSTEM OVERRIDES (#0D1B3E Unified Navy Theme)
+   ========================================================= */
+
+html.dark,
+body.dark,
+.dark {
+  background-color: #0D1B3E !important;
+  color: #F8FAFC !important;
+  color-scheme: dark;
+}
+
+html.dark #root,
+body.dark #root,
+.dark #root {
+  background-color: #0D1B3E !important;
+  color: #F8FAFC !important;
+}
+
+/* Background Conversions for Dark Navy Theme (#16224D Cards over #0D1B3E Canvas) */
+.dark .bg-white,
+.dark .bg-white\/98,
+.dark .bg-white\/95,
+.dark .bg-white\/90,
+.dark .bg-white\/80 {
+  background-color: #16224D !important;
+}
+
+.dark .bg-\[\#F5F7FA\],
+.dark .bg-slate-50,
+.dark .bg-slate-100 {
+  background-color: #0D1B3E !important;
+}
+
+.dark .bg-slate-200 {
+  background-color: #1A2A5A !important;
+}
+
+.dark .bg-slate-300 {
+  background-color: #24336A !important;
+}
+
+/* Primary Blue Text & Background Adjustments for Dark Mode (#4C7CFF for contrast) */
+.dark .text-\[\#1E4FD8\] {
+  color: #4C7CFF !important;
+}
+
+.dark .bg-\[\#1E4FD8\] {
+  background-color: #4C7CFF !important;
+}
+
+.dark .border-\[\#1E4FD8\] {
+  border-color: #4C7CFF !important;
+}
+
+.dark .bg-blue-50,
+.dark .bg-blue-50\/80,
+.dark .bg-blue-50\/60,
+.dark .bg-blue-50\/50,
+.dark .bg-blue-50\/30 {
+  background-color: rgba(76, 124, 255, 0.15) !important;
+}
+
+.dark .bg-blue-100 {
+  background-color: rgba(76, 124, 255, 0.25) !important;
+}
+
+.dark .text-blue-600,
+.dark .text-blue-700,
+.dark .text-blue-800,
+.dark .text-blue-900 {
+  color: #4C7CFF !important;
+}
+
+/* Primary Dark Navy Text -> White / Light Grey in Dark Mode */
+.dark .text-\[\#0D1B3E\],
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-slate-700 {
+  color: #F8FAFC !important;
+}
+
+.dark .text-\[\#6B7280\],
+.dark .text-slate-600,
+.dark .text-slate-500 {
+  color: #94A3B8 !important;
+}
+
+.dark .text-slate-400 {
+  color: #CBD5E1 !important;
+}
+
+/* Border Adjustments (Light Borders instead of shadows) */
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-slate-300,
+.dark .border-blue-100,
+.dark .border-blue-200 {
+  border-color: #24336A !important;
+}
+
+.dark .shadow-xs,
+.dark .shadow-sm,
+.dark .shadow-md,
+.dark .shadow-lg,
+.dark .shadow-xl {
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Form Inputs, Selects, and Textareas */
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #111C3D !important;
+  color: #F8FAFC !important;
+  border-color: #24336A !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748B !important;
+}
+
+/* Modals & Overlays in Dark Mode */
+.dark .glass-card {
+  background: #16224D !important;
+  border-color: #24336A !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4) !important;
+}
+
+.dark .glass-card-hover:hover {
+  border-color: #4C7CFF !important;
+  box-shadow: 0 12px 28px -6px rgba(76, 124, 255, 0.2) !important;
 }
 
 /* Custom Scrollbar for sleek physics platform */
@@ -39,6 +176,19 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #1E4FD8;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #0D1B3E;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #24336A;
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #4C7CFF;
 }
 
 /* Physics Glowing & Glass UI Accents */

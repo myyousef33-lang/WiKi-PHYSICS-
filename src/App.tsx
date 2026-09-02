@@ -25,6 +25,7 @@ import { FlashcardsView } from './components/FlashcardsView';
 import { CertificateModal } from './components/CertificateModal';
 import { GlobalAntiScreenshotShield } from './components/GlobalAntiScreenshotShield';
 import { StudentWalletModal } from './components/StudentWalletModal';
+import { FloatingSupportButton } from './components/FloatingSupportButton';
 import { StorageService, subscribeToStorage } from './services/storage';
 import { PresenceService } from './services/presence';
 import { EarnedCertificate, Student } from './types';
@@ -323,6 +324,9 @@ export default function App() {
           onClose={() => setSelectedCertificate(null)}
         />
       )}
+
+      {/* Floating Customer Support Action Button (WhatsApp) */}
+      <FloatingSupportButton currentView={currentView} />
 
       </div>
     </GlobalAntiScreenshotShield>
