@@ -218,11 +218,18 @@ const upload = multer({
   },
 });
 
-// Lazy Gemini API Client
+// Lazy Gemini API Client with robust initialization
 let geminiClient: GoogleGenAI | null = null;
 const getGemini = (): GoogleGenAI => {
   if (!geminiClient) {
-    geminiClient = new GoogleGenAI();
+    geminiClient = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        },
+      },
+    });
   }
   return geminiClient;
 };
@@ -234,8 +241,8 @@ async function generateWithFallback(ai: GoogleGenAI, requestOptions: {
   temperature?: number;
   responseMimeType?: string;
 }): Promise<{ text: string; modelUsed: string }> {
-  // Try high-availability models first to prevent 503 high-demand spike delays
-  const models = ['gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.8-flash'];
+  // Try high-availability models with progressive fallback
+  const models = ['gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.8-flash', 'gemini-3.1-pro-preview'];
   let lastError: any = null;
 
   for (const model of models) {
@@ -256,7 +263,7 @@ async function generateWithFallback(ai: GoogleGenAI, requestOptions: {
         config,
       });
 
-      if (response && typeof response.text === 'string') {
+      if (response && typeof response.text === 'string' && response.text.trim().length > 0) {
         return { text: response.text, modelUsed: model };
       }
     } catch (err: any) {
@@ -519,13 +526,37 @@ async function startServer() {
 
       const contents: any[] = [];
 
-      // Include previous conversation history if present
+      // Include previous conversation history if present (cleanly sanitized and alternated)
       if (Array.isArray(historyList) && historyList.length > 0) {
-        historyList.slice(-6).forEach((item: { role: string; text: string }) => {
-          contents.push({
-            role: item.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: item.text }]
-          });
+        const cleanHistory = historyList
+          .filter((item: any) => item && typeof item.text === 'string' && item.text.trim().length > 0)
+          .filter((item: any) => {
+            const t = item.text.trim();
+            // Filter out system greetings, error messages, and retry banners
+            return !t.includes('عذرًا، خادم الذكاء الاصطناعي') && 
+                   !t.includes('تعذر الاتصال بخادم') && 
+                   !t.includes('أنا مساعدك الذكي في مادة الفيزياء');
+          })
+          .slice(-6);
+
+        cleanHistory.forEach((item: { role: string; text: string }) => {
+          const role = (item.role === 'assistant' || item.role === 'model') ? 'model' : 'user';
+          
+          // Gemini contents must begin with a 'user' turn
+          if (contents.length === 0 && role !== 'user') {
+            return;
+          }
+
+          // Enforce strict alternating roles (user <-> model)
+          const lastTurn = contents[contents.length - 1];
+          if (lastTurn && lastTurn.role === role) {
+            lastTurn.parts[0].text += `\n${item.text}`;
+          } else {
+            contents.push({
+              role,
+              parts: [{ text: item.text }]
+            });
+          }
         });
       }
 
@@ -552,10 +583,17 @@ async function startServer() {
         text: `${contextPrefix}${prompt || 'اشرح هذه المسألة الفيزيائية الموضحة بالصورة بالتفصيل والخطوات والقوانين المستخدمة.'}`
       });
 
-      contents.push({
-        role: 'user',
-        parts: currentParts
-      });
+      // If the last turn in contents was 'user', append/replace so we maintain strict alternating order
+      const lastContentTurn = contents[contents.length - 1];
+      if (lastContentTurn && lastContentTurn.role === 'user') {
+        // Merge the current parts into the user turn
+        lastContentTurn.parts.push(...currentParts);
+      } else {
+        contents.push({
+          role: 'user',
+          parts: currentParts
+        });
+      }
 
       const { text: replyText, modelUsed } = await generateWithFallback(ai, {
         contents,

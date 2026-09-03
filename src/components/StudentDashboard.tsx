@@ -67,10 +67,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
       const allCourses = StorageService.getCourses();
       setAllCoursesList(allCourses);
 
-      // Resolve student courses (if logged in, their enrolled courses; else all available courses)
+      // Resolve student courses (STRICT: only courses the student is ACTUALLY enrolled in)
       const studentCourses = currentStudent 
-        ? allCourses.filter(c => currentStudent.enrolledCourseIds?.includes(c.id))
-        : allCourses;
+        ? allCourses.filter(c => StorageService.isStudentEnrolled(currentStudent.id, c.id))
+        : [];
       setCourses(studentCourses);
 
       const studentId = currentStudent?.id || 'demo-student';
@@ -86,8 +86,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
       const smartRecs = StorageService.getStudentRecommendations(studentId);
       setRecommendations(smartRecs);
 
-      // Resolve Next Step (الخطوة القادمة)
-      const coursesToSearch = studentCourses.length > 0 ? studentCourses : allCourses;
+      // Resolve Next Step (الخطوة القادمة) - Strictly from enrolled courses
+      const coursesToSearch = studentCourses;
       if (coursesToSearch.length > 0) {
         let selectedCourse: Course | null = null;
         let selectedLesson: Lesson | null = null;
@@ -107,7 +107,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           }
         }
 
-        // 2. If no last viewed, find first uncompleted lesson across courses
+        // 2. If no last viewed, find first uncompleted lesson across enrolled courses
         if (!selectedCourse || !selectedLesson) {
           const studentProg = StorageService.getStudentProgressList(studentId);
           const completedIds = new Set(studentProg.filter(p => p.isCompleted).map(p => p.lessonId));
@@ -127,7 +127,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           }
         }
 
-        // 3. Fallback to very first lesson of first course
+        // 3. Fallback to very first lesson of first enrolled course
         if (!selectedCourse || !selectedLesson) {
           selectedCourse = coursesToSearch[0];
           selectedLesson = selectedCourse.units?.[0]?.lessons?.[0] || null;
@@ -174,7 +174,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   const progressList = StorageService.getStudentProgressList(activeStudent.id);
   const completedLessonsCount = progressList.filter(p => p.isCompleted).length;
 
-  const relevantCourses = courses.length > 0 ? courses : allCoursesList;
+  // Strict enrolled courses (do NOT bypass or fallback to all courses)
+  const relevantCourses = courses;
   let totalAvailableLessons = 0;
   relevantCourses.forEach(c => {
     c.units?.forEach(u => {
@@ -700,24 +701,79 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         </div>
 
         {relevantCourses.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-xs">
-            <AlertCircle className="mx-auto h-8 w-8 text-slate-400 opacity-60" />
-            <h4 className="mt-2 text-sm font-bold text-[#0D1B3E]">لم تقم بتفعيل أي كورسات بعد</h4>
-            <p className="mt-1 text-xs text-[#6B7280]">أدخل كود التفعيل الخاص بك أو تصفح المناهج لبدء المذاكرة</p>
-            <div className="mt-3.5 flex justify-center gap-2.5">
-              <button
-                onClick={onOpenActivationModal}
-                className="rounded-xl bg-[#F5B301] px-3.5 py-1.5 text-xs font-bold text-[#0D1B3E] cursor-pointer"
-              >
-                تفعيل كود الكورس
-              </button>
-              <button
-                onClick={() => onNavigate('courses-catalog')}
-                className="rounded-xl border border-[#1E4FD8] bg-white px-3.5 py-1.5 text-xs font-bold text-[#1E4FD8] cursor-pointer"
-              >
-                استعراض الكورسات
-              </button>
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-xs">
+              <AlertCircle className="mx-auto h-8 w-8 text-slate-400 opacity-60" />
+              <h4 className="mt-2 text-sm font-bold text-[#0D1B3E]">لم تقم بالاشتراك في أي كورس بعد</h4>
+              <p className="mt-1 text-xs text-[#6B7280]">أدخل كود التفعيل الخاص بك أو تصفح المناهج المتاحة للاشتراك وبدء المذاكرة</p>
+              <div className="mt-3.5 flex justify-center gap-2.5">
+                <button
+                  onClick={onOpenActivationModal}
+                  className="rounded-xl bg-[#F5B301] px-4 py-2 text-xs font-bold text-[#0D1B3E] hover:bg-[#e0a401] transition-colors cursor-pointer"
+                >
+                  تفعيل كود الكورس
+                </button>
+                <button
+                  onClick={() => onNavigate('courses-catalog')}
+                  className="rounded-xl border border-[#1E4FD8] bg-white px-4 py-2 text-xs font-bold text-[#1E4FD8] hover:bg-blue-50 transition-colors cursor-pointer"
+                >
+                  استعراض الكورسات المتاحة
+                </button>
+              </div>
             </div>
+
+            {allCoursesList.length > 0 && (
+              <div className="space-y-2.5 pt-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-[#F5B301]" />
+                    <h3 className="text-sm font-black text-[#0D1B3E]">الكورسات المتاحة للتسجيل</h3>
+                  </div>
+                  <span className="text-[11px] text-[#6B7280]">اختر كورس لعرض التفاصيل والاشتراك</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {allCoursesList.slice(0, 3).map((course) => (
+                    <div 
+                      key={course.id}
+                      className="rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:border-blue-200 hover:shadow-sm transition-all overflow-hidden flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="relative h-28 w-full overflow-hidden bg-slate-100">
+                          <img 
+                            src={course.thumbnail} 
+                            alt={course.title}
+                            className="h-full w-full object-cover"
+                          />
+                          <div className="absolute top-1.5 right-1.5 rounded-md bg-[#F5B301] text-[#0D1B3E] px-2 py-0.5 text-[10px] font-black shadow-xs z-10">
+                            {course.price} ج.م
+                          </div>
+                          <div className="absolute bottom-1.5 right-1.5 rounded-md bg-[#0D1B3E]/85 backdrop-blur-md px-1.5 py-0.5 text-[9px] font-bold text-slate-200 z-10 flex items-center gap-1">
+                            <Lock className="h-2.5 w-2.5 text-amber-400" />
+                            <span>غير مشترك</span>
+                          </div>
+                        </div>
+                        <div className="p-3 space-y-1.5">
+                          <h4 className="font-bold text-[#0D1B3E] text-xs sm:text-sm line-clamp-1">
+                            {course.title}
+                          </h4>
+                          <p className="text-[10px] text-[#6B7280] line-clamp-1">
+                            {course.description}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="p-3 pt-0">
+                        <button
+                          onClick={() => onNavigate('course-details', { courseId: course.id })}
+                          className="w-full rounded-xl bg-blue-50 border border-blue-200 py-2 text-xs font-bold text-[#1E4FD8] hover:bg-[#1E4FD8] hover:text-white transition-all cursor-pointer text-center"
+                        >
+                          عرض تفاصيل الكورس والاشتراك
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">

@@ -37,13 +37,15 @@ interface LessonRoomViewProps {
   lessonId: string;
   onNavigate: (view: string, params?: any) => void;
   onOpenPdfModal?: (pdfUrl: string, title: string) => void;
+  onOpenActivationModal?: () => void;
 }
 
 export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
   courseId,
   lessonId,
   onNavigate,
-  onOpenPdfModal
+  onOpenPdfModal,
+  onOpenActivationModal
 }) => {
   const [course, setCourse] = useState<Course | undefined>(StorageService.getCourseById(courseId));
   const [student, setStudent] = useState<Student | null>(StorageService.getCurrentStudent());
@@ -72,6 +74,11 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const videoContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Access Control verification
+  const isEnrolled = student ? StorageService.isStudentEnrolled(student.id, courseId) : false;
+  const isFreePreview = Boolean(currentLesson?.isFreePreview);
+  const hasAccess = isEnrolled || isFreePreview;
 
   // Keyboard Shortcuts Interceptor & Anti-Screenshot Detection
   useEffect(() => {
@@ -352,142 +359,189 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
         {/* Main Content: Video Player & Lesson Details */}
         <div className={`${isTheaterMode ? 'w-full' : 'lg:col-span-2'} space-y-4`}>
           
-          {/* Responsive Video Container with Fullscreen & DRM Anti-Screen Recording Protection */}
-          <div 
-            ref={videoContainerRef}
-            onContextMenu={(e) => e.preventDefault()}
-            className={`relative aspect-video w-full rounded-2xl overflow-hidden border border-slate-200 bg-black shadow-md group flex items-center justify-center select-none ${
-              isCaptureBlocked ? 'filter blur-2xl transition-all duration-300' : ''
-            }`}
-            style={{
-              WebkitUserSelect: 'none',
-              userSelect: 'none',
-              WebkitTouchCallout: 'none'
-            }}
-          >
-            {isDirectVideo(currentLesson.videoUrl, currentLesson.videoType) ? (
-              <video
-                ref={videoRef}
-                src={resolvedVideoUrl || currentLesson.videoUrl}
-                controls
-                playsInline
-                preload="auto"
-                className="h-full w-full object-contain bg-black"
-                poster={course.thumbnail}
-              >
-                متصفحك لا يدعم تشغيل الفيديو المباشر.
-              </video>
-            ) : (
-              <iframe
-                src={getEmbedUrl(currentLesson.videoUrl, currentLesson.videoType, videoQuality)}
-                title={currentLesson.title}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-                allowFullScreen
-                className="h-full w-full border-0"
-              />
-            )}
-
-            {/* Quality Badge */}
-            <div className="absolute top-3 left-3 pointer-events-none rounded-lg bg-slate-950/85 backdrop-blur-md border border-slate-700/60 px-2.5 py-1 text-[11px] font-black text-[#F5B301] flex items-center gap-1.5 shadow-lg z-10">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Full HD 1080p</span>
-            </div>
-
-            {/* Quick Fullscreen Floating Button (top right) */}
-            <button
-              onClick={handleToggleFullscreen}
-              className="absolute top-3 right-3 rounded-lg bg-slate-950/85 backdrop-blur-md border border-slate-700/60 p-2 text-slate-200 hover:text-amber-400 hover:bg-slate-900 transition-all opacity-80 hover:opacity-100 shadow-lg z-10"
-              title={isFullscreen ? 'تصغير الشاشة' : 'تكبير الشاشة ملء الشاشة'}
-            >
-              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-            </button>
-
-            {/* Screen Capture Attempt Blocked Overlay */}
-            {isCaptureBlocked && (
-              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/95 p-6 text-center animate-fadeIn font-sans">
-                <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-red-500/20 border border-red-500/40 text-red-400 mb-4 animate-bounce">
-                  <ShieldAlert className="h-8 w-8" />
+          {!hasAccess ? (
+            /* Secure Access Control Lock Screen */
+            <div className="relative aspect-video w-full rounded-2xl overflow-hidden border-2 border-amber-300 bg-slate-950 shadow-lg flex flex-col items-center justify-center p-6 text-center">
+              {course.thumbnail && (
+                <img 
+                  src={course.thumbnail} 
+                  alt={course.title}
+                  className="absolute inset-0 w-full h-full object-cover opacity-15 filter blur-xs"
+                />
+              )}
+              <div className="relative z-10 max-w-md space-y-3.5">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/20 border border-amber-500/40 text-[#F5B301] shadow-md">
+                  <Lock className="h-7 w-7" />
                 </div>
-                <h3 className="text-lg font-black text-white">تصوير الشاشة غير مسموح به!</h3>
-                <p className="text-xs text-slate-300 max-w-md mt-2 leading-relaxed">
-                  محتوى المنصة محمي ضد الالتقاط والتصوير لحفظ حقوق النشر والتأليف.
-                </p>
+                <div>
+                  <span className="inline-block rounded-full bg-amber-500/20 border border-amber-500/40 px-3 py-1 text-xs font-bold text-[#F5B301]">
+                    محتوى محمي - للمشتركين فقط
+                  </span>
+                  <h3 className="mt-2.5 text-base sm:text-lg font-black text-white">
+                    {currentLesson.title}
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-300 leading-relaxed">
+                    عفواً، يتطلب مشاهدة هذا الدرس الاشتراك في كورس «{course.title}» أو تفعيل كود الحصة.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
+                  {onOpenActivationModal && (
+                    <button
+                      onClick={onOpenActivationModal}
+                      className="rounded-xl bg-[#F5B301] px-4 py-2.5 text-xs font-bold text-[#0D1B3E] hover:bg-[#e0a401] transition-all shadow-sm cursor-pointer"
+                    >
+                      تفعيل كود الحصة / الكورس
+                    </button>
+                  )}
+                  <button
+                    onClick={() => onNavigate('course-details', { courseId: course.id })}
+                    className="rounded-xl bg-[#1E4FD8] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#163cb5] transition-all shadow-sm cursor-pointer"
+                  >
+                    شراء والاشتراك في الكورس ({course.price} ج.م)
+                  </button>
+                </div>
               </div>
-            )}
-          </div>
-
-          {/* Video Playback & Quality Controls Bar */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 text-xs shadow-xs">
-            
-            {/* Speed & Seek Controls */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[#4B5563] font-bold flex items-center gap-1">
-                <Gauge className="h-3.5 w-3.5 text-[#1E4FD8]" />
-                <span>السرعة:</span>
-              </span>
-              {[1, 1.25, 1.5, 1.75, 2].map((spd) => (
-                <button
-                  key={spd}
-                  onClick={() => handleSpeedChange(spd)}
-                  className={`rounded-lg px-2.5 py-1 font-mono font-bold transition-all ${
-                    playbackSpeed === spd
-                      ? 'bg-[#1E4FD8] text-white shadow-xs'
-                      : 'bg-slate-100 text-[#4B5563] hover:bg-slate-200 hover:text-[#0D1B3E]'
-                  }`}
+            </div>
+          ) : (
+            /* Responsive Video Container with Fullscreen & DRM Anti-Screen Recording Protection */
+            <div 
+              ref={videoContainerRef}
+              onContextMenu={(e) => e.preventDefault()}
+              className={`relative aspect-video w-full rounded-2xl overflow-hidden border border-slate-200 bg-black shadow-md group flex items-center justify-center select-none ${
+                isCaptureBlocked ? 'filter blur-2xl transition-all duration-300' : ''
+              }`}
+              style={{
+                WebkitUserSelect: 'none',
+                userSelect: 'none',
+                WebkitTouchCallout: 'none'
+              }}
+            >
+              {isDirectVideo(currentLesson.videoUrl, currentLesson.videoType) ? (
+                <video
+                  ref={videoRef}
+                  src={resolvedVideoUrl || currentLesson.videoUrl}
+                  controls
+                  playsInline
+                  preload="auto"
+                  className="h-full w-full object-contain bg-black"
+                  poster={course.thumbnail}
                 >
-                  {spd}x
-                </button>
-              ))}
+                  متصفحك لا يدعم تشغيل الفيديو المباشر.
+                </video>
+              ) : (
+                <iframe
+                  src={getEmbedUrl(currentLesson.videoUrl, currentLesson.videoType, videoQuality)}
+                  title={currentLesson.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+                  allowFullScreen
+                  className="h-full w-full border-0"
+                />
+              )}
 
-              {isDirectVideo(currentLesson.videoUrl, currentLesson.videoType) && (
-                <div className="flex items-center gap-1 mr-2 border-r border-slate-200 pr-2">
-                  <button
-                    onClick={() => handleSkipTime(-10)}
-                    className="rounded-lg bg-slate-100 p-1.5 text-[#4B5563] hover:text-[#0D1B3E] hover:bg-slate-200"
-                    title="إرجاع 10 ثواني"
-                  >
-                    <RotateCcw className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    onClick={() => handleSkipTime(10)}
-                    className="rounded-lg bg-slate-100 p-1.5 text-[#4B5563] hover:text-[#0D1B3E] hover:bg-slate-200"
-                    title="تقديم 10 ثواني"
-                  >
-                    <RotateCw className="h-3.5 w-3.5" />
-                  </button>
+              {/* Quality Badge */}
+              <div className="absolute top-3 left-3 pointer-events-none rounded-lg bg-slate-950/85 backdrop-blur-md border border-slate-700/60 px-2.5 py-1 text-[11px] font-black text-[#F5B301] flex items-center gap-1.5 shadow-lg z-10">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Full HD 1080p</span>
+              </div>
+
+              {/* Quick Fullscreen Floating Button (top right) */}
+              <button
+                onClick={handleToggleFullscreen}
+                className="absolute top-3 right-3 rounded-lg bg-slate-950/85 backdrop-blur-md border border-slate-700/60 p-2 text-slate-200 hover:text-amber-400 hover:bg-slate-900 transition-all opacity-80 hover:opacity-100 shadow-lg z-10"
+                title={isFullscreen ? 'تصغير الشاشة' : 'تكبير الشاشة ملء الشاشة'}
+              >
+                {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </button>
+
+              {/* Screen Capture Attempt Blocked Overlay */}
+              {isCaptureBlocked && (
+                <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/95 p-6 text-center animate-fadeIn font-sans">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-red-500/20 border border-red-500/40 text-red-400 mb-4 animate-bounce">
+                    <ShieldAlert className="h-8 w-8" />
+                  </div>
+                  <h3 className="text-lg font-black text-white">تصوير الشاشة غير مسموح به!</h3>
+                  <p className="text-xs text-slate-300 max-w-md mt-2 leading-relaxed">
+                    محتوى المنصة محمي ضد الالتقاط والتصوير لحفظ حقوق النشر والتأليف.
+                  </p>
                 </div>
               )}
             </div>
+          )}
 
-            {/* Quality and Fullscreen Button */}
-            <div className="flex items-center gap-2">
-              <span className="text-[#4B5563] font-bold">الجودة:</span>
-              {(['1080p', '720p', '480p'] as const).map((q) => (
+          {/* Video Playback & Quality Controls Bar (Only when accessed) */}
+          {hasAccess && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 text-xs shadow-xs">
+              
+              {/* Speed & Seek Controls */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[#4B5563] font-bold flex items-center gap-1">
+                  <Gauge className="h-3.5 w-3.5 text-[#1E4FD8]" />
+                  <span>السرعة:</span>
+                </span>
+                {[1, 1.25, 1.5, 1.75, 2].map((spd) => (
+                  <button
+                    key={spd}
+                    onClick={() => handleSpeedChange(spd)}
+                    className={`rounded-lg px-2.5 py-1 font-mono font-bold transition-all ${
+                      playbackSpeed === spd
+                        ? 'bg-[#1E4FD8] text-white shadow-xs'
+                        : 'bg-slate-100 text-[#4B5563] hover:bg-slate-200 hover:text-[#0D1B3E]'
+                    }`}
+                  >
+                    {spd}x
+                  </button>
+                ))}
+
+                {isDirectVideo(currentLesson.videoUrl, currentLesson.videoType) && (
+                  <div className="flex items-center gap-1 mr-2 border-r border-slate-200 pr-2">
+                    <button
+                      onClick={() => handleSkipTime(-10)}
+                      className="rounded-lg bg-slate-100 p-1.5 text-[#4B5563] hover:text-[#0D1B3E] hover:bg-slate-200"
+                      title="إرجاع 10 ثواني"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleSkipTime(10)}
+                      className="rounded-lg bg-slate-100 p-1.5 text-[#4B5563] hover:text-[#0D1B3E] hover:bg-slate-200"
+                      title="تقديم 10 ثواني"
+                    >
+                      <RotateCw className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Quality and Fullscreen Button */}
+              <div className="flex items-center gap-2">
+                <span className="text-[#4B5563] font-bold">الجودة:</span>
+                {(['1080p', '720p', '480p'] as const).map((q) => (
+                  <button
+                    key={q}
+                    onClick={() => setVideoQuality(q)}
+                    className={`rounded-lg px-2.5 py-1 font-bold transition-all ${
+                      videoQuality === q
+                        ? 'bg-emerald-600 text-white font-black shadow-xs'
+                        : 'bg-slate-100 text-[#4B5563] hover:bg-slate-200'
+                    }`}
+                  >
+                    {q}
+                  </button>
+                ))}
+
+                {/* Dedicated Fullscreen Toggle Button */}
                 <button
-                  key={q}
-                  onClick={() => setVideoQuality(q)}
-                  className={`rounded-lg px-2.5 py-1 font-bold transition-all ${
-                    videoQuality === q
-                      ? 'bg-emerald-600 text-white font-black shadow-xs'
-                      : 'bg-slate-100 text-[#4B5563] hover:bg-slate-200'
-                  }`}
+                  onClick={handleToggleFullscreen}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#F5B301] hover:bg-[#e0a401] text-[#0D1B3E] px-3 py-1 font-black transition-all shadow-xs"
+                  title="تكبير الشاشة بالكامل"
                 >
-                  {q}
+                  {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                  <span>{isFullscreen ? 'تصغير الشاشة' : 'تكبير الشاشة'}</span>
                 </button>
-              ))}
+              </div>
 
-              {/* Dedicated Fullscreen Toggle Button */}
-              <button
-                onClick={handleToggleFullscreen}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[#F5B301] hover:bg-[#e0a401] text-[#0D1B3E] px-3 py-1 font-black transition-all shadow-xs"
-                title="تكبير الشاشة بالكامل"
-              >
-                {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-                <span>{isFullscreen ? 'تصغير الشاشة' : 'تكبير الشاشة'}</span>
-              </button>
             </div>
-
-          </div>
+          )}
 
           {/* Action Bar (Complete Lesson, AI Assistant & Previous / Next Buttons) */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
@@ -730,32 +784,44 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
                     {unit.lessons?.map((l) => {
                       const isCurrent = l.id === currentLesson.id;
                       const completed = student ? StorageService.getLessonProgress(student.id, l.id)?.isCompleted : false;
+                      const lHasAccess = isEnrolled || Boolean(l.isFreePreview);
 
                       return (
                         <button
                           key={l.id}
                           onClick={() => onNavigate('lesson-player', { courseId: course.id, lessonId: l.id })}
-                          className={`w-full text-right flex items-start gap-2.5 p-2.5 rounded-xl text-xs transition-all ${
+                          className={`w-full text-right flex items-start justify-between gap-2.5 p-2.5 rounded-xl text-xs transition-all cursor-pointer ${
                             isCurrent
                               ? 'bg-blue-50 border border-blue-200 text-[#1E4FD8] font-bold'
                               : 'text-[#4B5563] hover:bg-[#F5F7FA] hover:text-[#0D1B3E]'
                           }`}
                         >
-                          <div className="mt-0.5 shrink-0">
-                            {completed ? (
-                              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                            ) : isCurrent ? (
-                              <PlayCircle className="h-4 w-4 text-[#1E4FD8] animate-pulse" />
-                            ) : (
-                              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-slate-100 text-[10px] text-[#6B7280]">
-                                {l.order}
-                              </span>
-                            )}
+                          <div className="flex items-start gap-2.5 min-w-0">
+                            <div className="mt-0.5 shrink-0">
+                              {completed ? (
+                                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                              ) : isCurrent ? (
+                                <PlayCircle className="h-4 w-4 text-[#1E4FD8] animate-pulse" />
+                              ) : !lHasAccess ? (
+                                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber-50 text-amber-600">
+                                  <Lock className="h-2.5 w-2.5" />
+                                </span>
+                              ) : (
+                                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-slate-100 text-[10px] text-[#6B7280]">
+                                  {l.order}
+                                </span>
+                              )}
+                            </div>
+                            <div className="space-y-0.5 min-w-0">
+                              <p className="line-clamp-2 leading-snug">{l.title}</p>
+                              <span className="text-[10px] text-[#6B7280]">{l.durationMinutes || 45} دقيقة</span>
+                            </div>
                           </div>
-                          <div className="space-y-0.5">
-                            <p className="line-clamp-2 leading-snug">{l.title}</p>
-                            <span className="text-[10px] text-[#6B7280]">{l.durationMinutes || 45} دقيقة</span>
-                          </div>
+                          {!lHasAccess && (
+                            <span className="shrink-0 rounded-md bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[9px] font-bold text-amber-700">
+                              مغلق
+                            </span>
+                          )}
                         </button>
                       );
                     })}

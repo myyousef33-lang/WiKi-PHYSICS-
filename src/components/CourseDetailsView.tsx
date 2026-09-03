@@ -110,7 +110,7 @@ export const CourseDetailsView: React.FC<CourseDetailsViewProps> = ({
     );
   }
 
-  const isEnrolled = student?.enrolledCourseIds?.includes(course.id);
+  const isEnrolled = student ? StorageService.isStudentEnrolled(student.id, course.id) : false;
   const { totalLessons, completedLessons, percentage } = student 
     ? StorageService.calculateCourseProgress(student.id, course.id)
     : { totalLessons: 0, completedLessons: 0, percentage: 0 };
