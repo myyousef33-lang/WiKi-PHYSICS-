@@ -12,11 +12,6 @@ import { ExamResultView } from './components/ExamResultView';
 import { MyResultsView } from './components/MyResultsView';
 import { PdfLibraryView } from './components/PdfLibraryView';
 import { LeaderboardView } from './components/LeaderboardView';
-
-// Code Splitting: Lazy load the heavy AdminDashboard component
-const AdminDashboard = React.lazy(() =>
-  import('./components/AdminDashboard').then(module => ({ default: module.AdminDashboard }))
-);
 import { WeaknessAnalysisView } from './components/WeaknessAnalysisView';
 import { AIPhysicsAssistant } from './components/AIPhysicsAssistant';
 import { ActivationCodeModal } from './components/ActivationCodeModal';
@@ -33,6 +28,11 @@ import { FloatingSupportButton } from './components/FloatingSupportButton';
 import { StorageService, subscribeToStorage } from './services/storage';
 import { PresenceService } from './services/presence';
 import { EarnedCertificate, Student } from './types';
+
+// Code Splitting: Lazy load only the AdminDashboard component
+const AdminDashboard = React.lazy(() =>
+  import('./components/AdminDashboard').then(module => ({ default: module.AdminDashboard }))
+);
 
 export default function App() {
   const [currentView, setCurrentView] = useState<string>('home');
@@ -270,8 +270,7 @@ export default function App() {
           <React.Suspense fallback={
             <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-white p-6" dir="rtl">
               <div className="h-12 w-12 rounded-full border-4 border-amber-400 border-t-transparent animate-spin mb-4" />
-              <p className="font-bold text-lg text-slate-200">جاري تحميل لوحة الإدارة والشرف...</p>
-              <p className="text-xs text-slate-400 mt-1">ويكيفزياء | نظام التحكم المتكامل</p>
+              <p className="font-bold text-lg text-slate-200">جاري تحميل لوحة الإدارة...</p>
             </div>
           }>
             <AdminDashboard
@@ -288,41 +287,49 @@ export default function App() {
       />
 
       {/* Global Modals */}
-      <ActivationCodeModal
-        isOpen={isActivationModalOpen}
-        onClose={() => setIsActivationModalOpen(false)}
-        onSuccessRedirect={handleActivationSuccess}
-      />
+      {isActivationModalOpen && (
+        <ActivationCodeModal
+          isOpen={isActivationModalOpen}
+          onClose={() => setIsActivationModalOpen(false)}
+          onSuccessRedirect={handleActivationSuccess}
+        />
+      )}
 
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        initialMode={authModalInitialMode}
-        onClose={() => setIsAuthModalOpen(false)}
-        onSuccess={handleAuthSuccess}
-      />
+      {isAuthModalOpen && (
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          initialMode={authModalInitialMode}
+          onClose={() => setIsAuthModalOpen(false)}
+          onSuccess={handleAuthSuccess}
+        />
+      )}
 
-      {/* Secret Admin Security Portal */}
-      <AdminSecretModal
-        isOpen={isAdminSecretOpen}
-        onClose={() => setIsAdminSecretOpen(false)}
-        onSuccessRedirect={() => handleNavigate('admin')}
-      />
+      {isAdminSecretOpen && (
+        <AdminSecretModal
+          isOpen={isAdminSecretOpen}
+          onClose={() => setIsAdminSecretOpen(false)}
+          onSuccessRedirect={() => handleNavigate('admin')}
+        />
+      )}
 
-      <NotificationCenterModal
-        isOpen={isNotificationModalOpen}
-        onClose={() => setIsNotificationModalOpen(false)}
-      />
+      {isNotificationModalOpen && (
+        <NotificationCenterModal
+          isOpen={isNotificationModalOpen}
+          onClose={() => setIsNotificationModalOpen(false)}
+        />
+      )}
 
-      {/* Student Wallet & Payment Modal */}
-      <StudentWalletModal
-        isOpen={isWalletModalOpen}
-        onClose={() => setIsWalletModalOpen(false)}
-        onSuccess={() => {
-          setStudent(StorageService.getCurrentStudent());
-        }}
-      />
+      {isWalletModalOpen && (
+        <StudentWalletModal
+          isOpen={isWalletModalOpen}
+          onClose={() => setIsWalletModalOpen(false)}
+          onSuccess={() => {
+            setStudent(StorageService.getCurrentStudent());
+          }}
+        />
+      )}
 
-      {student && (
+      {student && isEditProfileModalOpen && (
         <EditProfileModal
           student={student}
           isOpen={isEditProfileModalOpen}

@@ -53,13 +53,13 @@ export const Logo: React.FC<LogoProps> = ({
       </div>
 
       {/* Typography: ويكي فيزياء */}
-      <div className="flex flex-col text-right">
+      <div className="flex flex-col text-right shrink-0">
         <div className="flex items-center gap-1.5">
-          <span className={`${titleSizes[size]} font-black tracking-tight text-[#0D1B3E] dark:text-white flex items-center gap-1 whitespace-nowrap`}>
-            <span>ويكي</span>
-            <span className="text-[#1E4FD8] dark:text-[#38BDF8]">فيزياء</span>
-          </span>
-          <span className="rounded-md bg-[#1E4FD8]/10 dark:bg-[#1E4FD8]/30 border border-[#1E4FD8]/25 dark:border-[#38BDF8]/40 px-1.5 py-0.5 text-[10px] font-extrabold text-[#1E4FD8] dark:text-[#38BDF8] shadow-sm whitespace-nowrap">
+          <div className={`${titleSizes[size]} font-black tracking-tight flex items-center gap-1 whitespace-nowrap`}>
+            <span className="text-[#0D1B3E] dark:text-white transition-colors">ويكي</span>
+            <span className="text-[#1E4FD8] dark:text-[#60A5FA] transition-colors">فيزياء</span>
+          </div>
+          <span className="hidden xs:inline-block rounded-md bg-[#1E4FD8]/10 dark:bg-[#1E4FD8]/30 border border-[#1E4FD8]/25 dark:border-[#60A5FA]/40 px-1.5 py-0.5 text-[10px] font-extrabold text-[#1E4FD8] dark:text-[#60A5FA] shadow-xs whitespace-nowrap">
             PHYSICS
           </span>
         </div>

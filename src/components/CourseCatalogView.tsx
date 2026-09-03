@@ -135,19 +135,19 @@ export const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({
                       {course.grade}
                     </div>
 
-                    {isEnrolled && (
-                      <div className="absolute top-2.5 left-2.5 rounded-lg bg-emerald-500 text-white px-2.5 py-1 text-[10px] font-black flex items-center gap-1 shadow-sm z-10">
-                        <CheckCircle2 className="h-3 w-3" />
-                        <span>مشترك بالفعل</span>
-                      </div>
-                    )}
-
                     {/* Edge Rating Badge on Corner/Side of Screen Image */}
                     <CourseRatingBadge 
                       rating={course.rating} 
                       ratingCount={course.ratingCount} 
-                      position="bottom-left"
+                      position="top-left"
                     />
+
+                    {isEnrolled && (
+                      <div className="absolute bottom-2.5 left-2.5 rounded-lg bg-emerald-500 text-white px-2.5 py-1 text-[10px] font-black flex items-center gap-1 shadow-sm z-10">
+                        <CheckCircle2 className="h-3 w-3" />
+                        <span>مشترك بالفعل</span>
+                      </div>
+                    )}
 
                     <div className="absolute bottom-2.5 right-2.5 rounded-lg bg-[#0D1B3E]/85 backdrop-blur-md px-2.5 py-0.5 text-[11px] font-bold text-white z-10">
                       {course.units?.length || 0} فصول • {totalLessons} درس

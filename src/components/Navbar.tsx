@@ -189,7 +189,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="absolute top-full right-0 mt-3 w-80 lg:w-96 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#16224D] p-3 shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                 <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 mb-2 flex items-center justify-between">
                   <span className="text-xs font-black text-[#0D1B3E] dark:text-white">الأدوات التفاعلية والذكية</span>
-                  <span className="text-[10px] bg-[#F5B301]/20 text-[#0D1B3E] dark:text-[#F5B301] px-2 py-0.5 rounded-full font-bold">Wiki-X Tools</span>
+                  <span className="text-[10px] bg-[#F5B301]/20 text-[#0D1B3E] dark:text-[#F5B301] px-2 py-0.5 rounded-full font-bold">أدوات ويكي فيزياء</span>
                 </div>
                 <div className="space-y-1">
                   {smartToolsItems.map((tool) => {

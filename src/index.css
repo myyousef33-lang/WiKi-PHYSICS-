@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   html, body {
     font-family: 'Cairo', 'Tajawal', system-ui, -apple-system, sans-serif;
@@ -10,13 +12,16 @@
     width: 100% !important;
     margin: 0;
     padding: 0;
-    transition: background-color 0.25s ease, color 0.25s ease;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Disable pinch-to-zoom on touchscreen/mobile devices only */
+  /* Native high-performance touch scrolling on mobile while preventing accidental zoom */
   @media (hover: none) and (pointer: coarse) {
     html, body {
       touch-action: pan-x pan-y;
+      -webkit-overflow-scrolling: touch;
     }
   }
 
@@ -27,18 +32,17 @@
     background-color: #F5F7FA;
     min-height: 100vh;
     color: #0D1B3E;
-    transition: background-color 0.25s ease, color 0.25s ease;
   }
 }
 
 /* =========================================================
-   DARK MODE SYSTEM OVERRIDES (#0D1B3E Unified Navy Theme)
+   SOPHISTICATED MIDNIGHT NAVY DARK THEME SYSTEM
    ========================================================= */
 
 html.dark,
 body.dark,
 .dark {
-  background-color: #0D1B3E !important;
+  background-color: #080D21 !important;
   color: #F8FAFC !important;
   color-scheme: dark;
 }
@@ -46,56 +50,33 @@ body.dark,
 html.dark #root,
 body.dark #root,
 .dark #root {
-  background-color: #0D1B3E !important;
+  background-color: #080D21 !important;
   color: #F8FAFC !important;
 }
 
-/* Background Conversions for Dark Navy Theme (#16224D Cards over #0D1B3E Canvas) */
-.dark .bg-white,
-.dark .bg-white\/98,
-.dark .bg-white\/95,
-.dark .bg-white\/90,
-.dark .bg-white\/80 {
-  background-color: #16224D !important;
+/* Dark Mode Smooth Canvas & Card Hierarchy */
+.dark .bg-\[\#F5F7FA\] {
+  background-color: #080D21;
 }
 
-.dark .bg-\[\#F5F7FA\],
-.dark .bg-slate-50,
-.dark .bg-slate-100 {
-  background-color: #0D1B3E !important;
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #0F1735;
+  color: #F8FAFC;
+  border-color: #1E2B58;
 }
 
-.dark .bg-slate-200 {
-  background-color: #1A2A5A !important;
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748B;
 }
 
-.dark .bg-slate-300 {
-  background-color: #24336A !important;
-}
-
-/* Primary Blue Text & Background Adjustments for Dark Mode (#4C7CFF for contrast) */
-.dark .text-\[\#1E4FD8\] {
-  color: #4C7CFF !important;
-}
-
-.dark .bg-\[\#1E4FD8\] {
-  background-color: #4C7CFF !important;
-}
-
-.dark .border-\[\#1E4FD8\] {
-  border-color: #4C7CFF !important;
-}
-
-.dark .bg-blue-50,
-.dark .bg-blue-50\/80,
-.dark .bg-blue-50\/60,
-.dark .bg-blue-50\/50,
-.dark .bg-blue-50\/30 {
-  background-color: rgba(76, 124, 255, 0.15) !important;
-}
-
-.dark .bg-blue-100 {
-  background-color: rgba(76, 124, 255, 0.25) !important;
+.dark input:focus,
+.dark select:focus,
+.dark textarea:focus {
+  border-color: #3B82F6;
+  background-color: #131E44;
 }
 
 .dark .text-blue-600,

@@ -196,7 +196,7 @@ export const CourseDetailsView: React.FC<CourseDetailsViewProps> = ({
 
           {/* Thumbnail & Quick Action */}
           <div className="space-y-4">
-            <div className="relative aspect-video rounded-2xl overflow-hidden border border-slate-200 shadow-md bg-[#F5F7FA]">
+            <div className="relative aspect-video rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-md bg-[#F5F7FA] dark:bg-[#0B122B]">
               <img 
                 src={course.thumbnail} 
                 alt={course.title}
@@ -206,10 +206,15 @@ export const CourseDetailsView: React.FC<CourseDetailsViewProps> = ({
               <CourseRatingBadge 
                 rating={course.rating} 
                 ratingCount={course.ratingCount} 
-                position="bottom-left"
+                position="top-left"
                 size="md"
                 onClick={() => setIsReviewModalOpen(true)}
               />
+              <div className="absolute top-3 right-3 z-10">
+                <span className="rounded-xl bg-white/95 dark:bg-[#080D21]/95 backdrop-blur-md px-3 py-1 text-xs font-bold text-[#1E4FD8] dark:text-[#60A5FA] border border-blue-200 dark:border-blue-900/60 shadow-sm">
+                  {course.grade}
+                </span>
+              </div>
             </div>
 
             {isEnrolled ? (

@@ -186,20 +186,20 @@ export const MyCoursesView: React.FC<MyCoursesViewProps> = ({
                       {course.grade.includes('الثالث') ? '3 ثانوي' : '2 ثانوي'}
                     </div>
 
-                    {percentage >= 100 && (
-                      <div className="absolute top-2.5 left-2.5 rounded-lg bg-emerald-500/90 text-slate-950 px-2 py-0.5 text-[10px] font-black flex items-center gap-1 z-10 shadow-xs">
-                        <CheckCircle2 className="h-3 w-3" />
-                        <span>مكتمل 100%</span>
-                      </div>
-                    )}
-
                     {/* Edge Rating Badge on Corner/Side of Screen Image */}
                     <CourseRatingBadge 
                       rating={course.rating} 
                       ratingCount={course.ratingCount} 
                       size="sm" 
-                      position="bottom-left" 
+                      position="top-left" 
                     />
+
+                    {percentage >= 100 && (
+                      <div className="absolute bottom-2.5 left-2.5 rounded-lg bg-emerald-500/90 text-slate-950 px-2 py-0.5 text-[10px] font-black flex items-center gap-1 z-10 shadow-xs">
+                        <CheckCircle2 className="h-3 w-3" />
+                        <span>مكتمل 100%</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Body */}

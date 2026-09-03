@@ -145,22 +145,28 @@ export const PresenceService = {
   initPresence(): void {
     if (heartbeatTimer) return; // Already initialized
 
-    // 1. Initial Heartbeat
-    this.sendHeartbeat();
-
-    // 2. Periodic Heartbeat every 30s
-    heartbeatTimer = setInterval(() => {
+    // 1. Defer initial Heartbeat by 2.5s so initial render and paint happen without Firestore network competition
+    setTimeout(() => {
       this.sendHeartbeat();
+    }, 2500);
+
+    // 2. Periodic Heartbeat every 30s only when document is visible
+    heartbeatTimer = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        this.sendHeartbeat();
+      }
     }, HEARTBEAT_INTERVAL_MS);
 
-    // 3. Periodic recalculation every 15s to automatically drop inactive users after 120s
+    // 3. Periodic recalculation every 20s to drop inactive users after 120s
     syncCheckTimer = setInterval(() => {
-      const data = getLocalPresence();
-      const count = calculateActiveCount(data);
-      if (count !== currentActiveCount) {
-        notifyCountListeners(count);
+      if (document.visibilityState === 'visible') {
+        const data = getLocalPresence();
+        const count = calculateActiveCount(data);
+        if (count !== currentActiveCount) {
+          notifyCountListeners(count);
+        }
       }
-    }, 15000);
+    }, 20000);
 
     // 4. Listen to Firestore presence updates in real time
     try {

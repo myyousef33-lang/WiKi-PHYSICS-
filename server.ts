@@ -227,6 +227,47 @@ const getGemini = (): GoogleGenAI => {
   return geminiClient;
 };
 
+// Resilient Gemini Model Fallback Runner
+async function generateWithFallback(ai: GoogleGenAI, requestOptions: {
+  contents: any[];
+  systemInstruction?: string;
+  temperature?: number;
+  responseMimeType?: string;
+}): Promise<{ text: string; modelUsed: string }> {
+  // Try high-availability models first to prevent 503 high-demand spike delays
+  const models = ['gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.8-flash'];
+  let lastError: any = null;
+
+  for (const model of models) {
+    try {
+      const config: any = {
+        temperature: requestOptions.temperature ?? 0.3,
+      };
+      if (requestOptions.systemInstruction) {
+        config.systemInstruction = requestOptions.systemInstruction;
+      }
+      if (requestOptions.responseMimeType) {
+        config.responseMimeType = requestOptions.responseMimeType;
+      }
+
+      const response = await ai.models.generateContent({
+        model,
+        contents: requestOptions.contents,
+        config,
+      });
+
+      if (response && typeof response.text === 'string') {
+        return { text: response.text, modelUsed: model };
+      }
+    } catch (err: any) {
+      console.warn(`[Gemini Fallback] Model ${model} failed, trying next candidate:`, err?.message?.slice(0, 150) || err);
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error('All candidate Gemini models are currently unavailable.');
+}
+
 export const app = express();
 
 async function startServer() {
@@ -516,20 +557,16 @@ async function startServer() {
         parts: currentParts
       });
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
+      const { text: replyText, modelUsed } = await generateWithFallback(ai, {
         contents,
-        config: {
-          systemInstruction,
-          temperature: 0.3,
-        }
+        systemInstruction,
+        temperature: 0.3,
       });
-
-      const replyText = response.text || 'عذراً، لم أتمكن من استخراج الإجابة. يرجى المحاولة مجدداً أو صياغة السؤال بشكل أوضح.';
 
       return res.json({
         success: true,
-        reply: replyText
+        reply: replyText || 'عذراً، لم أتمكن من استخراج الإجابة. يرجى المحاولة مجدداً أو صياغة السؤال بشكل أوضح.',
+        model: modelUsed
       });
     } catch (err: any) {
       console.error('Gemini Assistant Error:', err);
@@ -659,20 +696,17 @@ ${JSON.stringify(courseSummaries, null, 2)}
 }
 `;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
+      const { text: generatedJson } = await generateWithFallback(ai, {
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        config: {
-          temperature: 0.2,
-          responseMimeType: 'application/json'
-        }
+        temperature: 0.2,
+        responseMimeType: 'application/json',
       });
 
       let parsed: any = {};
       try {
-        parsed = JSON.parse(response.text || '{}');
+        parsed = JSON.parse(generatedJson || '{}');
       } catch {
-        parsed = { matches: [], conceptSummary: response.text || '' };
+        parsed = { matches: [], conceptSummary: generatedJson || '' };
       }
 
       return res.json({

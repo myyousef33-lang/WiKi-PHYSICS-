@@ -149,13 +149,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in duration-200" dir="rtl">
-      <div className="relative w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-2xl space-y-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 animate-in fade-in duration-200" dir="rtl">
+      <div className="relative w-full max-w-md rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#121E3E] p-6 sm:p-8 shadow-2xl space-y-5 transition-colors">
         
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 left-5 rounded-xl border border-slate-200 bg-white p-2 text-[#6B7280] hover:bg-slate-100 hover:text-[#0D1B3E] transition-colors"
+          className="absolute top-5 left-5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#16224D] p-2 text-[#6B7280] dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-[#0D1B3E] dark:hover:text-white transition-colors"
           title="إغلاق"
         >
           <X className="h-4 w-4" />
@@ -163,21 +163,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         {/* Header Title */}
         <div className="text-center space-y-1 pt-1">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 border border-blue-200 text-[#1E4FD8] mb-2 shadow-xs">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-[#1E4FD8] dark:text-[#60A5FA] mb-2 shadow-xs">
             <GraduationCap className="h-6 w-6" />
           </div>
-          <h2 className="text-xl font-black text-[#0D1B3E]">بوابة طلاب ويكيفزياء</h2>
-          <p className="text-xs text-[#6B7280]">سجل الدخول برقم هاتفك وكلمة المرور لمتابعة دروسك</p>
+          <h2 className="text-xl font-black text-[#0D1B3E] dark:text-white flex items-center justify-center gap-1.5">
+            <span>بوابة طلاب</span>
+            <span className="text-[#1E4FD8] dark:text-[#38BDF8]">ويكي فيزياء</span>
+          </h2>
+          <p className="text-xs text-[#6B7280] dark:text-slate-300">سجل الدخول برقم هاتفك وكلمة المرور لمتابعة دروسك</p>
         </div>
 
         {/* Mode Switcher Tabs */}
-        <div className="flex items-center gap-1 rounded-2xl border border-slate-200 bg-[#F5F7FA] p-1.5">
+        <div className="flex items-center gap-1 rounded-2xl border border-slate-200 dark:border-slate-800 bg-[#F5F7FA] dark:bg-[#0B132B] p-1.5">
           <button
             onClick={() => { setMode('login'); setError(null); }}
             className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition-all ${
               mode === 'login' 
                 ? 'bg-[#1E4FD8] text-white shadow-xs' 
-                : 'text-[#6B7280] hover:text-[#0D1B3E]'
+                : 'text-[#6B7280] dark:text-slate-400 hover:text-[#0D1B3E] dark:hover:text-white'
             }`}
           >
             <LogIn className="h-4 w-4" />
@@ -188,7 +191,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition-all ${
               mode === 'register' 
                 ? 'bg-[#1E4FD8] text-white shadow-xs' 
-                : 'text-[#6B7280] hover:text-[#0D1B3E]'
+                : 'text-[#6B7280] dark:text-slate-400 hover:text-[#0D1B3E] dark:hover:text-white'
             }`}
           >
             <UserPlus className="h-4 w-4" />

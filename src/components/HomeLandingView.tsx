@@ -27,7 +27,7 @@ import { PresenceService } from '../services/presence';
 import { Course, PdfMaterial, Student } from '../types';
 import { CourseRatingBadge } from './CourseRatingBadge';
 import { ExamCountdownBanner } from './ExamCountdownBanner';
-import teacherCutout from '../assets/images/teacher-cutout.png';
+import teacherCutout from '../assets/images/teacher-cutout.webp';
 
 interface HomeLandingViewProps {
   onNavigate: (view: string, params?: any) => void;
@@ -131,7 +131,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
   };
 
   return (
-    <div className="space-y-16 lg:space-y-24 animate-in fade-in duration-300 overflow-x-hidden max-w-full pb-16 bg-[#F5F7FA]">
+    <div className="space-y-16 lg:space-y-24 animate-in fade-in duration-300 overflow-x-hidden max-w-full pb-16 bg-[#F5F7FA] dark:bg-[#080D21] text-[#0D1B3E] dark:text-slate-100 transition-colors">
       
       {/* INTRO VIDEO IF PLACEMENT IS TOP */}
       {settings.homeVideoPlacement === 'top' && renderIntroVideo()}
@@ -309,8 +309,8 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
       {/* PLATFORM ADVANTAGES */}
       <section className="mx-auto max-w-7xl 2xl:max-w-screen-2xl px-4 sm:px-6 lg:px-10 xl:px-12">
         <div className="text-center space-y-3 max-w-3xl mx-auto mb-10 lg:mb-14">
-          <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-[#0D1B3E]">لماذا منصة Wiki-X فيزياء؟</h2>
-          <p className="text-sm sm:text-base lg:text-lg text-[#6B7280]">صُممت المنصة خصيصاً لتلبية متطلبات وتحديات نظام الثانوية العامة الحديث</p>
+          <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-[#0D1B3E] dark:text-white">لماذا منصة <span className="text-[#1E4FD8] dark:text-[#60A5FA]">ويكي فيزياء</span>؟</h2>
+          <p className="text-sm sm:text-base lg:text-lg text-[#6B7280] dark:text-slate-300">صُممت المنصة خصيصاً لتلبية متطلبات وتحديات نظام الثانوية العامة الحديث</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
@@ -479,17 +479,17 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                         </span>
                       </div>
 
-                      {/* Price Badge */}
-                      <div className="absolute top-3 left-3 rounded-xl bg-[#F5B301] px-3 py-1 text-xs font-bold text-[#0D1B3E] shadow-sm z-10">
-                        {course.price > 0 ? `${course.price} ج.م` : 'مجاني'}
-                      </div>
-
-                      {/* Rating Badge on the Corner/Side of the Screen Image */}
+                      {/* Rating Badge on Corner/Side of Screen Image */}
                       <CourseRatingBadge 
                         rating={course.rating} 
                         ratingCount={course.ratingCount} 
-                        position="bottom-left" 
+                        position="top-left" 
                       />
+
+                      {/* Price Badge */}
+                      <div className="absolute bottom-3 left-3 rounded-xl bg-[#F5B301] px-3 py-1 text-xs font-bold text-[#0D1B3E] shadow-sm z-10">
+                        {course.price > 0 ? `${course.price} ج.م` : 'مجاني'}
+                      </div>
 
                       {/* Bottom Badge: Lesson Count */}
                       <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-lg bg-black/75 backdrop-blur-md px-2.5 py-1 text-xs font-bold text-white z-10">
@@ -566,17 +566,17 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                         </span>
                       </div>
 
-                      {/* Price Badge */}
-                      <div className="absolute top-3 left-3 rounded-xl bg-[#F5B301] px-3 py-1 text-xs font-bold text-[#0D1B3E] shadow-sm z-10">
-                        {course.price > 0 ? `${course.price} ج.م` : 'مجاني'}
-                      </div>
-
                       {/* Rating Badge on Corner/Side of Screen Image */}
                       <CourseRatingBadge 
                         rating={course.rating} 
                         ratingCount={course.ratingCount} 
-                        position="bottom-left" 
+                        position="top-left" 
                       />
+
+                      {/* Price Badge */}
+                      <div className="absolute bottom-3 left-3 rounded-xl bg-[#F5B301] px-3 py-1 text-xs font-bold text-[#0D1B3E] shadow-sm z-10">
+                        {course.price > 0 ? `${course.price} ج.م` : 'مجاني'}
+                      </div>
 
                       {/* Bottom Badge: Lesson Count */}
                       <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-lg bg-black/75 backdrop-blur-md px-2.5 py-1 text-xs font-bold text-white z-10">
