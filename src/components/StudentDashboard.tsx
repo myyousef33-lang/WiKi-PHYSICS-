@@ -24,7 +24,8 @@ import {
   Zap,
   LayoutGrid,
   BarChart3,
-  Target
+  Target,
+  Lock
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { Student, Course, Lesson, ExamAttempt, NotificationItem, SmartStudyRecommendation } from '../types';
