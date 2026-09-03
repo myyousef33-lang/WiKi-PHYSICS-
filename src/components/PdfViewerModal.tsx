@@ -231,19 +231,40 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
           {/* Renderable PDF Frame */}
           {!hasError && resolvedUrl && (
             <div 
-              className="w-full h-full rounded-2xl overflow-hidden bg-white shadow-2xl transition-transform duration-200 relative"
-              style={{
-                transform: zoomLevel !== 100 ? `scale(${zoomLevel / 100})` : undefined,
-                transformOrigin: 'top center'
-              }}
+              className="w-full h-full rounded-2xl overflow-auto bg-slate-100 flex items-center justify-center p-2 relative"
             >
-              <iframe
-                src={embedSource}
-                title={title}
-                className="w-full h-full border-0 bg-white"
-                allow="fullscreen"
-                onError={() => setHasError(true)}
-              />
+              {resolvedUrl.startsWith('data:image/') ? (
+                <div 
+                  className="max-w-4xl w-full bg-white rounded-2xl shadow-xl overflow-hidden my-auto transition-transform duration-200"
+                  style={{
+                    transform: zoomLevel !== 100 ? `scale(${zoomLevel / 100})` : undefined,
+                    transformOrigin: 'top center'
+                  }}
+                >
+                  <img
+                    src={resolvedUrl}
+                    alt={title}
+                    className="w-full h-auto object-contain block mx-auto select-none"
+                    onError={() => setHasError(true)}
+                  />
+                </div>
+              ) : (
+                <div 
+                  className="w-full h-full rounded-2xl overflow-hidden bg-white shadow-2xl transition-transform duration-200 relative"
+                  style={{
+                    transform: zoomLevel !== 100 ? `scale(${zoomLevel / 100})` : undefined,
+                    transformOrigin: 'top center'
+                  }}
+                >
+                  <iframe
+                    src={embedSource}
+                    title={title}
+                    className="w-full h-full border-0 bg-white"
+                    allow="fullscreen"
+                    onError={() => setHasError(true)}
+                  />
+                </div>
+              )}
             </div>
           )}
 

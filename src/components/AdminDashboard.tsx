@@ -173,8 +173,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
   const [showAddNotif, setShowAddNotif] = useState(false);
   const [selectedCourseForUnits, setSelectedCourseForUnits] = useState<Course | null>(null);
 
-  // Student Search
+  // Student Search & Pagination States
   const [studentSearch, setStudentSearch] = useState('');
+  const [studentPage, setStudentPage] = useState(1);
+  const studentsPerPage = 10;
+
+  // Codes Pagination State
+  const [codesPage, setCodesPage] = useState(1);
+  const [codeSearch, setCodeSearch] = useState('');
+  const codesPerPage = 12;
+
+  // Exams Filter & Pagination State
+  const [examSearch, setExamSearch] = useState('');
+  const [examGradeFilter, setExamGradeFilter] = useState('all');
+  const [examTypeFilter, setExamTypeFilter] = useState('all');
+  const [examPage, setExamPage] = useState(1);
+  const examsPerPage = 9;
+
+  // PDFs Filter & Pagination State
+  const [pdfSearchAdmin, setPdfSearchAdmin] = useState('');
+  const [pdfGradeFilterAdmin, setPdfGradeFilterAdmin] = useState('all');
+  const [pdfPageAdmin, setPdfPageAdmin] = useState(1);
+  const pdfsPerPage = 9;
 
   // Mobile Drawer & Chart Controls
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
@@ -848,6 +868,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
   const handleDeleteCourse = (courseId: string) => {
     if (confirm('هل أنت متأكد من حذف هذا الكورس؟')) {
       StorageService.deleteCourse(courseId);
+      setCourses(StorageService.getCourses());
       if (selectedCourseForUnits?.id === courseId) setSelectedCourseForUnits(null);
     }
   };
@@ -1150,10 +1171,41 @@ ${weakConceptsText}
     window.open(`https://wa.me/${fullPhone}?text=${encoded}`, '_blank');
   };
 
+  // 1. Students Filtering & Pagination
   const filteredStudents = students.filter(s => 
     s.name.toLowerCase().includes(studentSearch.toLowerCase()) || 
     s.phone.includes(studentSearch)
   );
+  const totalStudentPages = Math.max(1, Math.ceil(filteredStudents.length / studentsPerPage));
+  const paginatedStudents = filteredStudents.slice((studentPage - 1) * studentsPerPage, studentPage * studentsPerPage);
+
+  // 2. Codes Filtering & Pagination
+  const filteredCodes = codes.filter(c => {
+    if (!codeSearch.trim()) return true;
+    const query = codeSearch.toLowerCase();
+    return c.code.toLowerCase().includes(query) || (c.targetName && c.targetName.toLowerCase().includes(query)) || (c.usedByStudentName && c.usedByStudentName.toLowerCase().includes(query));
+  });
+  const totalCodePages = Math.max(1, Math.ceil(filteredCodes.length / codesPerPage));
+  const paginatedCodes = filteredCodes.slice((codesPage - 1) * codesPerPage, codesPage * codesPerPage);
+
+  // 3. Exams Filtering & Pagination
+  const filteredExams = exams.filter(ex => {
+    if (examGradeFilter !== 'all' && ex.grade !== examGradeFilter) return false;
+    if (examTypeFilter !== 'all' && ex.type !== examTypeFilter) return false;
+    if (examSearch.trim() && !ex.title.toLowerCase().includes(examSearch.toLowerCase())) return false;
+    return true;
+  });
+  const totalExamPages = Math.max(1, Math.ceil(filteredExams.length / examsPerPage));
+  const paginatedExams = filteredExams.slice((examPage - 1) * examsPerPage, examPage * examsPerPage);
+
+  // 4. PDFs Filtering & Pagination
+  const filteredPdfsAdmin = pdfs.filter(p => {
+    if (pdfGradeFilterAdmin !== 'all' && p.grade !== pdfGradeFilterAdmin) return false;
+    if (pdfSearchAdmin.trim() && !p.title.toLowerCase().includes(pdfSearchAdmin.toLowerCase())) return false;
+    return true;
+  });
+  const totalPdfPagesAdmin = Math.max(1, Math.ceil(filteredPdfsAdmin.length / pdfsPerPage));
+  const paginatedPdfsAdmin = filteredPdfsAdmin.slice((pdfPageAdmin - 1) * pdfsPerPage, pdfPageAdmin * pdfsPerPage);
 
   const currentTabInfo = tabCategories.flatMap(c => c.items).find(i => i.id === activeTab);
 
@@ -2534,10 +2586,10 @@ ${weakConceptsText}
       {/* TAB 3: EXAMS & QUIZZES */}
       {activeTab === 'exams' && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-black text-[#0D1B3E]">بنك الأسئلة والامتحانات التفاعلية</h2>
-              <p className="text-xs text-[#6B7280]">إنشاء وتعديل الكويزات الدورية والامتحانات الشاملة مع التوقيت ونموذج الإجابة</p>
+              <p className="text-xs text-[#6B7280]">إنشاء وتعديل الكويزات الدورية والامتحانات الشاملة مع التوقيت ونموذج الإجابة والمعاينة الفورية</p>
             </div>
             <button
               onClick={() => setShowAddExam(true)}
@@ -2546,6 +2598,80 @@ ${weakConceptsText}
               <Plus className="h-4 w-4 text-[#0D1B3E]" />
               <span>إنشاء اختبار جديد</span>
             </button>
+          </div>
+
+          {/* Search & Filter Controls */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
+              <span className="text-xs font-bold text-[#6B7280]">تصفية:</span>
+              <button
+                type="button"
+                onClick={() => { setExamGradeFilter('all'); setExamPage(1); }}
+                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                  examGradeFilter === 'all'
+                    ? 'bg-[#1E4FD8] text-white'
+                    : 'bg-[#F5F7FA] text-[#0D1B3E] hover:bg-slate-200 border border-slate-200'
+                }`}
+              >
+                جميع الصفوف ({exams.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => { setExamGradeFilter('الصف الثالث الثانوي'); setExamPage(1); }}
+                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                  examGradeFilter === 'الصف الثالث الثانوي'
+                    ? 'bg-[#1E4FD8] text-white'
+                    : 'bg-[#F5F7FA] text-[#0D1B3E] hover:bg-slate-200 border border-slate-200'
+                }`}
+              >
+                3 ثانوي
+              </button>
+              <button
+                type="button"
+                onClick={() => { setExamGradeFilter('الصف الثاني الثانوي'); setExamPage(1); }}
+                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                  examGradeFilter === 'الصف الثاني الثانوي'
+                    ? 'bg-[#1E4FD8] text-white'
+                    : 'bg-[#F5F7FA] text-[#0D1B3E] hover:bg-slate-200 border border-slate-200'
+                }`}
+              >
+                2 ثانوي
+              </button>
+              <button
+                type="button"
+                onClick={() => { setExamGradeFilter('الصف الأول الثانوي'); setExamPage(1); }}
+                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                  examGradeFilter === 'الصف الأول الثانوي'
+                    ? 'bg-[#1E4FD8] text-white'
+                    : 'bg-[#F5F7FA] text-[#0D1B3E] hover:bg-slate-200 border border-slate-200'
+                }`}
+              >
+                1 ثانوي
+              </button>
+
+              <div className="h-4 w-px bg-slate-200 mx-1 hidden sm:block"></div>
+
+              <select
+                value={examTypeFilter}
+                onChange={e => { setExamTypeFilter(e.target.value); setExamPage(1); }}
+                className="rounded-xl border border-slate-200 bg-[#F5F7FA] px-3 py-1.5 text-xs font-bold text-[#0D1B3E] focus:outline-none"
+              >
+                <option value="all">كل الأنواع (كويزات وشامل)</option>
+                <option value="quiz">كويزات قصيرة</option>
+                <option value="exam">امتحانات شاملة</option>
+              </select>
+            </div>
+
+            <div className="relative w-full md:w-64">
+              <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#6B7280]" />
+              <input
+                type="text"
+                value={examSearch}
+                onChange={e => { setExamSearch(e.target.value); setExamPage(1); }}
+                placeholder="بحث باسم الامتحان..."
+                className="w-full rounded-xl border border-slate-200 bg-[#F5F7FA] py-1.5 pr-9 pl-3 text-xs text-[#0D1B3E] placeholder:text-slate-400 focus:bg-white focus:border-[#1E4FD8] focus:outline-none"
+              />
+            </div>
           </div>
 
           {/* Add Exam Modal */}
@@ -2897,69 +3023,139 @@ ${weakConceptsText}
           )}
 
           {/* Exams Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {exams.map(ex => {
-              const linkedCourse = courses.find(c => c.id === ex.courseId);
-              return (
-                <div key={ex.id} className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3 shadow-xs">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <span className="rounded bg-blue-50 text-[#1E4FD8] text-[10px] font-bold px-2 py-0.5 border border-blue-200">
-                      {ex.type === 'quiz' ? 'كويز' : 'امتحان شامل'}
-                    </span>
-                    <span className="text-xs text-[#6B7280]">{ex.durationMinutes} دقيقة</span>
-                  </div>
-                  
-                  <h3 className="font-bold text-[#0D1B3E] text-base leading-snug">{ex.title}</h3>
+          {filteredExams.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center">
+              <FileText className="mx-auto h-12 w-12 text-slate-300 mb-3" />
+              <h3 className="font-bold text-sm text-[#0D1B3E]">لا توجد امتحانات مطابقة للبحث أو التصفية</h3>
+              <p className="text-xs text-[#6B7280] mt-1">جرّب تغيير خيارات التصفية أو إنشاء امتحان جديد</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {paginatedExams.map(ex => {
+                const linkedCourse = courses.find(c => c.id === ex.courseId);
+                const attemptsCount = StorageService.getExamAttempts().filter(a => a.examId === ex.id).length;
 
-                  {/* Linked Course Badge */}
-                  <div className="rounded-xl border border-slate-200 bg-[#F5F7FA] p-2.5 text-xs flex items-center justify-between">
-                    <span className="text-[#6B7280] text-[11px]">الكورس التابع له:</span>
-                    {linkedCourse ? (
-                      <span className="font-bold text-[#1E4FD8] truncate max-w-[160px]" title={linkedCourse.title}>
-                        {linkedCourse.title}
-                      </span>
-                    ) : (
-                      <span className="text-[#6B7280] text-[11px]">عام (غير مرتبط)</span>
-                    )}
-                  </div>
+                return (
+                  <div key={ex.id} className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3 shadow-xs hover:border-[#1E4FD8]/40 transition-all flex flex-col justify-between">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="rounded bg-blue-50 text-[#1E4FD8] text-[10px] font-bold px-2 py-0.5 border border-blue-200">
+                            {ex.type === 'quiz' ? 'كويز' : 'امتحان شامل'}
+                          </span>
+                          <span className="rounded bg-slate-100 text-[#0D1B3E] text-[10px] font-bold px-2 py-0.5">
+                            {ex.grade.includes('الثالث') ? '3 ثانوي' : ex.grade.includes('الثاني') ? '2 ثانوي' : '1 ثانوي'}
+                          </span>
+                        </div>
+                        <span className="text-xs text-[#6B7280]">{ex.durationMinutes} دقيقة</span>
+                      </div>
+                      
+                      <h3 className="font-bold text-[#0D1B3E] text-base leading-snug">{ex.title}</h3>
 
-                  <div className="flex items-center justify-between text-xs text-[#6B7280] pt-1 border-t border-slate-100">
-                    <span>عدد الأسئلة: <strong className="text-[#0D1B3E]">{ex.questions?.length || 0}</strong></span>
-                    <span>النجاح: <strong className="text-emerald-700">{ex.passingPercentage}%</strong></span>
-                  </div>
+                      {/* Linked Course Badge */}
+                      <div className="rounded-xl border border-slate-200 bg-[#F5F7FA] p-2.5 text-xs flex items-center justify-between">
+                        <span className="text-[#6B7280] text-[11px]">الكورس التابع له:</span>
+                        {linkedCourse ? (
+                          <span className="font-bold text-[#1E4FD8] truncate max-w-[160px]" title={linkedCourse.title}>
+                            {linkedCourse.title}
+                          </span>
+                        ) : (
+                          <span className="text-[#6B7280] text-[11px]">عام (متاح للجميع)</span>
+                        )}
+                      </div>
 
-                  <div className="flex items-center gap-2 pt-1">
-                    <button
-                      onClick={() => setEditingExam(ex)}
-                      className="flex-1 rounded-xl bg-blue-50 border border-blue-200 py-2 text-xs font-bold text-[#1E4FD8] hover:bg-[#1E4FD8] hover:text-white flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                      title="تعديل بيانات الامتحان وربط الكورس"
-                    >
-                      <Edit3 className="h-3.5 w-3.5" />
-                      <span>تعديل وربط الكورس</span>
-                    </button>
-                    <button
-                      onClick={() => onNavigate('exam-runner', { examId: ex.id })}
-                      className="rounded-xl border border-slate-200 bg-[#F5F7FA] px-3 py-2 text-xs font-bold text-[#0D1B3E] hover:bg-slate-200 cursor-pointer"
-                      title="معاينة تجربة الامتحان"
-                    >
-                      معاينة
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (confirm(`هل أنت متأكد من حذف امتحان "${ex.title}"؟`)) {
-                          StorageService.deleteExam(ex.id);
-                        }
-                      }}
-                      className="p-2 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 cursor-pointer"
-                      title="حذف الامتحان"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                      <div className="grid grid-cols-3 gap-2 text-center text-[11px] pt-1 border-t border-slate-100 text-[#6B7280]">
+                        <div className="bg-[#F5F7FA] p-1.5 rounded-lg">
+                          <div className="font-bold text-[#0D1B3E]">{ex.questions?.length || 0}</div>
+                          <div className="text-[10px]">أسئلة</div>
+                        </div>
+                        <div className="bg-[#F5F7FA] p-1.5 rounded-lg">
+                          <div className="font-bold text-emerald-700">{ex.passingPercentage}%</div>
+                          <div className="text-[10px]">النجاح</div>
+                        </div>
+                        <div className="bg-[#F5F7FA] p-1.5 rounded-lg">
+                          <div className="font-bold text-[#1E4FD8]">{attemptsCount}</div>
+                          <div className="text-[10px]">محاولات</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                      <button
+                        onClick={() => setEditingExam(ex)}
+                        className="flex-1 rounded-xl bg-blue-50 border border-blue-200 py-2 text-xs font-bold text-[#1E4FD8] hover:bg-[#1E4FD8] hover:text-white flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                        title="تعديل بيانات الامتحان وربط الكورس"
+                      >
+                        <Edit3 className="h-3.5 w-3.5" />
+                        <span>تعديل</span>
+                      </button>
+                      <button
+                        onClick={() => onNavigate('exam-runner', { examId: ex.id })}
+                        className="rounded-xl border border-blue-300 bg-blue-600 text-white px-3 py-2 text-xs font-bold hover:bg-blue-700 transition-colors flex items-center gap-1 cursor-pointer shadow-xs"
+                        title="معاينة تجربة الامتحان الكاملة بنمط المعلم"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        <span>معاينة</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm(`هل أنت متأكد من حذف امتحان "${ex.title}"؟`)) {
+                            StorageService.deleteExam(ex.id);
+                            setExams(StorageService.getExams());
+                          }
+                        }}
+                        className="p-2 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 cursor-pointer"
+                        title="حذف الامتحان"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Exams Pagination */}
+          {totalExamPages > 1 && (
+            <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-3.5 shadow-xs">
+              <div className="text-xs text-[#6B7280]">
+                عرض الصفحة <strong className="text-[#0D1B3E]">{examPage}</strong> من <strong className="text-[#0D1B3E]">{totalExamPages}</strong> ({filteredExams.length} امتحان)
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setExamPage(p => Math.max(1, p - 1))}
+                  disabled={examPage === 1}
+                  className="rounded-xl border border-slate-200 bg-[#F5F7FA] px-3 py-1.5 text-xs font-bold text-[#0D1B3E] hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  السابق
+                </button>
+                {Array.from({ length: totalExamPages }, (_, i) => i + 1).map(p => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setExamPage(p)}
+                    className={`h-8 w-8 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                      examPage === p
+                        ? 'bg-[#1E4FD8] text-white'
+                        : 'bg-[#F5F7FA] text-[#0D1B3E] hover:bg-slate-200 border border-slate-200'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setExamPage(p => Math.min(totalExamPages, p + 1))}
+                  disabled={examPage === totalExamPages}
+                  className="rounded-xl border border-slate-200 bg-[#F5F7FA] px-3 py-1.5 text-xs font-bold text-[#0D1B3E] hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  التالي
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Edit & Link Exam Modal */}
           {editingExam && (
@@ -3117,111 +3313,184 @@ ${weakConceptsText}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredStudents.map(student => (
-                    <tr key={student.id} className="hover:bg-[#F5F7FA] transition-colors">
-                      <td className="py-4 px-4 font-bold text-[#0D1B3E]">
-                        <div className="flex items-center gap-2">
-                          <div className="h-7 w-7 rounded-full bg-blue-50 text-[#1E4FD8] flex items-center justify-center font-black text-xs">
-                            {student.name.charAt(0)}
-                          </div>
-                          <span>{student.name}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4 font-mono text-[#0D1B3E]" dir="ltr">{student.phone}</td>
-                      <td className="py-4 px-4 font-mono">
-                        <span className="inline-block rounded-lg border border-slate-200 bg-[#F5F7FA] px-2 py-0.5 text-xs text-[#1E4FD8] font-bold">
-                          {student.password || 'غير محدد'}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-[#6B7280]">{student.grade.includes('الثالث') ? '3 ثانوي' : '2 ثانوي'}</td>
-                      <td className="py-4 px-4 font-bold text-[#1E4FD8]">{student.enrolledCourseIds?.length || 0} كورس</td>
-                      <td className="py-4 px-4 text-[#0D1B3E]">
-                        <span className="inline-flex items-center gap-1">
-                          <Smartphone className="h-3.5 w-3.5 text-[#6B7280]" />
-                          <span>{student.registeredDevices?.length || 1} / {student.maxDevicesAllowed || 2}</span>
-                        </span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-bold ${
-                          student.isBlocked 
-                            ? 'bg-rose-50 text-rose-700 border border-rose-200' 
-                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        }`}>
-                          {student.isBlocked ? 'محظور' : 'نشط'}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-center">
-                        <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                          <button
-                            onClick={() => setSelectedAnalyticsStudent(student)}
-                            className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-black text-[#0D1B3E] hover:bg-amber-100 flex items-center gap-1 shadow-xs cursor-pointer"
-                            title="استعراض البروفايل الكامل وتحليلات النجاح والرسوب والاختبارات"
-                          >
-                            <BarChart3 className="h-3.5 w-3.5 text-[#1E4FD8]" />
-                            <span>البروفايل والتحليل</span>
-                          </button>
-
-                          <button
-                            onClick={() => setSelectedWeaknessStudent(student)}
-                            className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-[#1E4FD8] hover:bg-blue-100 flex items-center gap-1 cursor-pointer"
-                            title="تشخيص نقاط الضعف والمفاهيم المفقودة"
-                          >
-                            <Stethoscope className="h-3 w-3" />
-                            <span>تشخيص الضعف</span>
-                          </button>
-
-                          <button
-                            onClick={() => sendParentWhatsappReport(student)}
-                            className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-800 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer"
-                            title="إرسال تقرير ولي الأمر مباشرة عبر واتساب"
-                          >
-                            <MessageCircle className="h-3 w-3" />
-                            <span>تقرير واتساب</span>
-                          </button>
-
-                          <button
-                            onClick={() => handleResetDevices(student)}
-                            className="rounded-lg border border-slate-200 bg-[#F5F7FA] px-2 py-1 text-[11px] font-bold text-[#0D1B3E] hover:bg-slate-200 cursor-pointer"
-                            title="إعادة ضبط أجهزة الطالب"
-                          >
-                            تفريغ الأجهزة
-                          </button>
-                          <button
-                            onClick={() => handleToggleBlockStudent(student)}
-                            className={`rounded-lg px-2 py-1 text-[11px] font-bold cursor-pointer ${
-                              student.isBlocked 
-                                ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200' 
-                                : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
-                            }`}
-                          >
-                            {student.isBlocked ? 'إلغاء الحظر' : 'حظر'}
-                          </button>
-                        </div>
+                  {filteredStudents.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-8 text-center text-[#6B7280]">
+                        لا يوجد طلاب مطابقين للبحث
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    paginatedStudents.map(student => (
+                      <tr key={student.id} className="hover:bg-[#F5F7FA] transition-colors">
+                        <td className="py-4 px-4 font-bold text-[#0D1B3E]">
+                          <div className="flex items-center gap-2">
+                            <div className="h-7 w-7 rounded-full bg-blue-50 text-[#1E4FD8] flex items-center justify-center font-black text-xs">
+                              {student.name.charAt(0)}
+                            </div>
+                            <span>{student.name}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 font-mono text-[#0D1B3E]" dir="ltr">{student.phone}</td>
+                        <td className="py-4 px-4 font-mono">
+                          <span className="inline-block rounded-lg border border-slate-200 bg-[#F5F7FA] px-2 py-0.5 text-xs text-[#1E4FD8] font-bold">
+                            {student.password || 'غير محدد'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 text-[#6B7280]">{student.grade.includes('الثالث') ? '3 ثانوي' : student.grade.includes('الثاني') ? '2 ثانوي' : '1 ثانوي'}</td>
+                        <td className="py-4 px-4 font-bold text-[#1E4FD8]">{student.enrolledCourseIds?.length || 0} كورس</td>
+                        <td className="py-4 px-4 text-[#0D1B3E]">
+                          <span className="inline-flex items-center gap-1">
+                            <Smartphone className="h-3.5 w-3.5 text-[#6B7280]" />
+                            <span>{student.registeredDevices?.length || 1} / {student.maxDevicesAllowed || 2}</span>
+                          </span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-bold ${
+                            student.isBlocked 
+                              ? 'bg-rose-50 text-rose-700 border border-rose-200' 
+                              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          }`}>
+                            {student.isBlocked ? 'محظور' : 'نشط'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                            <button
+                              onClick={() => setSelectedAnalyticsStudent(student)}
+                              className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-black text-[#0D1B3E] hover:bg-amber-100 flex items-center gap-1 shadow-xs cursor-pointer"
+                              title="استعراض البروفايل الكامل وتحليلات النجاح والرسوب والاختبارات"
+                            >
+                              <BarChart3 className="h-3.5 w-3.5 text-[#1E4FD8]" />
+                              <span>البروفايل والتحليل</span>
+                            </button>
+
+                            <button
+                              onClick={() => setSelectedWeaknessStudent(student)}
+                              className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-[#1E4FD8] hover:bg-blue-100 flex items-center gap-1 cursor-pointer"
+                              title="تشخيص نقاط الضعف والمفاهيم المفقودة"
+                            >
+                              <Stethoscope className="h-3 w-3" />
+                              <span>تشخيص الضعف</span>
+                            </button>
+
+                            <button
+                              onClick={() => sendParentWhatsappReport(student)}
+                              className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-800 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer"
+                              title="إرسال تقرير ولي الأمر مباشرة عبر واتساب"
+                            >
+                              <MessageCircle className="h-3 w-3" />
+                              <span>تقرير واتساب</span>
+                            </button>
+
+                            <button
+                              onClick={() => handleResetDevices(student)}
+                              className="rounded-lg border border-slate-200 bg-[#F5F7FA] px-2 py-1 text-[11px] font-bold text-[#0D1B3E] hover:bg-slate-200 cursor-pointer"
+                              title="إعادة ضبط أجهزة الطالب"
+                            >
+                              تفريغ الأجهزة
+                            </button>
+                            <button
+                              onClick={() => handleToggleBlockStudent(student)}
+                              className={`rounded-lg px-2 py-1 text-[11px] font-bold cursor-pointer ${
+                                student.isBlocked 
+                                  ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200' 
+                                  : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
+                              }`}
+                            >
+                              {student.isBlocked ? 'إلغاء الحظر' : 'حظر'}
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (confirm(`هل أنت متأكد من حذف حساب الطالب "${student.name}" نهائياً؟`)) {
+                                  StorageService.deleteStudent(student.id);
+                                  setStudents(StorageService.getStudents());
+                                }
+                              }}
+                              className="p-1.5 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 cursor-pointer"
+                              title="حذف حساب الطالب"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
+
+          {/* Students Pagination */}
+          {totalStudentPages > 1 && (
+            <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-3.5 shadow-xs">
+              <div className="text-xs text-[#6B7280]">
+                عرض الصفحة <strong className="text-[#0D1B3E]">{studentPage}</strong> من <strong className="text-[#0D1B3E]">{totalStudentPages}</strong> ({filteredStudents.length} طالب)
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setStudentPage(p => Math.max(1, p - 1))}
+                  disabled={studentPage === 1}
+                  className="rounded-xl border border-slate-200 bg-[#F5F7FA] px-3 py-1.5 text-xs font-bold text-[#0D1B3E] hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  السابق
+                </button>
+                {Array.from({ length: totalStudentPages }, (_, i) => i + 1).map(p => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setStudentPage(p)}
+                    className={`h-8 w-8 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                      studentPage === p
+                        ? 'bg-[#1E4FD8] text-white'
+                        : 'bg-[#F5F7FA] text-[#0D1B3E] hover:bg-slate-200 border border-slate-200'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setStudentPage(p => Math.min(totalStudentPages, p + 1))}
+                  disabled={studentPage === totalStudentPages}
+                  className="rounded-xl border border-slate-200 bg-[#F5F7FA] px-3 py-1.5 text-xs font-bold text-[#0D1B3E] hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  التالي
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* TAB 5: ACTIVATION CODES */}
       {activeTab === 'codes' && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-bold text-[#0D1B3E]">توليد وإدارة أكواد التفعيل</h2>
               <p className="text-xs text-[#6B7280]">توليد أكواد فردية أو مجمعة (Bulk) لبيعها وتوزيعها على الطلاب لفتح الكورسات والمذكرات</p>
             </div>
-            <button
-              onClick={() => setShowAddCode(true)}
-              className="flex items-center gap-2 rounded-xl bg-[#F5B301] px-4 py-2.5 text-xs font-black text-[#0D1B3E] hover:bg-[#e0a401] shadow-xs"
-            >
-              <Plus className="h-4 w-4" />
-              <span>توليد أكواد جديدة</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#6B7280]" />
+                <input
+                  type="text"
+                  value={codeSearch}
+                  onChange={e => { setCodeSearch(e.target.value); setCodesPage(1); }}
+                  placeholder="بحث بالكود أو الكورس أو الطالب..."
+                  className="w-full rounded-xl border border-slate-200 bg-white py-2 pr-9 pl-3 text-xs text-[#0D1B3E] placeholder:text-slate-400 focus:border-[#1E4FD8] focus:outline-none shadow-xs"
+                />
+              </div>
+              <button
+                onClick={() => setShowAddCode(true)}
+                className="flex items-center gap-2 rounded-xl bg-[#F5B301] px-4 py-2.5 text-xs font-black text-[#0D1B3E] hover:bg-[#e0a401] shadow-xs shrink-0 cursor-pointer"
+              >
+                <Plus className="h-4 w-4" />
+                <span>توليد أكواد جديدة</span>
+              </button>
+            </div>
           </div>
 
           {/* Generator Modal */}
@@ -3319,52 +3588,101 @@ ${weakConceptsText}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {codes.map(code => (
-                    <tr key={code.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-bold text-[#1E4FD8]" dir="ltr">{code.code}</td>
-                      <td className="py-3.5 px-4">
-                        <button
-                          type="button"
-                          onClick={() => handleCopyCode(code.code, code.id)}
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
-                            copiedCodeId === code.id
-                              ? 'bg-emerald-600 text-white shadow-xs'
-                              : 'bg-[#F5F7FA] text-[#0D1B3E] hover:bg-[#F5B301] hover:text-[#0D1B3E] border border-slate-200'
-                          }`}
-                          title="نسخ كود التفعيل"
-                        >
-                          {copiedCodeId === code.id ? (
-                            <>
-                              <Check className="h-3 w-3" />
-                              <span>تم النسخ!</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="h-3 w-3" />
-                              <span>نسخ</span>
-                            </>
-                          )}
-                        </button>
+                  {filteredCodes.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-[#6B7280]">
+                        لا توجد أكواد تفعيل مطابقة للبحث
                       </td>
-                      <td className="py-3.5 px-4 text-[#0D1B3E] font-bold">{code.targetName}</td>
-                      <td className="py-3.5 px-4 text-[#6B7280]">{code.targetType === 'course' ? 'كورس' : 'مذكرة PDF'}</td>
-                      <td className="py-3.5 px-4">
-                        <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${
-                          code.isUsed 
-                            ? 'bg-rose-50 text-rose-700 border border-rose-200' 
-                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        }`}>
-                          {code.isUsed ? 'مستخدم' : 'متاح للتفعيل'}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-[#0D1B3E]">{code.usedByStudentName || '—'}</td>
-                      <td className="py-3.5 px-4 text-[#6B7280]">{new Date(code.createdAt).toLocaleDateString('ar-EG')}</td>
                     </tr>
-                  ))}
+                  ) : (
+                    paginatedCodes.map(code => (
+                      <tr key={code.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-3.5 px-4 font-mono font-bold text-[#1E4FD8]" dir="ltr">{code.code}</td>
+                        <td className="py-3.5 px-4">
+                          <button
+                            type="button"
+                            onClick={() => handleCopyCode(code.code, code.id)}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                              copiedCodeId === code.id
+                                ? 'bg-emerald-600 text-white shadow-xs'
+                                : 'bg-[#F5F7FA] text-[#0D1B3E] hover:bg-[#F5B301] hover:text-[#0D1B3E] border border-slate-200'
+                            }`}
+                            title="نسخ كود التفعيل"
+                          >
+                            {copiedCodeId === code.id ? (
+                              <>
+                                <Check className="h-3 w-3" />
+                                <span>تم النسخ!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3 w-3" />
+                                <span>نسخ</span>
+                              </>
+                            )}
+                          </button>
+                        </td>
+                        <td className="py-3.5 px-4 text-[#0D1B3E] font-bold">{code.targetName}</td>
+                        <td className="py-3.5 px-4 text-[#6B7280]">{code.targetType === 'course' ? 'كورس' : 'مذكرة PDF'}</td>
+                        <td className="py-3.5 px-4">
+                          <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${
+                            code.isUsed 
+                              ? 'bg-rose-50 text-rose-700 border border-rose-200' 
+                              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          }`}>
+                            {code.isUsed ? 'مستخدم' : 'متاح للتفعيل'}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-[#0D1B3E]">{code.usedByStudentName || '—'}</td>
+                        <td className="py-3.5 px-4 text-[#6B7280]">{new Date(code.createdAt).toLocaleDateString('ar-EG')}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
+
+          {/* Codes Pagination */}
+          {totalCodePages > 1 && (
+            <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-3.5 shadow-xs">
+              <div className="text-xs text-[#6B7280]">
+                عرض الصفحة <strong className="text-[#0D1B3E]">{codesPage}</strong> من <strong className="text-[#0D1B3E]">{totalCodePages}</strong> ({filteredCodes.length} كود)
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setCodesPage(p => Math.max(1, p - 1))}
+                  disabled={codesPage === 1}
+                  className="rounded-xl border border-slate-200 bg-[#F5F7FA] px-3 py-1.5 text-xs font-bold text-[#0D1B3E] hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  السابق
+                </button>
+                {Array.from({ length: totalCodePages }, (_, i) => i + 1).map(p => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setCodesPage(p)}
+                    className={`h-8 w-8 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                      codesPage === p
+                        ? 'bg-[#1E4FD8] text-white'
+                        : 'bg-[#F5F7FA] text-[#0D1B3E] hover:bg-slate-200 border border-slate-200'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setCodesPage(p => Math.min(totalCodePages, p + 1))}
+                  disabled={codesPage === totalCodePages}
+                  className="rounded-xl border border-slate-200 bg-[#F5F7FA] px-3 py-1.5 text-xs font-bold text-[#0D1B3E] hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  التالي
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Generated Codes Success Modal with Copy Options */}
           {showGeneratedSuccessModal && recentlyGeneratedCodes.length > 0 && (
@@ -3436,18 +3754,80 @@ ${weakConceptsText}
       {/* TAB 6: PDF MATERIALS */}
       {activeTab === 'pdfs' && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-bold text-[#0D1B3E]">إدارة المذكرات والملازم الرقمية</h2>
-              <p className="text-xs text-[#6B7280]">رفع مذكرات الشرح وبنوك الأسئلة وتحديد صلاحيات الحماية والأكواد</p>
+              <p className="text-xs text-[#6B7280]">رفع مذكرات الشرح وبنوك الأسئلة وتحديد صلاحيات الحماية والأكواد والمعاينة الفورية</p>
             </div>
             <button
               onClick={() => setShowAddPdf(true)}
-              className="flex items-center gap-2 rounded-xl bg-[#F5B301] px-4 py-2.5 text-xs font-black text-[#0D1B3E] hover:bg-[#e0a401] shadow-xs"
+              className="flex items-center gap-2 rounded-xl bg-[#F5B301] px-4 py-2.5 text-xs font-black text-[#0D1B3E] hover:bg-[#e0a401] shadow-xs cursor-pointer shrink-0"
             >
               <Plus className="h-4 w-4" />
               <span>إضافة مذكرة جديدة</span>
             </button>
+          </div>
+
+          {/* Search & Filter Controls */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
+              <span className="text-xs font-bold text-[#6B7280]">تصفية:</span>
+              <button
+                type="button"
+                onClick={() => { setPdfGradeFilterAdmin('all'); setPdfPageAdmin(1); }}
+                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                  pdfGradeFilterAdmin === 'all'
+                    ? 'bg-[#1E4FD8] text-white'
+                    : 'bg-[#F5F7FA] text-[#0D1B3E] hover:bg-slate-200 border border-slate-200'
+                }`}
+              >
+                جميع الصفوف ({pdfs.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => { setPdfGradeFilterAdmin('الصف الثالث الثانوي'); setPdfPageAdmin(1); }}
+                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                  pdfGradeFilterAdmin === 'الصف الثالث الثانوي'
+                    ? 'bg-[#1E4FD8] text-white'
+                    : 'bg-[#F5F7FA] text-[#0D1B3E] hover:bg-slate-200 border border-slate-200'
+                }`}
+              >
+                3 ثانوي
+              </button>
+              <button
+                type="button"
+                onClick={() => { setPdfGradeFilterAdmin('الصف الثاني الثانوي'); setPdfPageAdmin(1); }}
+                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                  pdfGradeFilterAdmin === 'الصف الثاني الثانوي'
+                    ? 'bg-[#1E4FD8] text-white'
+                    : 'bg-[#F5F7FA] text-[#0D1B3E] hover:bg-slate-200 border border-slate-200'
+                }`}
+              >
+                2 ثانوي
+              </button>
+              <button
+                type="button"
+                onClick={() => { setPdfGradeFilterAdmin('الصف الأول الثانوي'); setPdfPageAdmin(1); }}
+                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                  pdfGradeFilterAdmin === 'الصف الأول الثانوي'
+                    ? 'bg-[#1E4FD8] text-white'
+                    : 'bg-[#F5F7FA] text-[#0D1B3E] hover:bg-slate-200 border border-slate-200'
+                }`}
+              >
+                1 ثانوي
+              </button>
+            </div>
+
+            <div className="relative w-full md:w-64">
+              <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#6B7280]" />
+              <input
+                type="text"
+                value={pdfSearchAdmin}
+                onChange={e => { setPdfSearchAdmin(e.target.value); setPdfPageAdmin(1); }}
+                placeholder="بحث باسم المذكرة أو التصنيف..."
+                className="w-full rounded-xl border border-slate-200 bg-[#F5F7FA] py-1.5 pr-9 pl-3 text-xs text-[#0D1B3E] placeholder:text-slate-400 focus:bg-white focus:border-[#1E4FD8] focus:outline-none"
+              />
+            </div>
           </div>
 
           {/* Add PDF Modal */}
@@ -3651,99 +4031,154 @@ ${weakConceptsText}
           )}
 
           {/* PDFs Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {pdfs.map(pdf => {
-              const isFreePdf = pdf.isFree || !pdf.isLocked || pdf.price === 0;
-              const linkedCourse = courses.find(c => c.id === pdf.associatedCourseId);
+          {filteredPdfsAdmin.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center">
+              <FileText className="mx-auto h-12 w-12 text-slate-300 mb-3" />
+              <h3 className="font-bold text-sm text-[#0D1B3E]">لا توجد مذكرات مطابقة للبحث أو التصفية</h3>
+              <p className="text-xs text-[#6B7280] mt-1">جرّب تغيير خيارات البحث أو إضافة مذكرة جديدة</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {paginatedPdfsAdmin.map(pdf => {
+                const isFreePdf = pdf.isFree || !pdf.isLocked || pdf.price === 0;
+                const linkedCourse = courses.find(c => c.id === pdf.associatedCourseId);
 
-              return (
-                <div key={pdf.id} className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3 flex flex-col justify-between hover:border-[#1E4FD8]/40 transition-all shadow-xs">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <span className="rounded bg-blue-50 border border-blue-200 text-[#1E4FD8] text-[10px] font-bold px-2 py-0.5">
-                        {pdf.category}
-                      </span>
-                      <span className="text-xs text-[#6B7280]">{pdf.pageCount} صفحة</span>
-                    </div>
-
-                    <h3 className="font-bold text-[#0D1B3E] text-base leading-snug">{pdf.title}</h3>
-                    
-                    {pdf.description && (
-                      <p className="text-xs text-[#6B7280] line-clamp-2">{pdf.description}</p>
-                    )}
-
-                    {/* Linked Course & Access Status Badges */}
-                    <div className="rounded-xl border border-slate-200 bg-[#F5F7FA] p-2.5 text-xs space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[#6B7280] text-[11px]">حالة الوصول:</span>
-                        {isFreePdf ? (
-                          <span className="font-bold text-emerald-600">مجانية للجميع</span>
-                        ) : (
-                          <span className="font-bold text-[#1E4FD8]">مدفوعة ({pdf.price || 50} ج.م)</span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center justify-between border-t border-slate-200 pt-1">
-                        <span className="text-[#6B7280] text-[11px]">الكورس المرتبط:</span>
-                        {linkedCourse ? (
-                          <span className="font-bold text-[#0D1B3E] truncate max-w-[140px]" title={linkedCourse.title}>
-                            {linkedCourse.title}
+                return (
+                  <div key={pdf.id} className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3 flex flex-col justify-between hover:border-[#1E4FD8]/40 transition-all shadow-xs">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="rounded bg-blue-50 border border-blue-200 text-[#1E4FD8] text-[10px] font-bold px-2 py-0.5">
+                            {pdf.category}
                           </span>
-                        ) : (
-                          <span className="text-[#6B7280] text-[11px]">عام (غير مرتبط)</span>
-                        )}
+                          <span className="rounded bg-slate-100 text-[#0D1B3E] text-[10px] font-bold px-2 py-0.5">
+                            {pdf.grade.includes('الثالث') ? '3 ثانوي' : pdf.grade.includes('الثاني') ? '2 ثانوي' : '1 ثانوي'}
+                          </span>
+                        </div>
+                        <span className="text-xs text-[#6B7280]">{pdf.pageCount} صفحة</span>
+                      </div>
+
+                      <h3 className="font-bold text-[#0D1B3E] text-base leading-snug">{pdf.title}</h3>
+                      
+                      {pdf.description && (
+                        <p className="text-xs text-[#6B7280] line-clamp-2">{pdf.description}</p>
+                      )}
+
+                      {/* Linked Course & Access Status Badges */}
+                      <div className="rounded-xl border border-slate-200 bg-[#F5F7FA] p-2.5 text-xs space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[#6B7280] text-[11px]">حالة الوصول:</span>
+                          {isFreePdf ? (
+                            <span className="font-bold text-emerald-600">مجانية للجميع</span>
+                          ) : (
+                            <span className="font-bold text-[#1E4FD8]">مدفوعة ({pdf.price || 50} ج.م)</span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between border-t border-slate-200 pt-1">
+                          <span className="text-[#6B7280] text-[11px]">الكورس المرتبط:</span>
+                          {linkedCourse ? (
+                            <span className="font-bold text-[#0D1B3E] truncate max-w-[140px]" title={linkedCourse.title}>
+                              {linkedCourse.title}
+                            </span>
+                          ) : (
+                            <span className="text-[#6B7280] text-[11px]">عام (غير مرتبط)</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2.5 pt-2 border-t border-slate-200">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditingPdf(pdf)}
+                          className="flex-1 rounded-xl bg-blue-50 border border-blue-200 py-2 text-xs font-bold text-[#1E4FD8] hover:bg-blue-100 flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                          title="تعديل المذكرة والوصول"
+                        >
+                          <Edit3 className="h-3.5 w-3.5" />
+                          <span>تعديل والوصول</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setAdminPreviewPdf(pdf)}
+                          className="p-2 rounded-xl border border-blue-200 bg-blue-50 text-[#1E4FD8] hover:bg-[#1E4FD8] hover:text-white transition-all cursor-pointer"
+                          title="معاينة الملف"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => downloadPdfFile(pdf.url, pdf.title)}
+                          className="p-2 rounded-xl border border-slate-200 bg-[#F5F7FA] text-[#0D1B3E] hover:bg-slate-200 transition-colors cursor-pointer"
+                          title="تحميل المذكرة للجهاز"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm(`هل أنت متأكد من حذف مذكرة "${pdf.title}"؟`)) {
+                              StorageService.deletePdf(pdf.id);
+                              setPdfs(StorageService.getPdfs());
+                            }
+                          }}
+                          className="p-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 transition-colors cursor-pointer"
+                          title="حذف المذكرة"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                       </div>
                     </div>
                   </div>
+                );
+              })}
+            </div>
+          )}
 
-                  <div className="space-y-2.5 pt-2 border-t border-slate-200">
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setEditingPdf(pdf)}
-                        className="flex-1 rounded-xl bg-blue-50 border border-blue-200 py-2 text-xs font-bold text-[#1E4FD8] hover:bg-blue-100 flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                        title="تعديل المذكرة والوصول"
-                      >
-                        <Edit3 className="h-3.5 w-3.5" />
-                        <span>تعديل والوصول</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setAdminPreviewPdf(pdf)}
-                        className="p-2 rounded-xl border border-blue-200 bg-blue-50 text-[#1E4FD8] hover:bg-[#1E4FD8] hover:text-white transition-all cursor-pointer"
-                        title="معاينة الملف"
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => downloadPdfFile(pdf.url, pdf.title)}
-                        className="p-2 rounded-xl border border-slate-200 bg-[#F5F7FA] text-[#0D1B3E] hover:bg-slate-200 transition-colors cursor-pointer"
-                        title="تحميل المذكرة للجهاز"
-                      >
-                        <Download className="h-3.5 w-3.5" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (confirm(`هل أنت متأكد من حذف مذكرة "${pdf.title}"؟`)) {
-                            StorageService.deletePdf(pdf.id);
-                          }
-                        }}
-                        className="p-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 transition-colors cursor-pointer"
-                        title="حذف المذكرة"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          {/* PDFs Pagination */}
+          {totalPdfPagesAdmin > 1 && (
+            <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-3.5 shadow-xs">
+              <div className="text-xs text-[#6B7280]">
+                عرض الصفحة <strong className="text-[#0D1B3E]">{pdfPageAdmin}</strong> من <strong className="text-[#0D1B3E]">{totalPdfPagesAdmin}</strong> ({filteredPdfsAdmin.length} مذكرة)
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setPdfPageAdmin(p => Math.max(1, p - 1))}
+                  disabled={pdfPageAdmin === 1}
+                  className="rounded-xl border border-slate-200 bg-[#F5F7FA] px-3 py-1.5 text-xs font-bold text-[#0D1B3E] hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  السابق
+                </button>
+                {Array.from({ length: totalPdfPagesAdmin }, (_, i) => i + 1).map(p => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setPdfPageAdmin(p)}
+                    className={`h-8 w-8 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                      pdfPageAdmin === p
+                        ? 'bg-[#1E4FD8] text-white'
+                        : 'bg-[#F5F7FA] text-[#0D1B3E] hover:bg-slate-200 border border-slate-200'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setPdfPageAdmin(p => Math.min(totalPdfPagesAdmin, p + 1))}
+                  disabled={pdfPageAdmin === totalPdfPagesAdmin}
+                  className="rounded-xl border border-slate-200 bg-[#F5F7FA] px-3 py-1.5 text-xs font-bold text-[#0D1B3E] hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  التالي
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Edit PDF Modal */}
           {editingPdf && (

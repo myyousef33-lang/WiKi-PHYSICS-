@@ -168,7 +168,7 @@ const initFirestoreSync = () => {
     try {
       const docRef = doc(db, 'app_data', key);
 
-        // Helper function to safely reconcile local and remote data
+        // Helper function to safely reconcile local and remote data with deterministic timestamps
       const processRemoteData = async (remoteData: any, remoteUpdatedAt?: string) => {
         if (remoteData === undefined || remoteData === null) return;
 
@@ -201,7 +201,6 @@ const initFirestoreSync = () => {
               localStorage.setItem(key, mergedStr);
               notifyListeners();
             }
-            // Push our updated local settings to Firestore so cloud matches local
             await setDoc(docRef, { data: sanitizeForFirestore(merged), updatedAt: localUpdatedAt || new Date().toISOString() }).catch(() => {});
             return;
           }
@@ -211,78 +210,28 @@ const initFirestoreSync = () => {
           const mergedStr = JSON.stringify(merged);
           if (localStr !== mergedStr) {
             localStorage.setItem(key, mergedStr);
+            localStorage.setItem(key + '_updated_at', remoteUpdatedAt || new Date().toISOString());
             notifyListeners();
           }
           return;
         }
 
-        // Case A: Both are arrays
-        if (Array.isArray(localVal) && Array.isArray(remoteData)) {
-          // If local has items but remote is empty: push local to Firestore!
-          if (localVal.length > 0 && remoteData.length === 0) {
-            await setDoc(docRef, { data: sanitizeForFirestore(localVal), updatedAt: new Date().toISOString() }).catch(() => {});
-            return;
+        // Timestamp comparison: if local was modified more recently than remote, push local to remote!
+        if (localUpdatedAt && remoteUpdatedAt && localUpdatedAt > remoteUpdatedAt) {
+          if (localVal !== null && localVal !== undefined) {
+            await setDoc(docRef, { data: sanitizeForFirestore(localVal), updatedAt: localUpdatedAt }).catch(() => {});
           }
+          return;
+        }
 
-          // If local is empty and remote has items: accept remote
-          if ((!localVal || localVal.length === 0) && remoteData.length > 0) {
-            localStorage.setItem(key, JSON.stringify(remoteData));
-            notifyListeners();
-            return;
+        // If remote is newer or local has no timestamp, accept remote directly (including deletions)
+        const remoteStr = JSON.stringify(remoteData);
+        if (localStr !== remoteStr) {
+          localStorage.setItem(key, remoteStr);
+          if (remoteUpdatedAt) {
+            localStorage.setItem(key + '_updated_at', remoteUpdatedAt);
           }
-
-          // Merge items by id so neither local nor remote additions are lost
-          const remoteMap = new Map<string, any>();
-          remoteData.forEach(item => {
-            if (item && item.id) remoteMap.set(item.id, item);
-          });
-
-          let merged = false;
-          const mergedList = [...remoteData];
-
-          localVal.forEach(localItem => {
-            if (localItem && localItem.id) {
-              if (!remoteMap.has(localItem.id)) {
-                mergedList.push(localItem);
-                merged = true;
-              }
-            }
-          });
-
-          if (merged) {
-            // Push merged list back to Firestore and save locally
-            localStorage.setItem(key, JSON.stringify(mergedList));
-            notifyListeners();
-            await setDoc(docRef, { data: sanitizeForFirestore(mergedList), updatedAt: new Date().toISOString() }).catch(() => {});
-          } else {
-            const remoteStr = JSON.stringify(remoteData);
-            if (localStr !== remoteStr) {
-              localStorage.setItem(key, remoteStr);
-              notifyListeners();
-            }
-          }
-        } else if (typeof localVal === 'object' && localVal !== null && typeof remoteData === 'object' && remoteData !== null) {
-          // Object merge
-          const localKeys = Object.keys(localVal);
-          const remoteKeys = Object.keys(remoteData);
-          if (localKeys.length > remoteKeys.length || (localUpdatedAt && remoteUpdatedAt && localUpdatedAt > remoteUpdatedAt)) {
-            const merged = { ...localVal, ...remoteData, ...localVal };
-            localStorage.setItem(key, JSON.stringify(merged));
-            notifyListeners();
-            await setDoc(docRef, { data: sanitizeForFirestore(merged), updatedAt: new Date().toISOString() }).catch(() => {});
-          } else {
-            const remoteStr = JSON.stringify(remoteData);
-            if (localStr !== remoteStr) {
-              localStorage.setItem(key, remoteStr);
-              notifyListeners();
-            }
-          }
-        } else {
-          const remoteStr = JSON.stringify(remoteData);
-          if (localStr !== remoteStr) {
-            localStorage.setItem(key, remoteStr);
-            notifyListeners();
-          }
+          notifyListeners();
         }
       };
 
@@ -1342,6 +1291,9 @@ export const StorageService = {
   // === Admin Auth & Strong PIN via Server Verification ===
   isAdminLoggedIn(): boolean {
     return !!sessionStorage.getItem(STORAGE_KEYS.ADMIN_TOKEN) || sessionStorage.getItem(STORAGE_KEYS.ADMIN_AUTH) === 'true';
+  },
+  isAdminAuthenticated(): boolean {
+    return this.isAdminLoggedIn();
   },
   getAdminToken(): string | null {
     return sessionStorage.getItem(STORAGE_KEYS.ADMIN_TOKEN);
