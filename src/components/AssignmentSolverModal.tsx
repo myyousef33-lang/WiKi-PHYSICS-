@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { 
   FileText, 
   X, 
@@ -437,9 +438,21 @@ export const AssignmentSolverModal: React.FC<AssignmentSolverModalProps> = ({
   const embedSource = getEmbedPdfSource(resolvedPdfUrl, true);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-2 sm:p-4 lg:p-6 animate-in fade-in duration-200" dir="rtl">
-      
-      <div className="relative flex flex-col w-full h-[94vh] max-w-6xl bg-white dark:bg-[#16224D] border border-slate-200 dark:border-[#24336A] rounded-3xl shadow-2xl overflow-hidden transition-all">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-2 sm:p-4 lg:p-6"
+      dir="rtl"
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 16 }}
+        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+        className="relative flex flex-col w-full h-[94vh] max-w-6xl bg-white dark:bg-[#16224D] border border-slate-200 dark:border-[#24336A] rounded-3xl shadow-2xl overflow-hidden transition-all"
+      >
         
         {/* Header Toolbar */}
         <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#24336A] bg-slate-50 dark:bg-[#0D1B3E] px-4 sm:px-6 py-3 shrink-0">
@@ -752,7 +765,7 @@ export const AssignmentSolverModal: React.FC<AssignmentSolverModalProps> = ({
           )}
         </div>
 
-      </div>
+      </motion.div>
 
       {/* Popup Modal to add text annotation */}
       {textModalOpen && (
@@ -786,6 +799,6 @@ export const AssignmentSolverModal: React.FC<AssignmentSolverModalProps> = ({
         </div>
       )}
 
-    </div>
+    </motion.div>
   );
 };

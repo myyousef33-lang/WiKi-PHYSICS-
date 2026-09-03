@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
 import { User, Phone, Sparkles, X, UserPlus, LogIn, GraduationCap, MapPin, Lock, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { StorageService } from '../services/storage';
 import { GradeLevel, Student } from '../types';
@@ -149,8 +150,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 animate-in fade-in duration-200" dir="rtl">
-      <div className="relative w-full max-w-md rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#121E3E] p-6 sm:p-8 shadow-2xl space-y-5 transition-colors">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4"
+      dir="rtl"
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 16 }}
+        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+        className="relative w-full max-w-md rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#121E3E] p-6 sm:p-8 shadow-2xl space-y-5 transition-colors"
+      >
         
         {/* Close Button */}
         <button
@@ -406,8 +420,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </form>
         )}
 
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

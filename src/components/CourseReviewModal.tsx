@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
 import { Star, X, CheckCircle2, MessageSquare, Send, Award } from 'lucide-react';
 import { StorageService } from '../services/storage';
 import { Student, Course } from '../types';
@@ -66,8 +67,18 @@ export const CourseReviewModal: React.FC<CourseReviewModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div 
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+    >
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.94, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 16 }}
+        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
         className="w-full max-w-lg rounded-3xl bg-white dark:bg-[#16224D] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl relative overflow-hidden text-right"
         onClick={(e) => e.stopPropagation()}
       >
@@ -199,7 +210,7 @@ export const CourseReviewModal: React.FC<CourseReviewModalProps> = ({
             </div>
           </form>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

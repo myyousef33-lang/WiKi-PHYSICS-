@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
 import { Key, CheckCircle2, AlertCircle, X, Sparkles, Phone, User, GraduationCap } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { StorageService } from '../services/storage';
@@ -117,8 +118,20 @@ export const ActivationCodeModal: React.FC<ActivationCodeModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071120]/85 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md rounded-3xl border border-[#1E375E] bg-[#0C1B33] p-6 sm:p-8 shadow-2xl space-y-6">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#071120]/85 backdrop-blur-sm p-4"
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 16 }}
+        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+        className="relative w-full max-w-md rounded-3xl border border-[#1E375E] bg-[#0C1B33] p-6 sm:p-8 shadow-2xl space-y-6"
+      >
         
         {/* Close Button */}
         <button
@@ -258,7 +271,7 @@ export const ActivationCodeModal: React.FC<ActivationCodeModalProps> = ({
           </a>
         </div>
 
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

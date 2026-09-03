@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { HomeLandingView } from './components/HomeLandingView';
@@ -143,141 +144,152 @@ export default function App() {
         onOpenWalletModal={() => setIsWalletModalOpen(true)}
       />
 
-      {/* Main Content Area */}
+      {/* Main Content Area with Smooth Page/View Transitions */}
       <main className="flex-1 w-full max-w-full overflow-x-hidden">
-        {currentView === 'home' && (
-          <HomeLandingView
-            onNavigate={handleNavigate}
-            onOpenActivationModal={() => setIsActivationModalOpen(true)}
-            onOpenAuthModal={() => handleOpenAuth('register')}
-          />
-        )}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={currentView + (viewParams.courseId || '') + (viewParams.lessonId || '') + (viewParams.attemptId || '') + (viewParams.examId || '')}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="w-full min-h-[calc(100vh-80px)] flex flex-col"
+          >
+            {currentView === 'home' && (
+              <HomeLandingView
+                onNavigate={handleNavigate}
+                onOpenActivationModal={() => setIsActivationModalOpen(true)}
+                onOpenAuthModal={() => handleOpenAuth('register')}
+              />
+            )}
 
-        {currentView === 'dashboard' && (
-          <StudentDashboard
-            onNavigate={handleNavigate}
-            onOpenActivationModal={() => setIsActivationModalOpen(true)}
-            onOpenEditProfileModal={() => setIsEditProfileModalOpen(true)}
-            onOpenWalletModal={() => setIsWalletModalOpen(true)}
-          />
-        )}
+            {currentView === 'dashboard' && (
+              <StudentDashboard
+                onNavigate={handleNavigate}
+                onOpenActivationModal={() => setIsActivationModalOpen(true)}
+                onOpenEditProfileModal={() => setIsEditProfileModalOpen(true)}
+                onOpenWalletModal={() => setIsWalletModalOpen(true)}
+              />
+            )}
 
-        {currentView === 'physics-lab' && (
-          <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-            <PhysicsSimulationsLab />
-          </div>
-        )}
-
-        {currentView === 'flashcards' && (
-          <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-            {student ? (
-              <FlashcardsView student={student} />
-            ) : (
-              <div className="rounded-3xl border border-[#1E375E] bg-[#122442]/60 p-12 text-center space-y-4">
-                <h3 className="text-xl font-black text-white">يرجى تسجيل الدخول لاستخدام بطاقات المراجعة</h3>
-                <button
-                  onClick={() => handleOpenAuth('login')}
-                  className="rounded-xl bg-[#FFB020] px-6 py-2.5 text-xs font-bold text-[#0C1B33] hover:bg-[#e59e1c] transition-all"
-                >
-                  تسجيل الدخول
-                </button>
+            {currentView === 'physics-lab' && (
+              <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+                <PhysicsSimulationsLab />
               </div>
             )}
-          </div>
-        )}
 
-        {currentView === 'my-courses' && (
-          <MyCoursesView
-            onNavigate={handleNavigate}
-            onOpenActivationModal={() => setIsActivationModalOpen(true)}
-          />
-        )}
+            {currentView === 'flashcards' && (
+              <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+                {student ? (
+                  <FlashcardsView student={student} />
+                ) : (
+                  <div className="rounded-3xl border border-[#1E375E] bg-[#122442]/60 p-12 text-center space-y-4">
+                    <h3 className="text-xl font-black text-white">يرجى تسجيل الدخول لاستخدام بطاقات المراجعة</h3>
+                    <button
+                      onClick={() => handleOpenAuth('login')}
+                      className="rounded-xl bg-[#FFB020] px-6 py-2.5 text-xs font-bold text-[#0C1B33] hover:bg-[#e59e1c] transition-all"
+                    >
+                      تسجيل الدخول
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
-        {currentView === 'courses-catalog' && (
-          <CourseCatalogView
-            onNavigate={handleNavigate}
-            onOpenActivationModal={() => setIsActivationModalOpen(true)}
-            onOpenAuthModal={() => handleOpenAuth('register')}
-          />
-        )}
+            {currentView === 'my-courses' && (
+              <MyCoursesView
+                onNavigate={handleNavigate}
+                onOpenActivationModal={() => setIsActivationModalOpen(true)}
+              />
+            )}
 
-        {currentView === 'course-details' && (
-          <CourseDetailsView
-            courseId={viewParams.courseId || 'course-physics-3sec-full'}
-            onNavigate={handleNavigate}
-            onOpenActivationModal={() => setIsActivationModalOpen(true)}
-            onOpenAuthModal={() => handleOpenAuth('login')}
-          />
-        )}
+            {currentView === 'courses-catalog' && (
+              <CourseCatalogView
+                onNavigate={handleNavigate}
+                onOpenActivationModal={() => setIsActivationModalOpen(true)}
+                onOpenAuthModal={() => handleOpenAuth('register')}
+              />
+            )}
 
-        {currentView === 'lesson-player' && (
-          <LessonRoomView
-            courseId={viewParams.courseId || 'course-physics-3sec-full'}
-            lessonId={viewParams.lessonId || 'les-1'}
-            onNavigate={handleNavigate}
-          />
-        )}
+            {currentView === 'course-details' && (
+              <CourseDetailsView
+                courseId={viewParams.courseId || 'course-physics-3sec-full'}
+                onNavigate={handleNavigate}
+                onOpenActivationModal={() => setIsActivationModalOpen(true)}
+                onOpenAuthModal={() => handleOpenAuth('login')}
+              />
+            )}
 
-        {currentView === 'exam-runner' && (
-          <QuizExamView
-            examId={viewParams.examId || 'exam-unit-1-comprehensive'}
-            courseId={viewParams.courseId}
-            lessonId={viewParams.lessonId}
-            onNavigate={handleNavigate}
-          />
-        )}
+            {currentView === 'lesson-player' && (
+              <LessonRoomView
+                courseId={viewParams.courseId || 'course-physics-3sec-full'}
+                lessonId={viewParams.lessonId || 'les-1'}
+                onNavigate={handleNavigate}
+              />
+            )}
 
-        {currentView === 'exam-result' && (
-          <ExamResultView
-            attemptId={viewParams.attemptId}
-            onNavigate={handleNavigate}
-          />
-        )}
+            {currentView === 'exam-runner' && (
+              <QuizExamView
+                examId={viewParams.examId || 'exam-unit-1-comprehensive'}
+                courseId={viewParams.courseId}
+                lessonId={viewParams.lessonId}
+                onNavigate={handleNavigate}
+              />
+            )}
 
-        {currentView === 'my-results' && (
-          <MyResultsView
-            onNavigate={handleNavigate}
-          />
-        )}
+            {currentView === 'exam-result' && (
+              <ExamResultView
+                attemptId={viewParams.attemptId}
+                onNavigate={handleNavigate}
+              />
+            )}
 
-        {currentView === 'pdf-library' && (
-          <PdfLibraryView
-            onNavigate={handleNavigate}
-            onOpenActivationModal={() => setIsActivationModalOpen(true)}
-            onOpenAuthModal={() => handleOpenAuth('login')}
-          />
-        )}
+            {currentView === 'my-results' && (
+              <MyResultsView
+                onNavigate={handleNavigate}
+              />
+            )}
 
-        {currentView === 'leaderboard' && (
-          <LeaderboardView
-            onNavigate={handleNavigate}
-          />
-        )}
+            {currentView === 'pdf-library' && (
+              <PdfLibraryView
+                onNavigate={handleNavigate}
+                onOpenActivationModal={() => setIsActivationModalOpen(true)}
+                onOpenAuthModal={() => handleOpenAuth('login')}
+              />
+            )}
 
-        {currentView === 'weakness-profile' && (
-          <WeaknessAnalysisView
-            onNavigate={handleNavigate}
-          />
-        )}
+            {currentView === 'leaderboard' && (
+              <LeaderboardView
+                onNavigate={handleNavigate}
+              />
+            )}
 
-        {currentView === 'ai-assistant' && (
-          <div className="mx-auto max-w-4xl px-4 py-8">
-            <AIPhysicsAssistant />
-          </div>
-        )}
+            {currentView === 'weakness-profile' && (
+              <WeaknessAnalysisView
+                onNavigate={handleNavigate}
+              />
+            )}
 
-        {currentView === 'admin' && (
-          <React.Suspense fallback={
-            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-white p-6" dir="rtl">
-              <div className="h-12 w-12 rounded-full border-4 border-amber-400 border-t-transparent animate-spin mb-4" />
-              <p className="font-bold text-lg text-slate-200">جاري تحميل لوحة الإدارة...</p>
-            </div>
-          }>
-            <AdminDashboard
-              onNavigate={handleNavigate}
-            />
-          </React.Suspense>
-        )}
+            {currentView === 'ai-assistant' && (
+              <div className="mx-auto max-w-4xl px-4 py-8">
+                <AIPhysicsAssistant />
+              </div>
+            )}
+
+            {currentView === 'admin' && (
+              <React.Suspense fallback={
+                <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-white p-6" dir="rtl">
+                  <div className="h-12 w-12 rounded-full border-4 border-amber-400 border-t-transparent animate-spin mb-4" />
+                  <p className="font-bold text-lg text-slate-200">جاري تحميل لوحة الإدارة...</p>
+                </div>
+              }>
+                <AdminDashboard
+                  onNavigate={handleNavigate}
+                />
+              </React.Suspense>
+            )}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {/* Footer */}
@@ -286,68 +298,77 @@ export default function App() {
         onOpenActivationModal={() => setIsActivationModalOpen(true)}
       />
 
-      {/* Global Modals */}
-      {isActivationModalOpen && (
-        <ActivationCodeModal
-          isOpen={isActivationModalOpen}
-          onClose={() => setIsActivationModalOpen(false)}
-          onSuccessRedirect={handleActivationSuccess}
-        />
-      )}
+      {/* Global Modals with Animated Transitions */}
+      <AnimatePresence>
+        {isActivationModalOpen && (
+          <ActivationCodeModal
+            key="modal-activation"
+            isOpen={isActivationModalOpen}
+            onClose={() => setIsActivationModalOpen(false)}
+            onSuccessRedirect={handleActivationSuccess}
+          />
+        )}
 
-      {isAuthModalOpen && (
-        <AuthModal
-          isOpen={isAuthModalOpen}
-          initialMode={authModalInitialMode}
-          onClose={() => setIsAuthModalOpen(false)}
-          onSuccess={handleAuthSuccess}
-        />
-      )}
+        {isAuthModalOpen && (
+          <AuthModal
+            key="modal-auth"
+            isOpen={isAuthModalOpen}
+            initialMode={authModalInitialMode}
+            onClose={() => setIsAuthModalOpen(false)}
+            onSuccess={handleAuthSuccess}
+          />
+        )}
 
-      {isAdminSecretOpen && (
-        <AdminSecretModal
-          isOpen={isAdminSecretOpen}
-          onClose={() => setIsAdminSecretOpen(false)}
-          onSuccessRedirect={() => handleNavigate('admin')}
-        />
-      )}
+        {isAdminSecretOpen && (
+          <AdminSecretModal
+            key="modal-admin-secret"
+            isOpen={isAdminSecretOpen}
+            onClose={() => setIsAdminSecretOpen(false)}
+            onSuccessRedirect={() => handleNavigate('admin')}
+          />
+        )}
 
-      {isNotificationModalOpen && (
-        <NotificationCenterModal
-          isOpen={isNotificationModalOpen}
-          onClose={() => setIsNotificationModalOpen(false)}
-        />
-      )}
+        {isNotificationModalOpen && (
+          <NotificationCenterModal
+            key="modal-notifications"
+            isOpen={isNotificationModalOpen}
+            onClose={() => setIsNotificationModalOpen(false)}
+          />
+        )}
 
-      {isWalletModalOpen && (
-        <StudentWalletModal
-          isOpen={isWalletModalOpen}
-          onClose={() => setIsWalletModalOpen(false)}
-          onSuccess={() => {
-            setStudent(StorageService.getCurrentStudent());
-          }}
-        />
-      )}
+        {isWalletModalOpen && (
+          <StudentWalletModal
+            key="modal-wallet"
+            isOpen={isWalletModalOpen}
+            onClose={() => setIsWalletModalOpen(false)}
+            onSuccess={() => {
+              setStudent(StorageService.getCurrentStudent());
+            }}
+          />
+        )}
 
-      {student && isEditProfileModalOpen && (
-        <EditProfileModal
-          student={student}
-          isOpen={isEditProfileModalOpen}
-          onClose={() => setIsEditProfileModalOpen(false)}
-          onUpdateSuccess={() => {
-            setStudent(StorageService.getCurrentStudent());
-          }}
-        />
-      )}
+        {student && isEditProfileModalOpen && (
+          <EditProfileModal
+            key="modal-edit-profile"
+            student={student}
+            isOpen={isEditProfileModalOpen}
+            onClose={() => setIsEditProfileModalOpen(false)}
+            onUpdateSuccess={() => {
+              setStudent(StorageService.getCurrentStudent());
+            }}
+          />
+        )}
 
-      {student && selectedCertificate && (
-        <CertificateModal
-          student={student}
-          certificate={selectedCertificate}
-          isOpen={!!selectedCertificate}
-          onClose={() => setSelectedCertificate(null)}
-        />
-      )}
+        {student && selectedCertificate && (
+          <CertificateModal
+            key="modal-certificate"
+            student={student}
+            certificate={selectedCertificate}
+            isOpen={!!selectedCertificate}
+            onClose={() => setSelectedCertificate(null)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Floating Customer Support Action Button (WhatsApp) */}
       <FloatingSupportButton currentView={currentView} />

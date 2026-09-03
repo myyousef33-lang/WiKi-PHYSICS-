@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { X, Download, Share2, Award, CheckCircle, Sparkles } from 'lucide-react';
 import { Student, EarnedCertificate } from '../types';
 import { triggerAchievementConfetti } from '../utils/confetti';
@@ -160,8 +161,20 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-fadeIn">
-      <div className="relative w-full max-w-4xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl text-right font-sans overflow-hidden max-h-[92vh] overflow-y-auto">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs"
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 16 }}
+        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+        className="relative w-full max-w-4xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl text-right font-sans overflow-hidden max-h-[92vh] overflow-y-auto"
+      >
         
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
@@ -216,7 +229,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
           </div>
         </div>
 
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { 
   FileText, 
   Download, 
@@ -84,9 +85,19 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
   const embedSource = getEmbedPdfSource(resolvedUrl);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-2 sm:p-4 lg:p-6 animate-in fade-in duration-200" dir="rtl">
-      
-      <div 
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-2 sm:p-4 lg:p-6"
+      dir="rtl"
+    >
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 16 }}
+        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
         className={`relative flex flex-col w-full bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden transition-all duration-300 ${
           isFullscreen 
             ? 'h-full max-h-screen rounded-none border-none' 
@@ -258,8 +269,8 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
           </div>
         </div>
 
-      </div>
+      </motion.div>
 
-    </div>
+    </motion.div>
   );
 };
