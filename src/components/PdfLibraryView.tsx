@@ -20,6 +20,7 @@ import { StorageService, subscribeToStorage } from '../services/storage';
 import { PdfMaterial, Student } from '../types';
 import { PdfViewerModal } from './PdfViewerModal';
 import { downloadPdfFile } from '../utils/pdfHelper';
+import { ScrollReveal } from './ScrollReveal';
 
 interface PdfLibraryViewProps {
   onNavigate: (view: string, params?: any) => void;
@@ -230,7 +231,7 @@ export const PdfLibraryView: React.FC<PdfLibraryViewProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredMaterials.map((pdf) => {
+          {filteredMaterials.map((pdf, idx) => {
             const isFreePdf = pdf.isFree || !pdf.isLocked || pdf.price === 0;
             const isEnrolledInCourse = pdf.associatedCourseId && student?.enrolledCourseIds?.includes(pdf.associatedCourseId);
             const isUnlockedByCode = student && student.unlockedPdfIds?.includes(pdf.id);
@@ -239,98 +240,99 @@ export const PdfLibraryView: React.FC<PdfLibraryViewProps> = ({
             const linkedCourse = courses.find(c => c.id === pdf.associatedCourseId);
 
             return (
-              <div
-                key={pdf.id}
-                className="glass-card glass-card-hover rounded-2xl p-6 flex flex-col justify-between space-y-4"
-              >
-                <div className="space-y-3">
-                  {/* Top Badge Row */}
-                  <div className="flex items-center justify-between flex-wrap gap-1">
-                    <span className="rounded-md bg-[#2E86FF]/15 border border-[#2E86FF]/30 px-2 py-0.5 text-[10px] font-bold text-[#2E86FF]">
-                      {pdf.category}
-                    </span>
-                    
-                    {isFreePdf ? (
-                      <span className="rounded-md bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
-                        مجانية
+              <ScrollReveal key={pdf.id} index={idx} className="h-full">
+                <div
+                  className="glass-card glass-card-hover rounded-2xl p-6 flex flex-col justify-between space-y-4 h-full"
+                >
+                  <div className="space-y-3">
+                    {/* Top Badge Row */}
+                    <div className="flex items-center justify-between flex-wrap gap-1">
+                      <span className="rounded-md bg-[#2E86FF]/15 border border-[#2E86FF]/30 px-2 py-0.5 text-[10px] font-bold text-[#2E86FF]">
+                        {pdf.category}
                       </span>
+                      
+                      {isFreePdf ? (
+                        <span className="rounded-md bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
+                          مجانية
+                        </span>
+                      ) : (
+                        <span className="rounded-md bg-[#FFB020]/15 border border-[#FFB020]/30 px-2 py-0.5 text-[10px] font-bold text-[#FFB020]">
+                          {pdf.price || 50} ج.م
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Title & Icon */}
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-xl bg-[#2E86FF]/15 p-3 text-[#2E86FF] shrink-0 border border-[#2E86FF]/30">
+                        <FileText className="h-6 w-6" />
+                      </div>
+                      <div className="space-y-1">
+                        <h3 className="font-bold text-white text-base leading-snug line-clamp-2">
+                          {pdf.title}
+                        </h3>
+                        {pdf.description && (
+                          <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">
+                            {pdf.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Linked Course info if present */}
+                    {linkedCourse && (
+                      <div className="rounded-xl bg-[#0C1B33] border border-[#2E86FF]/20 p-2 text-xs flex items-center justify-between">
+                        <span className="text-slate-400 text-[10px]">الكورس التابع:</span>
+                        <span className="font-bold text-[#2E86FF] text-[11px]">{linkedCourse.title}</span>
+                      </div>
+                    )}
+
+                    {/* Metadata Row */}
+                    <div className="flex items-center justify-between text-[11px] text-slate-300 pt-2 border-t border-[#1E375E]">
+                      <span>{pdf.pageCount || 40} صفحة</span>
+                      <span>{pdf.fileSize || '8.5 MB'}</span>
+                      <span>{pdf.downloadCount || 150} تنزيل</span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="pt-2 border-t border-[#1E375E]">
+                    {isUnlocked ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setPreviewPdf(pdf)}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#1E375E] bg-[#122442] py-2.5 text-xs font-bold text-white hover:bg-[#1B355E] transition-colors"
+                        >
+                          <Eye className="h-4 w-4 text-[#2E86FF]" />
+                          <span>معاينة وقراءة</span>
+                        </button>
+                        <button
+                          onClick={() => downloadPdfFile(pdf.url, `${pdf.title}.pdf`)}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#FFB020] py-2.5 text-xs font-bold text-[#0C1B33] shadow-md shadow-[#FFB020]/20 hover:bg-[#e59e1c] transition-all"
+                        >
+                          <Download className="h-4 w-4" />
+                          <span>تحميل الملف</span>
+                        </button>
+                      </div>
                     ) : (
-                      <span className="rounded-md bg-[#FFB020]/15 border border-[#FFB020]/30 px-2 py-0.5 text-[10px] font-bold text-[#FFB020]">
-                        {pdf.price || 50} ج.م
-                      </span>
+                      <div className="space-y-2">
+                        <button
+                          onClick={() => setSelectedOptionsPdf(pdf)}
+                          className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#2E86FF] py-2.5 text-xs font-bold text-white shadow-md shadow-[#2E86FF]/20 hover:bg-[#2072e5] transition-all"
+                        >
+                          <Lock className="h-4 w-4" />
+                          <span>عرض خيارات التفعيل والوصول</span>
+                        </button>
+                        {linkedCourse && (
+                          <p className="text-[10px] text-center text-[#FFB020] font-medium">
+                            متاحة مجاناً لجميع المشتركين في كورس "{linkedCourse.title}"
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
-
-                  {/* Title & Icon */}
-                  <div className="flex items-start gap-3">
-                    <div className="rounded-xl bg-[#2E86FF]/15 p-3 text-[#2E86FF] shrink-0 border border-[#2E86FF]/30">
-                      <FileText className="h-6 w-6" />
-                    </div>
-                    <div className="space-y-1">
-                      <h3 className="font-bold text-white text-base leading-snug line-clamp-2">
-                        {pdf.title}
-                      </h3>
-                      {pdf.description && (
-                        <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">
-                          {pdf.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Linked Course info if present */}
-                  {linkedCourse && (
-                    <div className="rounded-xl bg-[#0C1B33] border border-[#2E86FF]/20 p-2 text-xs flex items-center justify-between">
-                      <span className="text-slate-400 text-[10px]">الكورس التابع:</span>
-                      <span className="font-bold text-[#2E86FF] text-[11px]">{linkedCourse.title}</span>
-                    </div>
-                  )}
-
-                  {/* Metadata Row */}
-                  <div className="flex items-center justify-between text-[11px] text-slate-300 pt-2 border-t border-[#1E375E]">
-                    <span>{pdf.pageCount || 40} صفحة</span>
-                    <span>{pdf.fileSize || '8.5 MB'}</span>
-                    <span>{pdf.downloadCount || 150} تنزيل</span>
-                  </div>
                 </div>
-
-                {/* Actions */}
-                <div className="pt-2 border-t border-[#1E375E]">
-                  {isUnlocked ? (
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setPreviewPdf(pdf)}
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#1E375E] bg-[#122442] py-2.5 text-xs font-bold text-white hover:bg-[#1B355E] transition-colors"
-                      >
-                        <Eye className="h-4 w-4 text-[#2E86FF]" />
-                        <span>معاينة وقراءة</span>
-                      </button>
-                      <button
-                        onClick={() => downloadPdfFile(pdf.url, `${pdf.title}.pdf`)}
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#FFB020] py-2.5 text-xs font-bold text-[#0C1B33] shadow-md shadow-[#FFB020]/20 hover:bg-[#e59e1c] transition-all"
-                      >
-                        <Download className="h-4 w-4" />
-                        <span>تحميل الملف</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <button
-                        onClick={() => setSelectedOptionsPdf(pdf)}
-                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#2E86FF] py-2.5 text-xs font-bold text-white shadow-md shadow-[#2E86FF]/20 hover:bg-[#2072e5] transition-all"
-                      >
-                        <Lock className="h-4 w-4" />
-                        <span>عرض خيارات التفعيل والوصول</span>
-                      </button>
-                      {linkedCourse && (
-                        <p className="text-[10px] text-center text-[#FFB020] font-medium">
-                          متاحة مجاناً لجميع المشتركين في كورس "{linkedCourse.title}"
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
+              </ScrollReveal>
             );
           })}
         </div>

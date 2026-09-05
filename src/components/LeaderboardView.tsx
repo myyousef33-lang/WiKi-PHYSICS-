@@ -12,11 +12,14 @@ import {
   Users,
   Target,
   Shield,
-  Medal
+  Medal,
+  Crown
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { StorageService } from '../services/storage';
 import { LeaderboardEntry, WeeklyChallenge, WeeklyChallengeQuestion } from '../types';
+import { calculateStudentRankStats, STUDENT_LEVELS } from '../utils/studentLevels';
+import { StudentLevelRankCard } from './StudentLevelRankCard';
 
 interface LeaderboardViewProps {
   onNavigate: (view: string, params?: any) => void;
@@ -37,6 +40,8 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({ onNavigate }) 
     setLeaderboard(StorageService.getLeaderboard());
     setChallenges(StorageService.getWeeklyChallenges());
   }, []);
+
+  const stats = calculateStudentRankStats(student, leaderboard);
 
   const handleSelectOption = (questionId: string, optIdx: number) => {
     if (submittedChallenge) return;
@@ -82,13 +87,24 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({ onNavigate }) 
           </div>
 
           <div className="flex items-center gap-4 bg-[#F5F7FA] border border-slate-200 rounded-2xl p-4 shrink-0 shadow-xs">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 border border-blue-200 text-[#1E4FD8]">
-              <Medal className="h-7 w-7" />
+            <div className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${
+              stats.isFirstOnPlatform 
+                ? 'bg-gradient-to-tr from-amber-400 to-yellow-400 border-amber-300 text-slate-950 ring-2 ring-amber-400/50' 
+                : 'bg-blue-50 border-blue-200 text-[#1E4FD8]'
+            }`}>
+              {stats.isFirstOnPlatform ? <Crown className="h-7 w-7 text-slate-950 fill-slate-950" /> : <Medal className="h-7 w-7" />}
             </div>
             <div>
-              <span className="text-[11px] font-bold text-[#6B7280]">نقاط الطالب الحالي</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-bold text-[#6B7280]">
+                  {stats.isFirstOnPlatform ? 'المركز الأول على المنصة' : `المركز #${stats.rank} على المنصة`}
+                </span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-black border ${stats.level.badgeClass}`}>
+                  رتبة {stats.level.badge}
+                </span>
+              </div>
               <p className="text-xl font-black text-[#1E4FD8]">
-                {student ? (leaderboard.find(l => l.studentId === student.id)?.points || 50) : 0} نقطة
+                {stats.points.toLocaleString('ar-EG')} نقطة
               </p>
             </div>
           </div>
@@ -140,6 +156,12 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({ onNavigate }) 
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="text-sm font-bold text-[#0D1B3E]">{entry.studentName}</h3>
+                          {rankNum === 1 && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 px-2.5 py-0.5 text-[10px] font-black shadow-2xs">
+                              <Crown className="h-3 w-3 text-slate-950 fill-slate-950" />
+                              <span>الأول على المنصة</span>
+                            </span>
+                          )}
                           {isCurrent && (
                             <span className="rounded bg-blue-100 text-[#1E4FD8] px-1.5 py-0.5 text-[10px] font-bold">
                               أنت
@@ -179,9 +201,12 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({ onNavigate }) 
           </div>
         </div>
 
-        {/* Right Column: Weekly Challenge & Badges (1 col) */}
+        {/* Right Column: Student Rank Card & Weekly Challenge & Badges (1 col) */}
         <div className="space-y-6">
           
+          {/* Your Detailed Rank & Level Progress Card */}
+          <StudentLevelRankCard stats={stats} />
+
           {/* Weekly Challenge Card */}
           {activeChallenge && (
             <div className="rounded-3xl border border-blue-100 bg-white p-6 space-y-5 shadow-xs">

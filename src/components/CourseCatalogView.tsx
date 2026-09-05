@@ -4,6 +4,7 @@ import confetti from 'canvas-confetti';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { Course, Student, GradeLevel } from '../types';
 import { CourseRatingBadge } from './CourseRatingBadge';
+import { ScrollReveal } from './ScrollReveal';
 
 interface CourseCatalogViewProps {
   onNavigate: (view: string, params?: any) => void;
@@ -111,7 +112,7 @@ export const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredCourses.map(course => {
+          {filteredCourses.map((course, idx) => {
             const isEnrolled = student?.enrolledCourseIds?.includes(course.id);
             let totalLessons = 0;
             course.units?.forEach(u => {
@@ -119,96 +120,104 @@ export const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({
             });
 
             return (
-              <div
-                key={course.id}
-                className="rounded-3xl bg-white border border-slate-200 shadow-xs hover:shadow-md hover:border-blue-200 transition-all duration-300 overflow-hidden flex flex-col justify-between"
-              >
-                <div>
-                  {/* Thumbnail */}
-                  <div className="relative aspect-video w-full overflow-hidden bg-slate-100">
-                    <img
-                      src={course.thumbnail}
-                      alt={course.title}
-                      className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
-                    />
-                    <div className="absolute top-2.5 right-2.5 rounded-lg bg-white/95 backdrop-blur-md px-2.5 py-1 text-[11px] font-bold text-[#1E4FD8] border border-blue-200 shadow-xs z-10">
-                      {course.grade}
+              <ScrollReveal key={course.id} index={idx} className="h-full">
+                <div
+                  className="rounded-3xl bg-white border border-slate-200 shadow-xs hover:shadow-md hover:border-blue-200 transition-all duration-300 overflow-hidden flex flex-col justify-between h-full"
+                >
+                  <div>
+                    {/* Thumbnail */}
+                    <div 
+                      className="relative aspect-video w-full overflow-hidden bg-slate-100"
+                      style={{ aspectRatio: '16 / 9' }}
+                    >
+                      <img
+                        src={course.thumbnail}
+                        alt={course.title}
+                        loading="lazy"
+                        decoding="async"
+                        width={640}
+                        height={360}
+                        className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
+                      />
+                      <div className="absolute top-2.5 right-2.5 rounded-lg bg-white/95 backdrop-blur-md px-2.5 py-1 text-[11px] font-bold text-[#1E4FD8] border border-blue-200 shadow-xs z-10">
+                        {course.grade}
+                      </div>
+
+                      {/* Edge Rating Badge on Corner/Side of Screen Image */}
+                      <CourseRatingBadge 
+                        rating={course.rating} 
+                        ratingCount={course.ratingCount} 
+                        position="top-left" 
+                      />
+
+                      {isEnrolled && (
+                        <div className="absolute bottom-2.5 left-2.5 rounded-lg bg-emerald-500 text-white px-2.5 py-1 text-[10px] font-black flex items-center gap-1 shadow-sm z-10">
+                          <CheckCircle2 className="h-3 w-3" />
+                          <span>مشترك بالفعل</span>
+                        </div>
+                      )}
+
+                      <div className="absolute bottom-2.5 right-2.5 rounded-lg bg-[#0D1B3E]/85 backdrop-blur-md px-2.5 py-0.5 text-[11px] font-bold text-white z-10">
+                        {course.units?.length || 0} فصول • {totalLessons} درس
+                      </div>
                     </div>
 
-                    {/* Edge Rating Badge on Corner/Side of Screen Image */}
-                    <CourseRatingBadge 
-                      rating={course.rating} 
-                      ratingCount={course.ratingCount} 
-                      position="top-left"
-                    />
+                    {/* Details */}
+                    <div className="p-5 space-y-3">
+                      <h3 className="font-bold text-[#0D1B3E] text-base leading-snug line-clamp-2">
+                        {course.title}
+                      </h3>
+                      <p className="text-xs text-[#6B7280] line-clamp-3 leading-relaxed">
+                        {course.description}
+                      </p>
 
-                    {isEnrolled && (
-                      <div className="absolute bottom-2.5 left-2.5 rounded-lg bg-emerald-500 text-white px-2.5 py-1 text-[10px] font-black flex items-center gap-1 shadow-sm z-10">
-                        <CheckCircle2 className="h-3 w-3" />
-                        <span>مشترك بالفعل</span>
+                      <div className="flex items-center justify-between text-xs text-[#6B7280] pt-2 border-t border-slate-100">
+                        <span>المحاضر: {course.instructorName}</span>
+                        <span className="text-[#1E4FD8] font-black text-sm">{course.price} ج.م</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="p-5 pt-0 space-y-2">
+                    {isEnrolled ? (
+                      <button
+                        onClick={() => onNavigate('course-details', { courseId: course.id })}
+                        className="w-full rounded-2xl bg-emerald-500 py-3 text-xs font-bold text-white shadow-md shadow-emerald-500/20 hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>دخول الكورس (مشترك)</span>
+                      </button>
+                    ) : (
+                      <div className="flex flex-col sm:flex-row items-center gap-2">
+                        <button
+                          onClick={() => handleQuickWalletPurchase(course)}
+                          className="flex-1 w-full rounded-xl bg-[#F5B301] py-2.5 px-3 text-xs font-black text-[#0D1B3E] shadow-sm hover:bg-[#e0a401] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                          title="خصم فوري وتفعيل تلقائي من المحفظة"
+                        >
+                          <Wallet className="h-4 w-4 shrink-0" />
+                          <span>شراء بالمحفظة ({course.price} ج.م)</span>
+                        </button>
+
+                        <button
+                          onClick={student ? onOpenActivationModal : onOpenAuthModal}
+                          className="flex-1 w-full rounded-xl border-2 border-[#1E4FD8] bg-white py-2.5 px-3 text-xs font-bold text-[#1E4FD8] hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <Key className="h-3.5 w-3.5 shrink-0" />
+                          <span>كود الاشتراك</span>
+                        </button>
                       </div>
                     )}
 
-                    <div className="absolute bottom-2.5 right-2.5 rounded-lg bg-[#0D1B3E]/85 backdrop-blur-md px-2.5 py-0.5 text-[11px] font-bold text-white z-10">
-                      {course.units?.length || 0} فصول • {totalLessons} درس
-                    </div>
-                  </div>
-
-                  {/* Details */}
-                  <div className="p-5 space-y-3">
-                    <h3 className="font-bold text-[#0D1B3E] text-base leading-snug line-clamp-2">
-                      {course.title}
-                    </h3>
-                    <p className="text-xs text-[#6B7280] line-clamp-3 leading-relaxed">
-                      {course.description}
-                    </p>
-
-                    <div className="flex items-center justify-between text-xs text-[#6B7280] pt-2 border-t border-slate-100">
-                      <span>المحاضر: {course.instructorName}</span>
-                      <span className="text-[#1E4FD8] font-black text-sm">{course.price} ج.م</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="p-5 pt-0 space-y-2">
-                  {isEnrolled ? (
                     <button
                       onClick={() => onNavigate('course-details', { courseId: course.id })}
-                      className="w-full rounded-2xl bg-emerald-500 py-3 text-xs font-bold text-white shadow-md shadow-emerald-500/20 hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full rounded-xl border border-slate-200 bg-[#F5F7FA] py-2 text-[11px] font-bold text-[#6B7280] hover:text-[#1E4FD8] hover:border-blue-200 transition-colors"
                     >
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span>دخول الكورس (مشترك)</span>
+                      استعراض المنهج والتفاصيل الكاملة
                     </button>
-                  ) : (
-                    <div className="flex flex-col sm:flex-row items-center gap-2">
-                      <button
-                        onClick={() => handleQuickWalletPurchase(course)}
-                        className="flex-1 w-full rounded-xl bg-[#F5B301] py-2.5 px-3 text-xs font-black text-[#0D1B3E] shadow-sm hover:bg-[#e0a401] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                        title="خصم فوري وتفعيل تلقائي من المحفظة"
-                      >
-                        <Wallet className="h-4 w-4 shrink-0" />
-                        <span>شراء بالمحفظة ({course.price} ج.م)</span>
-                      </button>
-
-                      <button
-                        onClick={student ? onOpenActivationModal : onOpenAuthModal}
-                        className="flex-1 w-full rounded-xl border-2 border-[#1E4FD8] bg-white py-2.5 px-3 text-xs font-bold text-[#1E4FD8] hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <Key className="h-3.5 w-3.5 shrink-0" />
-                        <span>كود الاشتراك</span>
-                      </button>
-                    </div>
-                  )}
-
-                  <button
-                    onClick={() => onNavigate('course-details', { courseId: course.id })}
-                    className="w-full rounded-xl border border-slate-200 bg-[#F5F7FA] py-2 text-[11px] font-bold text-[#6B7280] hover:text-[#1E4FD8] hover:border-blue-200 transition-colors"
-                  >
-                    استعراض المنهج والتفاصيل الكاملة
-                  </button>
+                  </div>
                 </div>
-              </div>
+              </ScrollReveal>
             );
           })}
         </div>

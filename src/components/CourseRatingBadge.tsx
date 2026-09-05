@@ -11,7 +11,7 @@ interface CourseRatingBadgeProps {
   onClick?: (e: React.MouseEvent) => void;
 }
 
-export const CourseRatingBadge: React.FC<CourseRatingBadgeProps> = ({
+export const CourseRatingBadge: React.FC<CourseRatingBadgeProps> = React.memo(({
   rating,
   ratingCount,
   size = 'sm',
@@ -67,4 +67,4 @@ export const CourseRatingBadge: React.FC<CourseRatingBadgeProps> = ({
       )}
     </Component>
   );
-};
+});

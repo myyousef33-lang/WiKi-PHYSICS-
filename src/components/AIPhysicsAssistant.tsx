@@ -149,7 +149,7 @@ export const AIPhysicsAssistant: React.FC<AIPhysicsAssistantProps> = ({
         const errorMsg: AIChatMessage = {
           id: 'msg-ai-err-' + Date.now(),
           role: 'assistant',
-          text: `${serverError}\n\n💡 يمكنك النقر على الزر أدناه لإعادة المحاولة فوراً وسيقوم المساعد بمحاولة نموذج آخر.`,
+          text: `${serverError}\n\nيمكنك النقر على الزر أدناه لإعادة المحاولة فوراً وسيقوم المساعد بمحاولة نموذج آخر.`,
           timestamp: new Date().toISOString()
         };
         setMessages(prev => [...prev, errorMsg]);

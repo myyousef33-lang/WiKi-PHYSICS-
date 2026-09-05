@@ -398,7 +398,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       : 'border-slate-200 bg-[#F5F7FA] text-slate-600 hover:bg-slate-100 hover:text-[#0D1B3E]'
                   }`}
                 >
-                  <span className="text-base">👦</span>
+                  <User className="h-3.5 w-3.5" />
                   <span>طالب (ذكر)</span>
                 </button>
                 <button
@@ -410,7 +410,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       : 'border-slate-200 bg-[#F5F7FA] text-slate-600 hover:bg-slate-100 hover:text-[#0D1B3E]'
                   }`}
                 >
-                  <span className="text-base">👧</span>
+                  <User className="h-3.5 w-3.5" />
                   <span>طالبة (أنثى)</span>
                 </button>
               </div>

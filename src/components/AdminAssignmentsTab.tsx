@@ -344,7 +344,7 @@ export const AdminAssignmentsTab: React.FC = () => {
                                 </span>
                                 {sub.feedbackStatus && (
                                   <p className="text-[10px] text-slate-500 font-semibold">
-                                    {sub.feedbackStatus === 'excellent' ? '🌟 ممتاز' : sub.feedbackStatus === 'needs_revision' ? '⚠️ يحتاج إعادة' : '✅ معتمد'}
+                                    {sub.feedbackStatus === 'excellent' ? 'ممتاز' : sub.feedbackStatus === 'needs_revision' ? 'يحتاج إعادة' : 'معتمد'}
                                   </p>
                                 )}
                               </div>

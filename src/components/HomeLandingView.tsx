@@ -27,6 +27,7 @@ import { PresenceService } from '../services/presence';
 import { Course, PdfMaterial, Student } from '../types';
 import { CourseRatingBadge } from './CourseRatingBadge';
 import { ExamCountdownBanner } from './ExamCountdownBanner';
+import { ScrollReveal } from './ScrollReveal';
 import teacherCutout from '../assets/images/teacher-cutout.webp';
 
 interface HomeLandingViewProps {
@@ -34,6 +35,111 @@ interface HomeLandingViewProps {
   onOpenActivationModal: () => void;
   onOpenAuthModal: () => void;
 }
+
+interface HomeCourseCardProps {
+  course: Course;
+  instructorFallback: string;
+  onNavigate: (view: string, params?: any) => void;
+  isCarouselItem?: boolean;
+}
+
+const HomeCourseCard: React.FC<HomeCourseCardProps> = React.memo(({
+  course,
+  instructorFallback,
+  onNavigate,
+  isCarouselItem = false
+}) => {
+  const totalLessons = course.units?.reduce((acc, u) => acc + (u.lessons?.length || 0), 0) || 0;
+  const unitCount = course.units?.length || 0;
+
+  return (
+    <div
+      className={`glass-card glass-card-hover rounded-3xl overflow-hidden flex flex-col justify-between group border border-[#C7D9FE] hover:border-[#1E4FD8] transition-all shadow-xs h-full ${
+        isCarouselItem ? 'w-[290px] sm:w-[340px] lg:w-[380px] shrink-0 snap-start' : ''
+      }`}
+    >
+      <div>
+        {/* Video/Course Thumbnail Container */}
+        <div 
+          className="relative aspect-video w-full overflow-hidden bg-slate-100"
+          style={{ aspectRatio: '16 / 9' }}
+        >
+          <img
+            src={course.thumbnail}
+            alt={course.title}
+            decoding="async"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+          
+          {/* Dark Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none" />
+
+          {/* Hover Play Button Overlay */}
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 backdrop-blur-[2px] pointer-events-none">
+            <div className="h-13 w-13 rounded-full bg-[#F5B301] text-[#0D1B3E] flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
+              <Play className="h-6 w-6 fill-[#0D1B3E] mr-0.5" />
+            </div>
+          </div>
+
+          {/* Corner Grade Badge */}
+          <div className="absolute top-3 right-3 z-10">
+            <span className="rounded-xl bg-white/95 backdrop-blur-md px-3 py-1 text-xs font-bold text-[#1E4FD8] border border-blue-200 shadow-sm">
+              {course.grade}
+            </span>
+          </div>
+
+          {/* Rating Badge on Corner/Side of Screen Image */}
+          <CourseRatingBadge 
+            rating={course.rating} 
+            ratingCount={course.ratingCount} 
+            position="top-left" 
+          />
+
+          {/* Price Badge */}
+          <div className="absolute bottom-3 left-3 rounded-xl bg-[#F5B301] px-3 py-1 text-xs font-bold text-[#0D1B3E] shadow-sm z-10">
+            {course.price > 0 ? `${course.price} ج.م` : 'مجاني'}
+          </div>
+
+          {/* Bottom Badge: Lesson Count */}
+          <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-lg bg-black/75 backdrop-blur-md px-2.5 py-1 text-xs font-bold text-white z-10">
+            <PlayCircle className="h-3.5 w-3.5 text-[#F5B301]" />
+            <span>{totalLessons} درس • {unitCount} فصول</span>
+          </div>
+        </div>
+
+        {/* Course Title & Description */}
+        <div className="p-5 lg:p-6 space-y-2.5">
+          <div className="flex items-center gap-2">
+            <div className="h-6 w-6 rounded-full bg-blue-50 flex items-center justify-center text-[#1E4FD8] text-[10px] font-black border border-blue-200 shrink-0">
+              أكـ
+            </div>
+            <span className="text-xs font-bold text-[#6B7280] truncate">
+              {course.instructorName || instructorFallback}
+            </span>
+          </div>
+
+          <h3 className="font-bold text-[#0D1B3E] text-base leading-snug line-clamp-2 min-h-[2.75rem] group-hover:text-[#1E4FD8] transition-colors">
+            {course.title}
+          </h3>
+          
+          <p className="text-xs text-[#6B7280] line-clamp-2 leading-relaxed">
+            {course.description}
+          </p>
+        </div>
+      </div>
+
+      <div className="p-5 lg:p-6 pt-0">
+        <button
+          onClick={() => onNavigate('course-details', { courseId: course.id })}
+          className="w-full rounded-2xl bg-[#1E4FD8] hover:bg-blue-700 py-3 text-xs sm:text-sm font-bold text-white transition-all shadow-sm shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer"
+        >
+          <span>استعراض المنهج والدروس</span>
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+});
 
 export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
   onNavigate,
@@ -47,6 +153,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
   const [courseDisplayMode, setCourseDisplayMode] = useState<'carousel' | 'grid'>('carousel');
   const coursesScrollRef = useRef<HTMLDivElement>(null);
   const [settings, setSettings] = useState(StorageService.getSettings());
+
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeftPos, setScrollLeftPos] = useState(0);
 
   useEffect(() => {
     const update = () => {
@@ -67,9 +177,28 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
     };
   }, []);
 
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!coursesScrollRef.current) return;
+    setIsDragging(true);
+    setStartX(e.pageX - coursesScrollRef.current.offsetLeft);
+    setScrollLeftPos(coursesScrollRef.current.scrollLeft);
+  };
+
+  const handleMouseLeaveOrUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !coursesScrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - coursesScrollRef.current.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    coursesScrollRef.current.scrollLeft = scrollLeftPos - walk;
+  };
+
   const scrollCourses = (direction: 'left' | 'right') => {
     if (coursesScrollRef.current) {
-      const scrollAmount = direction === 'left' ? -420 : 420;
+      const scrollAmount = direction === 'left' ? -380 : 380;
       coursesScrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
   };
@@ -314,45 +443,53 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
-          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#1E4FD8] hover:scale-[1.02] transition-all">
-            <div className="rounded-2xl bg-white border border-[#B4CFFE] p-4 w-fit text-[#1E4FD8] shadow-xs">
-              <PlayCircle className="h-7 w-7" />
+          <ScrollReveal index={0} className="h-full">
+            <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#1E4FD8] hover:scale-[1.02] transition-all h-full">
+              <div className="rounded-2xl bg-white border border-[#B4CFFE] p-4 w-fit text-[#1E4FD8] shadow-xs">
+                <PlayCircle className="h-7 w-7" />
+              </div>
+              <h3 className="font-bold text-[#0D1B3E] text-lg lg:text-xl">شرح وافي ومبسط</h3>
+              <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
+                فيديوهات بجودة عالية وتطبيقات عملية ورسوم متحركة لتجسيد الظواهر الفيزيائية المعقدة خطوة بخطوة.
+              </p>
             </div>
-            <h3 className="font-bold text-[#0D1B3E] text-lg lg:text-xl">شرح وافي ومبسط</h3>
-            <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
-              فيديوهات بجودة عالية وتطبيقات عملية ورسوم متحركة لتجسيد الظواهر الفيزيائية المعقدة خطوة بخطوة.
-            </p>
-          </div>
+          </ScrollReveal>
 
-          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#1E4FD8] hover:scale-[1.02] transition-all">
-            <div className="rounded-2xl bg-[#F5B301]/25 border border-[#F5B301]/50 p-4 w-fit text-[#0D1B3E] shadow-xs">
-              <Award className="h-7 w-7 text-[#1E4FD8]" />
+          <ScrollReveal index={1} className="h-full">
+            <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#1E4FD8] hover:scale-[1.02] transition-all h-full">
+              <div className="rounded-2xl bg-[#F5B301]/25 border border-[#F5B301]/50 p-4 w-fit text-[#0D1B3E] shadow-xs">
+                <Award className="h-7 w-7 text-[#1E4FD8]" />
+              </div>
+              <h3 className="font-bold text-[#0D1B3E] text-lg lg:text-xl">امتحانات وتصحيح فوري</h3>
+              <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
+                بنك أسئلة متدرج الصعوبة مع مؤقت زمني ونموذج إجابة مفصل لكل سؤال لتشخيص نقاط الضعف وعلاجها فوراً.
+              </p>
             </div>
-            <h3 className="font-bold text-[#0D1B3E] text-lg lg:text-xl">امتحانات وتصحيح فوري</h3>
-            <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
-              بنك أسئلة متدرج الصعوبة مع مؤقت زمني ونموذج إجابة مفصل لكل سؤال لتشخيص نقاط الضعف وعلاجها فوراً.
-            </p>
-          </div>
+          </ScrollReveal>
 
-          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#1E4FD8] hover:scale-[1.02] transition-all">
-            <div className="rounded-2xl bg-white border border-[#B4CFFE] p-4 w-fit text-[#1E4FD8] shadow-xs">
-              <FileText className="h-7 w-7" />
+          <ScrollReveal index={2} className="h-full">
+            <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#1E4FD8] hover:scale-[1.02] transition-all h-full">
+              <div className="rounded-2xl bg-white border border-[#B4CFFE] p-4 w-fit text-[#1E4FD8] shadow-xs">
+                <FileText className="h-7 w-7" />
+              </div>
+              <h3 className="font-bold text-[#0D1B3E] text-lg lg:text-xl">مذكرات وملازم PDF</h3>
+              <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
+                ملازم مطبوعة ورقمية عالية الجودة، تشمل ملخصات القوانين، الخرائط الذهنية، وأسئلة امتحانات سابقة.
+              </p>
             </div>
-            <h3 className="font-bold text-[#0D1B3E] text-lg lg:text-xl">مذكرات وملازم PDF</h3>
-            <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
-              ملازم مطبوعة ورقمية عالية الجودة، تشمل ملخصات القوانين، الخرائط الذهنية، وأسئلة امتحانات سابقة.
-            </p>
-          </div>
+          </ScrollReveal>
 
-          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#1E4FD8] hover:scale-[1.02] transition-all">
-            <div className="rounded-2xl bg-[#F5B301]/25 border border-[#F5B301]/50 p-4 w-fit text-[#0D1B3E] shadow-xs">
-              <ShieldCheck className="h-7 w-7 text-[#1E4FD8]" />
+          <ScrollReveal index={3} className="h-full">
+            <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#1E4FD8] hover:scale-[1.02] transition-all h-full">
+              <div className="rounded-2xl bg-[#F5B301]/25 border border-[#F5B301]/50 p-4 w-fit text-[#0D1B3E] shadow-xs">
+                <ShieldCheck className="h-7 w-7 text-[#1E4FD8]" />
+              </div>
+              <h3 className="font-bold text-[#0D1B3E] text-lg lg:text-xl">تفعيل فوري بالأكواد</h3>
+              <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
+                اشترك بسهولة عبر كود التفعيل السري دون تعقيدات، مع حماية أجهزتك ومتابعة مستواك بصفة دورية.
+              </p>
             </div>
-            <h3 className="font-bold text-[#0D1B3E] text-lg lg:text-xl">تفعيل فوري بالأكواد</h3>
-            <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
-              اشترك بسهولة عبر كود التفعيل السري دون تعقيدات، مع حماية أجهزتك ومتابعة مستواك بصفة دورية.
-            </p>
-          </div>
+          </ScrollReveal>
         </div>
       </section>
 
@@ -440,183 +577,46 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             </div>
           </div>
         ) : courseDisplayMode === 'carousel' ? (
-          /* YouTube Desktop Horizontal Scroll Row */
+          /* YouTube Desktop Horizontal Scroll Row with Smooth Touch & Mouse Drag */
           <div 
             ref={coursesScrollRef}
-            className="flex gap-6 overflow-x-auto scroll-smooth pb-6 pt-1 snap-x"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            onMouseDown={handleMouseDown}
+            onMouseLeave={handleMouseLeaveOrUp}
+            onMouseUp={handleMouseLeaveOrUp}
+            onMouseMove={handleMouseMove}
+            className={`flex gap-6 overflow-x-auto pb-6 pt-1 snap-x scroll-smooth transition-all ${
+              isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'
+            }`}
+            style={{ 
+              scrollbarWidth: 'none', 
+              msOverflowStyle: 'none',
+              WebkitOverflowScrolling: 'touch',
+              touchAction: 'pan-x pan-y pinch-zoom'
+            }}
           >
-            {courses.map(course => {
-              const totalLessons = course.units?.reduce((acc, u) => acc + (u.lessons?.length || 0), 0) || 0;
-              return (
-                <div
-                  key={course.id}
-                  className="w-[290px] sm:w-[340px] lg:w-[380px] shrink-0 snap-start glass-card glass-card-hover rounded-3xl overflow-hidden flex flex-col justify-between group border border-[#C7D9FE] hover:border-[#1E4FD8] transition-all shadow-xs"
-                >
-                  <div>
-                    {/* Video/Course Thumbnail Container */}
-                    <div className="relative aspect-video w-full overflow-hidden bg-slate-100">
-                      <img
-                        src={course.thumbnail}
-                        alt={course.title}
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                      
-                      {/* Dark Gradient Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
-
-                      {/* Hover Play Button Overlay */}
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 backdrop-blur-[2px]">
-                        <div className="h-13 w-13 rounded-full bg-[#F5B301] text-[#0D1B3E] flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
-                          <Play className="h-6 w-6 fill-[#0D1B3E] mr-0.5" />
-                        </div>
-                      </div>
-
-                      {/* Corner Grade Badge */}
-                      <div className="absolute top-3 right-3 z-10">
-                        <span className="rounded-xl bg-white/95 backdrop-blur-md px-3 py-1 text-xs font-bold text-[#1E4FD8] border border-blue-200 shadow-sm">
-                          {course.grade}
-                        </span>
-                      </div>
-
-                      {/* Rating Badge on Corner/Side of Screen Image */}
-                      <CourseRatingBadge 
-                        rating={course.rating} 
-                        ratingCount={course.ratingCount} 
-                        position="top-left" 
-                      />
-
-                      {/* Price Badge */}
-                      <div className="absolute bottom-3 left-3 rounded-xl bg-[#F5B301] px-3 py-1 text-xs font-bold text-[#0D1B3E] shadow-sm z-10">
-                        {course.price > 0 ? `${course.price} ج.م` : 'مجاني'}
-                      </div>
-
-                      {/* Bottom Badge: Lesson Count */}
-                      <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-lg bg-black/75 backdrop-blur-md px-2.5 py-1 text-xs font-bold text-white z-10">
-                        <PlayCircle className="h-3.5 w-3.5 text-[#F5B301]" />
-                        <span>{totalLessons} درس • {course.units?.length || 0} فصول</span>
-                      </div>
-                    </div>
-
-                    {/* Course Title & Description */}
-                    <div className="p-5 lg:p-6 space-y-2.5">
-                      <div className="flex items-center gap-2">
-                        <div className="h-6 w-6 rounded-full bg-blue-50 flex items-center justify-center text-[#1E4FD8] text-[10px] font-black border border-blue-200 shrink-0">
-                          أكـ
-                        </div>
-                        <span className="text-xs font-bold text-[#6B7280] truncate">
-                          {course.instructorName || settings.instructorName}
-                        </span>
-                      </div>
-
-                      <h3 className="font-bold text-[#0D1B3E] text-base leading-snug line-clamp-2 min-h-[2.75rem] group-hover:text-[#1E4FD8] transition-colors">
-                        {course.title}
-                      </h3>
-                      
-                      <p className="text-xs text-[#6B7280] line-clamp-2 leading-relaxed">
-                        {course.description}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="p-5 lg:p-6 pt-0">
-                    <button
-                      onClick={() => onNavigate('course-details', { courseId: course.id })}
-                      className="w-full rounded-2xl bg-[#1E4FD8] hover:bg-blue-700 py-3 text-xs sm:text-sm font-bold text-white transition-all shadow-sm shadow-blue-500/20 flex items-center justify-center gap-2"
-                    >
-                      <span>استعراض المنهج والدروس</span>
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+            {courses.map(course => (
+              <HomeCourseCard
+                key={course.id}
+                course={course}
+                instructorFallback={settings.instructorName}
+                onNavigate={onNavigate}
+                isCarouselItem={true}
+              />
+            ))}
           </div>
         ) : (
           /* Full Grid Mode for Desktop */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-            {courses.map(course => {
-              const totalLessons = course.units?.reduce((acc, u) => acc + (u.lessons?.length || 0), 0) || 0;
-              return (
-                <div
-                  key={course.id}
-                  className="glass-card glass-card-hover rounded-3xl overflow-hidden flex flex-col justify-between group border border-[#C7D9FE] hover:border-[#1E4FD8] transition-all shadow-xs"
-                >
-                  <div>
-                    {/* Video/Course Thumbnail Container */}
-                    <div className="relative aspect-video w-full overflow-hidden bg-slate-100">
-                      <img
-                        src={course.thumbnail}
-                        alt={course.title}
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                      
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
-
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 backdrop-blur-[2px]">
-                        <div className="h-13 w-13 rounded-full bg-[#F5B301] text-[#0D1B3E] flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
-                          <Play className="h-6 w-6 fill-[#0D1B3E] mr-0.5" />
-                        </div>
-                      </div>
-
-                      {/* Corner Grade Badge */}
-                      <div className="absolute top-3 right-3 z-10">
-                        <span className="rounded-xl bg-white/95 backdrop-blur-md px-3 py-1 text-xs font-bold text-[#1E4FD8] border border-blue-200 shadow-sm">
-                          {course.grade}
-                        </span>
-                      </div>
-
-                      {/* Rating Badge on Corner/Side of Screen Image */}
-                      <CourseRatingBadge 
-                        rating={course.rating} 
-                        ratingCount={course.ratingCount} 
-                        position="top-left" 
-                      />
-
-                      {/* Price Badge */}
-                      <div className="absolute bottom-3 left-3 rounded-xl bg-[#F5B301] px-3 py-1 text-xs font-bold text-[#0D1B3E] shadow-sm z-10">
-                        {course.price > 0 ? `${course.price} ج.م` : 'مجاني'}
-                      </div>
-
-                      {/* Bottom Badge: Lesson Count */}
-                      <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-lg bg-black/75 backdrop-blur-md px-2.5 py-1 text-xs font-bold text-white z-10">
-                        <PlayCircle className="h-3.5 w-3.5 text-[#F5B301]" />
-                        <span>{totalLessons} درس • {course.units?.length || 0} فصول</span>
-                      </div>
-                    </div>
-
-                    <div className="p-6 space-y-2.5">
-                      <div className="flex items-center gap-2">
-                        <div className="h-6 w-6 rounded-full bg-blue-50 flex items-center justify-center text-[#1E4FD8] text-[10px] font-black border border-blue-200 shrink-0">
-                          أكـ
-                        </div>
-                        <span className="text-xs font-bold text-[#6B7280] truncate">
-                          {course.instructorName || settings.instructorName}
-                        </span>
-                      </div>
-
-                      <h3 className="font-bold text-[#0D1B3E] text-base leading-snug line-clamp-2 min-h-[2.75rem] group-hover:text-[#1E4FD8] transition-colors">
-                        {course.title}
-                      </h3>
-                      
-                      <p className="text-xs text-[#6B7280] line-clamp-2 leading-relaxed">
-                        {course.description}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="p-6 pt-0">
-                    <button
-                      onClick={() => onNavigate('course-details', { courseId: course.id })}
-                      className="w-full rounded-2xl bg-[#1E4FD8] hover:bg-blue-700 py-3 text-xs sm:text-sm font-bold text-white transition-all shadow-sm shadow-blue-500/20 flex items-center justify-center gap-2"
-                    >
-                      <span>استعراض المنهج والدروس</span>
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+            {courses.map((course, idx) => (
+              <ScrollReveal key={course.id} index={idx} className="h-full">
+                <HomeCourseCard
+                  course={course}
+                  instructorFallback={settings.instructorName}
+                  onNavigate={onNavigate}
+                  isCarouselItem={false}
+                />
+              </ScrollReveal>
+            ))}
           </div>
         )}
       </section>
@@ -626,26 +626,28 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
 
       {/* PDF MATERIALS TEASER */}
       <section className="mx-auto max-w-7xl 2xl:max-w-screen-2xl px-4 sm:px-6 lg:px-10 xl:px-12 space-y-8">
-        <div className="rounded-3xl border border-[#C7D9FE] bg-[#EBF1FE] p-8 sm:p-12 lg:p-16 flex flex-col lg:flex-row items-center justify-between gap-8 shadow-xs">
-          <div className="space-y-3 text-center lg:text-right">
-            <span className="rounded-full bg-white border border-[#B4CFFE] px-4 py-1.5 text-xs font-bold text-[#1E4FD8] shadow-xs">
-              المكتبة والملازم
-            </span>
-            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-[#0D1B3E]">
-              أقوى مذكرات الشرح وبنوك الأسئلة PDF
-            </h2>
-            <p className="text-xs sm:text-base text-[#6B7280] max-w-2xl leading-relaxed">
-              تصفح مذكرات الشرح والمسائل المحلولة وخرائط القوانين الذهنية المجهزة خصيصاً للطباعة أو القراءة المباشرة من التابلت والكمبيوتر.
-            </p>
-          </div>
+        <ScrollReveal index={0} className="w-full">
+          <div className="rounded-3xl border border-[#C7D9FE] bg-[#EBF1FE] p-8 sm:p-12 lg:p-16 flex flex-col lg:flex-row items-center justify-between gap-8 shadow-xs">
+            <div className="space-y-3 text-center lg:text-right">
+              <span className="rounded-full bg-white border border-[#B4CFFE] px-4 py-1.5 text-xs font-bold text-[#1E4FD8] shadow-xs">
+                المكتبة والملازم
+              </span>
+              <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-[#0D1B3E]">
+                أقوى مذكرات الشرح وبنوك الأسئلة PDF
+              </h2>
+              <p className="text-xs sm:text-base text-[#6B7280] max-w-2xl leading-relaxed">
+                تصفح مذكرات الشرح والمسائل المحلولة وخرائط القوانين الذهنية المجهزة خصيصاً للطباعة أو القراءة المباشرة من التابلت والكمبيوتر.
+              </p>
+            </div>
 
-          <button
-            onClick={() => onNavigate('pdf-library')}
-            className="rounded-2xl bg-[#F5B301] px-9 py-4 text-sm sm:text-base font-bold text-[#0D1B3E] shadow-md shadow-[#F5B301]/25 hover:bg-[#e0a401] hover:scale-105 transition-all shrink-0"
-          >
-            تصفح مكتبة الـ PDF
-          </button>
-        </div>
+            <button
+              onClick={() => onNavigate('pdf-library')}
+              className="rounded-2xl bg-[#F5B301] px-9 py-4 text-sm sm:text-base font-bold text-[#0D1B3E] shadow-md shadow-[#F5B301]/25 hover:bg-[#e0a401] hover:scale-105 transition-all shrink-0 cursor-pointer"
+            >
+              تصفح مكتبة الـ PDF
+            </button>
+          </div>
+        </ScrollReveal>
       </section>
 
       {/* TESTIMONIALS / SUCCESS STORIES */}
@@ -656,41 +658,47 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs">
-            <div className="flex items-center gap-1 text-[#F5B301]">
-              {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 fill-[#F5B301]" />)}
+          <ScrollReveal index={0} className="h-full">
+            <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs h-full">
+              <div className="flex items-center gap-1 text-[#F5B301]">
+                {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 fill-[#F5B301]" />)}
+              </div>
+              <p className="text-xs sm:text-sm text-[#0D1B3E] leading-relaxed">
+                "الفيزياء كانت أصعب مادة عندي، لكن بفضل أسلوب الشرح المنظم وبنك الأسئلة قدرت أقفل الامتحان التجريبي بدرجة 59 من 60!"
+              </p>
+              <div className="pt-3 border-t border-[#C7D9FE]/80 text-xs sm:text-sm font-bold text-[#1E4FD8]">
+                أحمد محمد — أوائل الدقهلية
+              </div>
             </div>
-            <p className="text-xs sm:text-sm text-[#0D1B3E] leading-relaxed">
-              "الفيزياء كانت أصعب مادة عندي، لكن بفضل أسلوب الشرح المنظم وبنك الأسئلة قدرت أقفل الامتحان التجريبي بدرجة 59 من 60!"
-            </p>
-            <div className="pt-3 border-t border-[#C7D9FE]/80 text-xs sm:text-sm font-bold text-[#1E4FD8]">
-              أحمد محمد — أوائل الدقهلية
-            </div>
-          </div>
+          </ScrollReveal>
 
-          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs">
-            <div className="flex items-center gap-1 text-[#F5B301]">
-              {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 fill-[#F5B301]" />)}
+          <ScrollReveal index={1} className="h-full">
+            <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs h-full">
+              <div className="flex items-center gap-1 text-[#F5B301]">
+                {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 fill-[#F5B301]" />)}
+              </div>
+              <p className="text-xs sm:text-sm text-[#0D1B3E] leading-relaxed">
+                "ميزة تصحيح الامتحانات الفورية ومعرفة سبب الخطأ بالشرح الفيزيائي وفرت عليا وقت كبير جداً وخلتني أثق في نفسي."
+              </p>
+              <div className="pt-3 border-t border-[#C7D9FE]/80 text-xs sm:text-sm font-bold text-[#1E4FD8]">
+                مريم خالد — الجيزة
+              </div>
             </div>
-            <p className="text-xs sm:text-sm text-[#0D1B3E] leading-relaxed">
-              "ميزة تصحيح الامتحانات الفورية ومعرفة سبب الخطأ بالشرح الفيزيائي وفرت عليا وقت كبير جداً وخلتني أثق في نفسي."
-            </p>
-            <div className="pt-3 border-t border-[#C7D9FE]/80 text-xs sm:text-sm font-bold text-[#1E4FD8]">
-              مريم خالد — الجيزة
-            </div>
-          </div>
+          </ScrollReveal>
 
-          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs">
-            <div className="flex items-center gap-1 text-[#F5B301]">
-              {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 fill-[#F5B301]" />)}
+          <ScrollReveal index={2} className="h-full">
+            <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs h-full">
+              <div className="flex items-center gap-1 text-[#F5B301]">
+                {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 fill-[#F5B301]" />)}
+              </div>
+              <p className="text-xs sm:text-sm text-[#0D1B3E] leading-relaxed">
+                "المذكرات والـ PDF منظمة جداً وكل قانون معاه رسم توضيحي وأمثلة الوزارة السابقة. منصة متكاملة بمعنى الكلمة."
+              </p>
+              <div className="pt-3 border-t border-[#C7D9FE]/80 text-xs sm:text-sm font-bold text-[#1E4FD8]">
+                يوسف طارق — الإسكندرية
+              </div>
             </div>
-            <p className="text-xs sm:text-sm text-[#0D1B3E] leading-relaxed">
-              "المذكرات والـ PDF منظمة جداً وكل قانون معاه رسم توضيحي وأمثلة الوزارة السابقة. منصة متكاملة بمعنى الكلمة."
-            </p>
-            <div className="pt-3 border-t border-[#C7D9FE]/80 text-xs sm:text-sm font-bold text-[#1E4FD8]">
-              يوسف طارق — الإسكندرية
-            </div>
-          </div>
+          </ScrollReveal>
         </div>
       </section>
 

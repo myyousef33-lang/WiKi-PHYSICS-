@@ -3325,7 +3325,7 @@ ${weakConceptsText}
                         <td className="py-4 px-4 font-bold text-[#0D1B3E]">
                           <div className="flex items-center gap-2">
                             <div className="h-7 w-7 rounded-full bg-blue-50 text-[#1E4FD8] flex items-center justify-center font-black text-xs relative">
-                              {student.gender === 'female' ? '👧' : student.gender === 'male' ? '👦' : student.name.charAt(0)}
+                              {student.name.charAt(0) || 'ط'}
                             </div>
                             <span>{student.name}</span>
                             {student.gender && (

@@ -439,8 +439,9 @@ export const QuizExamView: React.FC<QuizExamViewProps> = ({
 
                   <div className="flex items-center gap-2">
                     {isCorrectInPreview && (
-                      <span className="text-[11px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">
-                        ✓ الإجابة النموذجية
+                      <span className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">
+                        <Check className="h-3.5 w-3.5" />
+                        <span>الإجابة النموذجية</span>
                       </span>
                     )}
                     {isSelected && !isCorrectInPreview && (
@@ -455,7 +456,7 @@ export const QuizExamView: React.FC<QuizExamViewProps> = ({
           {/* Explanation in Preview Mode */}
           {isPreviewMode && showAnswerKeyInPreview && currentQ.explanation && (
             <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 text-xs text-[#0D1B3E] space-y-1">
-              <span className="font-bold text-[#1E4FD8] block">💡 شرح خطوات الحل والقانون المستخدم:</span>
+              <span className="font-bold text-[#1E4FD8] block">شرح خطوات الحل والقانون المستخدم:</span>
               <p className="leading-relaxed">{currentQ.explanation}</p>
             </div>
           )}

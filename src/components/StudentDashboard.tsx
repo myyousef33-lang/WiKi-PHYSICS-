@@ -25,13 +25,20 @@ import {
   LayoutGrid,
   BarChart3,
   Target,
-  Lock
+  Lock,
+  Gift,
+  Crown
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
-import { Student, Course, Lesson, ExamAttempt, NotificationItem, SmartStudyRecommendation } from '../types';
+import { Student, Course, Lesson, ExamAttempt, NotificationItem, SmartStudyRecommendation, LeaderboardEntry } from '../types';
 import { CourseRatingBadge } from './CourseRatingBadge';
 import { ExamCountdownBanner } from './ExamCountdownBanner';
 import { StreakBanner } from './StreakBanner';
+import { MascotWithRank } from './MascotWithRank';
+import { StudentLevelRankCard } from './StudentLevelRankCard';
+import { calculateStudentRankStats } from '../utils/studentLevels';
+import { LuckyWheelModal } from './LuckyWheelModal';
+import { RankTierIcon } from './RankTierIcon';
 
 interface StudentDashboardProps {
   onNavigate: (view: string, params?: any) => void;
@@ -52,6 +59,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   const [attempts, setAttempts] = useState<ExamAttempt[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [recommendations, setRecommendations] = useState<SmartStudyRecommendation[]>([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(StorageService.getLeaderboard());
+  const [isLuckyWheelOpen, setIsLuckyWheelOpen] = useState(false);
   const [nextStepInfo, setNextStepInfo] = useState<{
     course: Course;
     lesson: Lesson;
@@ -61,6 +70,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   } | null>(null);
 
   useEffect(() => {
+    // Check and award daily spin upon dashboard access
+    const cur = StorageService.getCurrentStudent();
+    if (cur) {
+      StorageService.checkAndAwardDailySpin(cur.id);
+    }
+
     const refreshData = () => {
       const currentStudent = StorageService.getCurrentStudent();
       setStudent(currentStudent);
@@ -86,6 +101,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
       // Dynamic Smart Recommendations
       const smartRecs = StorageService.getStudentRecommendations(studentId);
       setRecommendations(smartRecs);
+
+      // Refresh Leaderboard
+      setLeaderboard(StorageService.getLeaderboard());
 
       // Resolve Next Step (الخطوة القادمة) - Strictly from enrolled courses
       const coursesToSearch = studentCourses;
@@ -174,6 +192,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   // Metrics calculation
   const progressList = StorageService.getStudentProgressList(activeStudent.id);
   const completedLessonsCount = progressList.filter(p => p.isCompleted).length;
+
+  // Student Level and Leaderboard Rank Stats
+  const rankStats = calculateStudentRankStats(activeStudent, leaderboard);
 
   // Strict enrolled courses (do NOT bypass or fallback to all courses)
   const relevantCourses = courses;
@@ -279,7 +300,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   };
 
   const isFemale = activeStudent.gender === 'female';
-  const mascotSrc = isFemale ? '/images/student-mascot-female.png' : '/images/student-mascot-male.png';
+  const mascotSrc = isFemale ? '/images/student-mascot-female-half.png' : '/images/student-mascot-male-half.png';
 
   return (
     <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-5 sm:space-y-6 animate-in fade-in duration-300 pb-24 md:pb-12" dir="rtl">
@@ -287,114 +308,189 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
       {/* ========================================================================= */}
       {/* 1. Welcome Section (قسم الترحيب مع الشخصية الكرتونية 3D Mascot)             */}
       {/* ========================================================================= */}
-      <section className="rounded-2xl sm:rounded-3xl border border-blue-100 bg-gradient-to-l from-white via-white to-blue-50/40 p-4 sm:p-6 shadow-xs relative overflow-hidden">
-        {/* Subtle decorative physics glow in the background behind mascot */}
-        <div className="absolute -left-10 -top-10 h-44 w-44 rounded-full bg-blue-400/10 blur-3xl pointer-events-none" />
-        <div className="absolute -left-4 -bottom-4 h-32 w-32 rounded-full bg-amber-400/10 blur-2xl pointer-events-none" />
+      <section className="rounded-2xl sm:rounded-3xl border border-blue-100 bg-gradient-to-l from-white via-white to-blue-50/70 p-4 sm:p-6 lg:p-8 shadow-sm relative overflow-hidden min-h-[240px] sm:min-h-[280px] md:min-h-[310px] lg:min-h-[330px] flex items-center">
+        {/* Decorative physics ambient glow behind mascot */}
+        <div className="absolute -left-12 -bottom-12 h-72 w-72 sm:h-96 sm:w-96 rounded-full bg-blue-400/25 blur-3xl pointer-events-none" />
+        <div className="absolute left-8 bottom-0 h-56 w-56 sm:h-72 sm:w-72 rounded-full bg-amber-400/20 blur-2xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-row items-center justify-between gap-3 sm:gap-6">
+        <div className="relative z-10 w-full flex flex-row items-center justify-between gap-3 sm:gap-6">
           
           {/* Right Side: Text & Actions */}
-          <div className="flex-1 space-y-2 sm:space-y-2.5 min-w-0">
+          <div className="flex-1 space-y-2.5 sm:space-y-3.5 min-w-0 py-1 pl-2 sm:pl-4">
             {/* Badges */}
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold text-[#1E4FD8]">
-                <Sparkles className="h-3 w-3 text-[#F5B301]" />
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 sm:px-3 py-0.5 sm:py-1 text-[11px] sm:text-xs font-bold text-[#1E4FD8]">
+                <Sparkles className="h-3.5 w-3.5 text-[#F5B301]" />
                 <span>{activeStudent.grade || 'الصف الثالث الثانوي'}</span>
               </span>
+
+              {/* Student Level & Rank Status Badge */}
+              <button
+                onClick={() => onNavigate('leaderboard')}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 sm:px-3 py-0.5 sm:py-1 text-[11px] sm:text-xs font-black transition-all cursor-pointer shadow-xs ${
+                  rankStats.isFirstOnPlatform
+                    ? 'border-amber-400 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950 animate-pulse ring-2 ring-amber-300/80'
+                    : rankStats.isTopThree
+                    ? 'border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100'
+                    : 'border-blue-200 bg-blue-50 text-[#1E4FD8] hover:bg-blue-100'
+                }`}
+                title="عرض ترتيبك على مستوى الجمهورية في لوحة الشرف"
+              >
+                {rankStats.isFirstOnPlatform ? (
+                  <Crown className="h-3.5 w-3.5 text-slate-950 fill-slate-950" />
+                ) : (
+                  <Trophy className="h-3.5 w-3.5 text-[#F5B301]" />
+                )}
+                <span>
+                  {rankStats.isFirstOnPlatform 
+                    ? 'المركز الأول على المنصة' 
+                    : `المركز #${rankStats.rank} (${rankStats.points.toLocaleString('ar-EG')} نقطة)`}
+                </span>
+              </button>
+
+              {/* Level Badge */}
+              <button
+                onClick={() => onNavigate('leaderboard')}
+                className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 sm:px-3 py-0.5 sm:py-1 text-[11px] sm:text-xs font-bold text-indigo-800 hover:bg-indigo-100 transition-colors cursor-pointer"
+                title="رتبتك الحالية في منصة نيوتن"
+              >
+                <RankTierIcon tier={rankStats.level.tier} className="h-3.5 w-3.5 text-indigo-700" />
+                <span>رتبة {rankStats.level.badge} (مستوى {rankStats.level.level})</span>
+              </button>
 
               {activeStudent.walletBalance !== undefined && (
                 <button 
                   onClick={onOpenWalletModal}
-                  className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-800 hover:bg-amber-100 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 sm:px-3 py-0.5 sm:py-1 text-[11px] sm:text-xs font-bold text-amber-800 hover:bg-amber-100 transition-colors cursor-pointer"
                 >
-                  <Wallet className="h-3 w-3 text-[#F5B301]" />
+                  <Wallet className="h-3.5 w-3.5 text-[#F5B301]" />
                   <span>المحفظة: {activeStudent.walletBalance} ج.م</span>
                 </button>
               )}
 
+              {/* Lucky Wheel Spins Badge */}
+              <button
+                onClick={() => setIsLuckyWheelOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-gradient-to-r from-amber-100 to-amber-200/90 px-2.5 sm:px-3 py-0.5 sm:py-1 text-[11px] sm:text-xs font-black text-amber-950 hover:from-amber-200 hover:to-amber-300 transition-all cursor-pointer shadow-xs group"
+                title="عجلة الحظ لربح نقاط إضافية وتصدر المركز الأول"
+              >
+                <Gift className="h-3.5 w-3.5 text-amber-700 group-hover:rotate-12 transition-transform" />
+                <span>عجلة الحظ: {activeStudent.wheelSpins || 0} لفات</span>
+              </button>
+
               {/* Gender selector badge for older accounts if not set */}
               {!activeStudent.gender && (
-                <div className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-700 shadow-2xs">
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 sm:py-1 text-[10px] sm:text-[11px] font-bold text-indigo-700 shadow-2xs">
                   <span>اختر شخصيتك:</span>
                   <button
                     type="button"
                     onClick={() => handleQuickSetGender('male')}
-                    className="hover:scale-125 transition-transform cursor-pointer px-1"
+                    className="hover:scale-105 transition-transform cursor-pointer px-1 text-xs font-black text-blue-700"
                     title="طالب (ذكر)"
                   >
-                    👦
+                    طالب (ذكر)
                   </button>
                   <span>|</span>
                   <button
                     type="button"
                     onClick={() => handleQuickSetGender('female')}
-                    className="hover:scale-125 transition-transform cursor-pointer px-1"
+                    className="hover:scale-105 transition-transform cursor-pointer px-1 text-xs font-black text-pink-700"
                     title="طالبة (أنثى)"
                   >
-                    👧
+                    طالبة (أنثى)
                   </button>
                 </div>
               )}
             </div>
 
             {/* Greeting Title */}
-            <h1 className="text-lg sm:text-2xl font-black text-[#0D1B3E] tracking-tight">
+            <h1 className="text-xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-[#0D1B3E] tracking-tight leading-tight">
               مرحبًا بك يا {activeStudent.name || 'طالبنا المتميز'}
             </h1>
 
             {/* Subtitle description */}
-            <p className="text-xs sm:text-sm text-[#6B7280] font-medium leading-relaxed max-w-xl line-clamp-2 sm:line-clamp-none">
-              {completedLessonsCount > 0 
+            <p className="text-xs sm:text-sm md:text-base text-[#4B5563] font-medium leading-relaxed max-w-xl line-clamp-2 sm:line-clamp-none">
+              {rankStats.isFirstOnPlatform
+                ? 'ما شاء الله! أنت متصدر المركز الأول على مستوى الجمهورية! واصل التفوق للحفاظ على الصدارة.'
+                : rankStats.pointsToNextLevel > 0
+                ? `لديك ${rankStats.points.toLocaleString('ar-EG')} نقطة وأنت في رتبة ${rankStats.level.title}. تبقّى لك ${rankStats.pointsToNextLevel} نقطة للوصول إلى الرتبة التالية!`
+                : completedLessonsCount > 0 
                 ? `أكملت بنجاح ${completedLessonsCount} درسًا بنسبة إنجاز ${overallProgressPercent}%. استمر في تثبيت المفاهيم والمتابعة اليومية!`
                 : 'جاهز لرحلة التفوق في الفيزياء؟ ابدأ بالدرس التالي لتحقيق الـ 60 من 60!'}
             </p>
 
-            {/* Quick Actions (ملف شخصي، تشخيص، وتفعيل كود) */}
-            <div className="flex flex-wrap items-center gap-2 pt-0.5">
+            {/* Quick Actions */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-1">
+              {/* Leaderboard & Rank Button */}
+              <button
+                onClick={() => onNavigate('leaderboard')}
+                className="flex h-9 sm:h-11 items-center gap-1.5 sm:gap-2 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 px-3.5 sm:px-5 text-xs sm:text-sm font-black text-[#0D1B3E] hover:from-amber-300 hover:to-yellow-300 shadow-md shadow-amber-500/30 ring-2 ring-amber-400/60 hover:scale-105 transition-all cursor-pointer"
+                title="عرض لوحة الشرف وترتيب المتفوقين"
+              >
+                <Trophy className="h-4 w-4" />
+                <span>
+                  {rankStats.isFirstOnPlatform ? 'المتصدر الأول' : `ترتيبي (#${rankStats.rank})`}
+                </span>
+              </button>
+
+              {/* Lucky Wheel Button */}
+              <button
+                onClick={() => setIsLuckyWheelOpen(true)}
+                className="flex h-9 sm:h-11 items-center gap-1.5 sm:gap-2 px-3 sm:px-4 rounded-xl border border-amber-200 bg-amber-50 text-xs sm:text-sm font-bold text-amber-900 hover:bg-amber-100 transition-all cursor-pointer shadow-xs"
+                title="لف عجلة الحظ واكسب نقاط تصدر لوحة الشرف"
+              >
+                <Gift className="h-4 w-4 text-amber-600" />
+                <span>عجلة الحظ ({activeStudent.wheelSpins || 0})</span>
+              </button>
+
               {onOpenEditProfileModal && (
                 <button
                   onClick={onOpenEditProfileModal}
                   title="تعديل الملف الشخصي"
-                  className="flex h-8 sm:h-9 items-center gap-1.5 px-2.5 sm:px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-[#0D1B3E] hover:border-blue-300 hover:bg-blue-50 hover:text-[#1E4FD8] transition-all cursor-pointer shadow-xs"
+                  className="flex h-9 sm:h-11 items-center gap-1.5 sm:gap-2 px-3 sm:px-4 rounded-xl border border-slate-200 bg-slate-50 text-xs sm:text-sm font-bold text-[#0D1B3E] hover:border-blue-300 hover:bg-blue-50 hover:text-[#1E4FD8] transition-all cursor-pointer shadow-xs"
                 >
-                  <User className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">الملف الشخصي</span>
+                  <User className="h-4 w-4" />
+                  <span>الملف الشخصي</span>
                 </button>
               )}
 
               <button
                 onClick={() => onNavigate('weakness-profile')}
                 title="تشخيص مستواي"
-                className="flex h-8 sm:h-9 items-center gap-1.5 px-2.5 sm:px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-[#0D1B3E] hover:border-blue-300 hover:bg-blue-50 hover:text-[#1E4FD8] transition-all cursor-pointer shadow-xs"
+                className="flex h-9 sm:h-11 items-center gap-1.5 sm:gap-2 px-3 sm:px-4 rounded-xl border border-slate-200 bg-slate-50 text-xs sm:text-sm font-bold text-[#0D1B3E] hover:border-blue-300 hover:bg-blue-50 hover:text-[#1E4FD8] transition-all cursor-pointer shadow-xs"
               >
-                <Brain className="h-3.5 w-3.5 text-[#1E4FD8]" />
-                <span className="hidden sm:inline">تشخيص مستواي</span>
+                <Brain className="h-4 w-4 text-[#1E4FD8]" />
+                <span className="hidden xs:inline">تشخيص مستواي</span>
               </button>
 
               <button
                 onClick={onOpenActivationModal}
-                className="flex h-8 sm:h-9 items-center gap-1.5 rounded-xl bg-[#F5B301] px-3 sm:px-3.5 text-xs font-bold text-[#0D1B3E] hover:bg-[#e0a401] shadow-xs transition-all cursor-pointer"
+                className="flex h-9 sm:h-11 items-center gap-1.5 sm:gap-2 rounded-xl bg-[#0D1B3E] px-3.5 sm:px-5 text-xs sm:text-sm font-black text-white hover:bg-slate-800 shadow-xs transition-all cursor-pointer"
               >
-                <Key className="h-3.5 w-3.5" />
+                <Key className="h-4 w-4 text-[#F5B301]" />
                 <span>تفعيل كود</span>
               </button>
             </div>
           </div>
 
-          {/* Left Side: 3D Mascot Illustration (شخصية ثلاثية الأبعاد) */}
-          <div className="relative shrink-0 w-24 sm:w-32 md:w-40 flex items-center justify-center">
-            {/* Soft backdrop glow blending into card */}
-            <div className="absolute inset-0 m-auto h-20 w-20 sm:h-28 sm:w-28 rounded-full bg-gradient-to-tr from-blue-100/50 to-amber-100/40 blur-md pointer-events-none" />
-            
-            <img
-              src={mascotSrc}
-              alt={isFemale ? "شخصية الطالبة المتميزة" : "شخصية الطالب المتميز"}
-              referrerPolicy="no-referrer"
-              className="relative z-10 w-full h-auto max-h-28 sm:max-h-36 md:max-h-44 object-contain drop-shadow-sm hover:scale-105 transition-transform duration-300 pointer-events-none select-none"
-            />
-          </div>
+          {/* Spacer on right in flex row so text doesn't overlap mascot */}
+          <div className="shrink-0 w-32 xs:w-44 sm:w-56 md:w-68 lg:w-84 xl:w-96" aria-hidden="true" />
 
+        </div>
+
+        {/* Left Side: 3D Mascot Character with Platform Rank & Level Badges */}
+        <div 
+          className="absolute bottom-0 left-0 sm:left-2 md:left-4 lg:left-6 xl:left-8 w-40 xs:w-48 sm:w-64 md:w-76 lg:w-92 xl:w-[390px] select-none flex items-end justify-center z-10 cursor-pointer"
+          onClick={() => onNavigate('leaderboard')}
+          title="انقر لعرض تفاصيل الترتيب ولوحة الشرف"
+        >
+          <MascotWithRank
+            gender={activeStudent.gender}
+            stats={rankStats}
+            isHalfBody={true}
+            className="w-full"
+            showLevelBadge={true}
+          />
         </div>
       </section>
 
@@ -635,33 +731,11 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           </button>
         </div>
 
-        {/* Card 2: Honor Leaderboard */}
-        <div className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 flex flex-col justify-between space-y-3 shadow-xs">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-[#F5B301] border border-amber-200">
-                <Trophy className="h-4 w-4" />
-              </div>
-              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-[#0D1B3E] border border-amber-200">
-                تحدي الأسبوع
-              </span>
-            </div>
-
-            <h3 className="text-sm sm:text-base font-black text-[#0D1B3E]">لوحة الشرف وتحديات الفيزياء</h3>
-            <p className="text-xs text-[#6B7280] leading-relaxed">
-              تنافس مع زملائك، اكسب النقاط، واحصل على وسام المتفوق الأسبوعي في الفيزياء للثانوية العامة.
-            </p>
-          </div>
-
-          <button
-            onClick={() => onNavigate('leaderboard')}
-            className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50/50 py-2 text-xs font-bold text-[#0D1B3E] hover:bg-amber-100 transition-colors cursor-pointer"
-          >
-            <Trophy className="h-3.5 w-3.5 text-[#F5B301]" />
-            <span>عرض قائمة الأوائل</span>
-            <ChevronLeft className="h-3.5 w-3.5" />
-          </button>
-        </div>
+        {/* Card 2: Student Level & Platform Rank Card */}
+        <StudentLevelRankCard
+          stats={rankStats}
+          onOpenLeaderboard={() => onNavigate('leaderboard')}
+        />
 
       </section>
 
@@ -968,6 +1042,22 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           <span className="text-[10px] font-bold">كورساتي</span>
         </button>
 
+        {/* Lucky Wheel Tab */}
+        <button
+          onClick={() => setIsLuckyWheelOpen(true)}
+          className="flex flex-col items-center gap-1 text-amber-600 hover:text-amber-700 transition-colors cursor-pointer relative"
+        >
+          <div className="p-1 rounded-xl bg-amber-100 text-amber-800 relative">
+            <Gift className="h-4 w-4" />
+            {(activeStudent.wheelSpins || 0) > 0 && (
+              <span className="absolute -top-1 -right-1 h-3.5 w-3.5 bg-amber-500 text-white rounded-full text-[8px] font-black flex items-center justify-center shadow-xs animate-pulse">
+                {activeStudent.wheelSpins}
+              </span>
+            )}
+          </div>
+          <span className="text-[10px] font-black text-amber-900">عجلة الحظ</span>
+        </button>
+
         <button
           onClick={() => onNavigate('ai-assistant')}
           className="flex flex-col items-center gap-1 text-[#6B7280] hover:text-[#1E4FD8] transition-colors cursor-pointer"
@@ -998,6 +1088,21 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           <span className="text-[10px] font-bold">حسابي</span>
         </button>
       </nav>
+
+      {/* Lucky Wheel Modal (Focused on Points & Rank Acceleration) */}
+      <LuckyWheelModal
+        isOpen={isLuckyWheelOpen}
+        onClose={() => setIsLuckyWheelOpen(false)}
+        student={activeStudent}
+        onStudentUpdated={(updated) => {
+          setStudent(updated);
+          setLeaderboard(StorageService.getLeaderboard());
+        }}
+        onOpenLeaderboard={() => {
+          setIsLuckyWheelOpen(false);
+          onNavigate('leaderboard');
+        }}
+      />
 
     </div>
   );

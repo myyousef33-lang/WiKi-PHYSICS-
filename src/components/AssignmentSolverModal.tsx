@@ -498,7 +498,6 @@ export const AssignmentSolverModal: React.FC<AssignmentSolverModalProps> = ({
 
     StorageService.saveAssignmentSubmission(submissionData);
     setIsSubmitting(false);
-    alert('🎉 تم تسليم الواجب بنجاح للأستاذ! يمكنك متابعة حالة التصحيح والدرجة هنا أو في صفحة الكورس.');
     if (onSuccess) onSuccess();
     onClose();
   };
@@ -512,7 +511,6 @@ export const AssignmentSolverModal: React.FC<AssignmentSolverModalProps> = ({
     if (!submission) return;
     const gradeNum = parseFloat(gradeInput);
     if (isNaN(gradeNum) || gradeNum < 0 || gradeNum > (assignment.maxGrade || 20)) {
-      alert(`برجاء إدخال درجة صحيحة بين 0 و ${assignment.maxGrade || 20}`);
       return;
     }
 
@@ -525,7 +523,6 @@ export const AssignmentSolverModal: React.FC<AssignmentSolverModalProps> = ({
       feedbackStatus
     );
     setIsSubmitting(false);
-    alert('✅ تم حفظ التصحيح والدرجة بنجاح وإرسال إشعار فوري للطالب!');
     if (onSuccess) onSuccess();
     onClose();
   };
@@ -1147,7 +1144,7 @@ export const AssignmentSolverModal: React.FC<AssignmentSolverModalProps> = ({
                     onClick={() => setGradeInput(String(assignment.maxGrade || 20))}
                     className="px-2.5 py-1.5 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold text-[11px] hover:bg-emerald-200 cursor-pointer"
                   >
-                    درجة كاملة ⭐
+                    درجة كاملة
                   </button>
                   <button
                     type="button"
@@ -1164,9 +1161,9 @@ export const AssignmentSolverModal: React.FC<AssignmentSolverModalProps> = ({
                   onChange={e => setFeedbackStatus(e.target.value as any)}
                   className="rounded-xl border border-slate-300 dark:border-[#24336A] bg-white dark:bg-[#16224D] px-3 py-2 text-xs font-bold text-[#0D1B3E] dark:text-white focus:outline-none"
                 >
-                  <option value="approved">معتمد ومقبول ✅</option>
-                  <option value="excellent">ممتاز ومثالي 🌟</option>
-                  <option value="needs_revision">يحتاج إعادة مراجعة ⚠️</option>
+                  <option value="approved">معتمد ومقبول</option>
+                  <option value="excellent">ممتاز ومثالي</option>
+                  <option value="needs_revision">يحتاج إعادة مراجعة</option>
                 </select>
 
                 {/* Teacher Feedback Notes */}

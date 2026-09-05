@@ -19,7 +19,8 @@ import {
   Layers,
   Edit3,
   Wallet,
-  ChevronDown
+  ChevronDown,
+  Gift
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { Student } from '../types';
@@ -231,13 +232,28 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Clean Actions Toolbar */}
         <div className="flex items-center gap-2 sm:gap-3">
           
+          {/* Lucky Wheel Fast Trigger */}
+          {student && (
+            <button
+              onClick={() => onNavigate('dashboard')}
+              className="flex items-center gap-1.5 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-300 px-3 py-2 text-xs font-black text-[#0D1B3E] shadow-sm shadow-amber-500/20 transition-transform hover:scale-105 active:scale-95 shrink-0"
+              title="عجلة الحظ لربح إكسسوارات الشخصية"
+            >
+              <Gift className="h-4 w-4 text-[#0D1B3E]" />
+              <span className="hidden lg:inline">عجلة الحظ</span>
+              <span className="inline-flex h-4 px-1.5 items-center justify-center rounded-full bg-[#0D1B3E] text-amber-300 text-[10px] font-black">
+                {student.wheelSpins || 0}
+              </span>
+            </button>
+          )}
+
           {/* Activation Key Button */}
           <button
             onClick={onOpenActivationModal}
-            className="hidden sm:flex items-center gap-1.5 rounded-2xl bg-[#F5B301] px-3.5 py-2 text-xs font-bold text-[#0D1B3E] shadow-sm shadow-[#F5B301]/20 transition-transform hover:scale-105 active:scale-95 hover:bg-[#e0a401] shrink-0"
+            className="hidden sm:flex items-center gap-1.5 rounded-2xl bg-[#0D1B3E] text-white px-3.5 py-2 text-xs font-bold shadow-sm transition-transform hover:scale-105 active:scale-95 hover:bg-slate-800 shrink-0"
             title="تفعيل كود مسبق الدفع"
           >
-            <Key className="h-4 w-4 text-[#0D1B3E]" />
+            <Key className="h-4 w-4 text-[#F5B301]" />
             <span>تفعيل كود</span>
           </button>
 

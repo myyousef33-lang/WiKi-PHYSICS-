@@ -39,6 +39,16 @@ export interface Student {
   flashcardProgress?: Record<string, 'understood' | 'needs_review'>;
   earnedCertificates?: EarnedCertificate[];
   walletBalance?: number;
+  wheelSpins?: number;
+  unlockedAccessories?: string[]; // array of accessory IDs
+  equippedAccessories?: {
+    hat?: string;
+    hoodie?: string;
+    glasses?: string;
+    badge?: string;
+    shoes?: string;
+  };
+  lastDailySpinDate?: string; // YYYY-MM-DD
 }
 
 export interface CourseReview {

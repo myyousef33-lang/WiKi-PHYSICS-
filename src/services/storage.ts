@@ -57,6 +57,25 @@ const STORAGE_KEYS = {
   ASSIGNMENT_SUBMISSIONS: 'wikifizya_db_assignment_submissions_v4'
 };
 
+// Phone Number Normalization (Handles Arabic-Indic numerals, spaces, dashes, country codes)
+export const normalizePhoneNumber = (input?: string | null): string => {
+  if (!input) return '';
+  let cleaned = input
+    .toString()
+    .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString())
+    .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString())
+    .replace(/[\s\-\(\)\._]/g, '');
+
+  if (cleaned.startsWith('+20')) {
+    cleaned = '0' + cleaned.slice(3);
+  } else if (cleaned.startsWith('0020')) {
+    cleaned = '0' + cleaned.slice(4);
+  } else if (cleaned.startsWith('20') && cleaned.length === 12) {
+    cleaned = '0' + cleaned.slice(2);
+  }
+  return cleaned.trim();
+};
+
 // Cryptographic Password Hashing (SHA-256 with Salt)
 export const hashPassword = async (password: string): Promise<string> => {
   try {
@@ -91,6 +110,9 @@ export const verifyPassword = async (inputPassword: string, storedHashOrPlain?: 
   return storedHashOrPlain === cleanInput;
 };
 
+// In-memory cache for ultra-fast zero-latency reads without repeated JSON.parse overhead
+const memoryCache: Record<string, any> = {};
+
 // Event listener mechanism for reactive updates with frame throttling
 const listeners: (() => void)[] = [];
 export const subscribeToStorage = (callback: () => void) => {
@@ -109,7 +131,7 @@ const notifyListeners = () => {
     listeners.forEach(cb => {
       try { cb(); } catch (e) { console.error('Listener error:', e); }
     });
-  }, 16);
+  }, 32);
 };
 
 // Sanitizer to remove any undefined fields before sending to Firestore
@@ -143,20 +165,29 @@ const syncKeys = [
   STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS
 ];
 
-// Firebase Firestore Cloud Sync Helpers
+// Cloud Sync Helpers with debouncing
+const pendingSyncTimers: Record<string, any> = {};
+
 const syncToFirestore = async (key: string, data: any) => {
-  try {
-    cloudSyncStatus = 'syncing';
-    const docRef = doc(db, 'app_data', key);
-    const cleanData = sanitizeForFirestore(data);
-    const nowIso = localStorage.getItem(key + '_updated_at') || new Date().toISOString();
-    await setDoc(docRef, { data: cleanData, updatedAt: nowIso });
-    cloudSyncStatus = 'synced';
-    lastSyncTimestamp = nowIso;
-  } catch (err) {
-    console.error(`Firestore sync write error for ${key}:`, err);
-    cloudSyncStatus = 'error';
+  if (pendingSyncTimers[key]) {
+    clearTimeout(pendingSyncTimers[key]);
   }
+
+  pendingSyncTimers[key] = setTimeout(async () => {
+    delete pendingSyncTimers[key];
+    try {
+      cloudSyncStatus = 'syncing';
+      const docRef = doc(db, 'app_data', key);
+      const cleanData = sanitizeForFirestore(data);
+      const nowIso = localStorage.getItem(key + '_updated_at') || new Date().toISOString();
+      await setDoc(docRef, { data: cleanData, updatedAt: nowIso });
+      cloudSyncStatus = 'synced';
+      lastSyncTimestamp = nowIso;
+    } catch (err) {
+      // Local storage remains the authoritative offline store
+      cloudSyncStatus = 'error';
+    }
+  }, 300);
 };
 
 let isFirestoreInitialized = false;
@@ -164,9 +195,11 @@ const initFirestoreSync = () => {
   if (isFirestoreInitialized) return;
   isFirestoreInitialized = true;
 
-  syncKeys.forEach(async (key) => {
-    try {
-      const docRef = doc(db, 'app_data', key);
+  syncKeys.forEach((key, index) => {
+    // Stagger listener attachments to prevent initial network spike
+    setTimeout(() => {
+      try {
+        const docRef = doc(db, 'app_data', key);
 
         // Helper function to safely reconcile local and remote data with deterministic timestamps
       const processRemoteData = async (remoteData: any, remoteUpdatedAt?: string) => {
@@ -221,6 +254,7 @@ const initFirestoreSync = () => {
         // Update local storage directly to reflect remote state (including deletions)
         const remoteStr = JSON.stringify(remoteData);
         if (localStr !== remoteStr) {
+          memoryCache[key] = remoteData;
           localStorage.setItem(key, remoteStr);
           if (remoteUpdatedAt) {
             localStorage.setItem(key + '_updated_at', remoteUpdatedAt);
@@ -258,6 +292,7 @@ const initFirestoreSync = () => {
     } catch (e) {
       console.warn('Error setting up snapshot for', key, e);
     }
+    }, index * 60);
   });
 };
 
@@ -280,23 +315,31 @@ const SEED_SETTINGS: PlatformSettings = {
 
 const lastLocalWriteTime: Record<string, number> = {};
 
-// Helper functions for safe local persistence
+// Helper functions for safe local persistence with fast in-memory caching
 const getStored = <T>(key: string, defaultVal: T): T => {
+  if (memoryCache[key] !== undefined) {
+    return memoryCache[key] as T;
+  }
   try {
     const item = localStorage.getItem(key);
     if (!item) {
       localStorage.setItem(key, JSON.stringify(defaultVal));
+      memoryCache[key] = defaultVal;
       return defaultVal;
     }
-    return JSON.parse(item) as T;
+    const parsed = JSON.parse(item) as T;
+    memoryCache[key] = parsed;
+    return parsed;
   } catch (e) {
     console.error(`Error reading ${key} from storage:`, e);
+    memoryCache[key] = defaultVal;
     return defaultVal;
   }
 };
 
 const setStored = <T>(key: string, val: T): void => {
   try {
+    memoryCache[key] = val;
     lastLocalWriteTime[key] = Date.now();
     const nowIso = new Date().toISOString();
     localStorage.setItem(key + '_updated_at', nowIso);
@@ -388,10 +431,14 @@ export const StorageService = {
     return getStored<Student[]>(STORAGE_KEYS.STUDENTS, []);
   },
   async loginStudent(phone: string, password?: string): Promise<{ success: boolean; student?: Student; error?: string }> {
-    const cleanPhone = phone.trim();
+    const cleanPhone = normalizePhoneNumber(phone);
+    const rawTrimmed = (phone || '').trim();
     const cleanPass = (password || '').trim();
     const students = this.getStudents();
-    const found = students.find(s => s.phone === cleanPhone);
+    const found = students.find(s => {
+      const sNorm = normalizePhoneNumber(s.phone);
+      return (cleanPhone && sNorm === cleanPhone) || s.phone === rawTrimmed;
+    });
     if (!found) {
       return { success: false, error: 'رقم الهاتف غير مسجل. يرجى الضغط على إنشاء حساب جديد والتسجيل.' };
     }
@@ -434,10 +481,11 @@ export const StorageService = {
     gender?: 'male' | 'female';
   }): Promise<{ success: boolean; student?: Student; error?: string }> {
     const students = this.getStudents();
-    const cleanPhone = data.phone.trim();
+    const cleanPhone = normalizePhoneNumber(data.phone) || data.phone.trim();
+    const cleanParent = normalizePhoneNumber(data.parentPhone) || data.parentPhone.trim();
     const cleanPass = (data.password || '').trim();
 
-    if (students.some(s => s.phone === cleanPhone)) {
+    if (students.some(s => normalizePhoneNumber(s.phone) === cleanPhone || s.phone === cleanPhone)) {
       return { success: false, error: 'رقم الهاتف مسجل بالفعل مسبقاً، يمكنك تسجيل الدخول به مباشرة مع كلمة المرور.' };
     }
 
@@ -447,7 +495,7 @@ export const StorageService = {
       id: 'std-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
       name: data.name.trim(),
       phone: cleanPhone,
-      parentPhone: data.parentPhone.trim(),
+      parentPhone: cleanParent,
       password: hashedPassword,
       grade: data.grade,
       governorate: data.governorate,
@@ -521,8 +569,16 @@ export const StorageService = {
     }
   },
   loginStudentByPhone(phone: string, password?: string): Student | null {
-    const res = this.loginStudent(phone, password);
-    return res.student || null;
+    const cleanPhone = normalizePhoneNumber(phone);
+    const rawTrimmed = (phone || '').trim();
+    const students = this.getStudents();
+    const found = students.find(s => {
+      const sNorm = normalizePhoneNumber(s.phone);
+      return (cleanPhone && sNorm === cleanPhone) || s.phone === rawTrimmed;
+    });
+    if (!found || found.isBlocked) return null;
+    this.setCurrentStudent(found);
+    return found;
   },
   getStudentById(id: string): Student | undefined {
     return this.getStudents().find(s => s.id === id);
@@ -572,6 +628,20 @@ export const StorageService = {
     });
 
     return { streakDays: streak, isNewStreak };
+  },
+  checkAndAwardDailySpin(studentId: string): { awarded: boolean; spins: number; student?: Student } {
+    const student = this.getStudentById(studentId);
+    if (!student) return { awarded: false, spins: 0 };
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    if (student.lastDailySpinDate !== todayStr) {
+      student.lastDailySpinDate = todayStr;
+      student.wheelSpins = (student.wheelSpins || 0) + 1;
+      this.saveStudent(student);
+      return { awarded: true, spins: student.wheelSpins, student };
+    }
+
+    return { awarded: false, spins: student.wheelSpins || 0, student };
   },
   updateFlashcardProgress(studentId: string, cardId: string, status: 'understood' | 'needs_review'): void {
     const student = this.getStudentById(studentId);
@@ -795,8 +865,11 @@ export const StorageService = {
     if (!student) return;
 
     if (!student.enrolledCourseIds) student.enrolledCourseIds = [];
-    if (!student.enrolledCourseIds.includes(courseId)) {
+    const isNewEnrollment = !student.enrolledCourseIds.includes(courseId);
+    if (isNewEnrollment) {
       student.enrolledCourseIds.push(courseId);
+      // Award 3 spins for new course enrollment
+      student.wheelSpins = (student.wheelSpins || 0) + 3;
     }
 
     if (!student.courseExpiryDates) student.courseExpiryDates = {};
@@ -964,6 +1037,18 @@ export const StorageService = {
     };
     attempts.unshift(newAttempt);
     setStored(STORAGE_KEYS.ATTEMPTS, attempts);
+
+    // If passed exam with > 50%, award 1 spin
+    const maxScore = attemptData.maxScore || 1;
+    const percentage = (attemptData.score / maxScore) * 100;
+    if (percentage > 50) {
+      const student = this.getStudents().find(s => s.id === attemptData.studentId);
+      if (student) {
+        student.wheelSpins = (student.wheelSpins || 0) + 1;
+        this.saveStudent(student);
+      }
+    }
+
     return newAttempt;
   },
 
@@ -1565,6 +1650,10 @@ export const StorageService = {
     setStored(STORAGE_KEYS.LEADERBOARD, sorted);
     return sorted;
   },
+  saveLeaderboard(leaderboard: LeaderboardEntry[]): void {
+    const sorted = leaderboard.sort((a, b) => b.points - a.points).map((entry, idx) => ({ ...entry, rank: idx + 1 }));
+    setStored(STORAGE_KEYS.LEADERBOARD, sorted);
+  },
   getWeeklyChallenges(): WeeklyChallenge[] {
     const stored = getStored<WeeklyChallenge[]>(STORAGE_KEYS.WEEKLY_CHALLENGES, []);
     if (stored && stored.length > 0) return stored;
@@ -1933,6 +2022,8 @@ export const StorageService = {
     student.walletBalance = balance - cost;
     student.enrolledCourseIds = student.enrolledCourseIds || [];
     student.enrolledCourseIds.push(courseId);
+    // Award 3 spins for new course enrollment
+    student.wheelSpins = (student.wheelSpins || 0) + 3;
 
     // Set expiry
     if (course.validityDays && course.validityDays > 0) {

@@ -400,7 +400,9 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                     : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-[#0D1B3E]'
                 }`}
               >
-                <span className="text-lg">👦</span>
+                <div className="h-8 w-8 rounded-lg bg-blue-100/70 flex items-center justify-center text-[#1E4FD8]">
+                  <User className="h-4 w-4" />
+                </div>
                 <div className="text-right">
                   <div className="font-black">طالب (ذكر)</div>
                   <div className="text-[10px] text-[#6B7280]">شخصية الطالب المتفوق</div>
@@ -415,7 +417,9 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                     : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-[#0D1B3E]'
                 }`}
               >
-                <span className="text-lg">👧</span>
+                <div className="h-8 w-8 rounded-lg bg-pink-100/70 flex items-center justify-center text-pink-600">
+                  <User className="h-4 w-4" />
+                </div>
                 <div className="text-right">
                   <div className="font-black">طالبة (أنثى)</div>
                   <div className="text-[10px] text-[#6B7280]">شخصية الطالبة المتفوقة</div>
