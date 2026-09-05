@@ -23,6 +23,7 @@ export interface Student {
   password?: string;
   grade: GradeLevel | string;
   governorate: string;
+  gender?: 'male' | 'female';
   deviceFingerprint?: string;
   registeredAt: string;
   lastActiveAt: string;
@@ -421,11 +422,15 @@ export interface AssignmentSubmission {
   studentGrade?: string;
   submittedAt: string;
   annotatedPdfData: string; // JSON string of drawing layers or PDF URL with annotations
+  submissionType?: 'upload' | 'draw' | 'both';
+  solutionFiles?: string[]; // URLs or base64 of uploaded solution images/PDF pages
+  studentNotes?: string; // Notes or explanations from the student
   status: 'pending' | 'graded'; // قيد المراجعة | تم التصحيح
   grade?: number;
   maxGrade?: number;
   teacherNotes?: string;
   teacherAnnotatedData?: string;
+  feedbackStatus?: 'approved' | 'needs_revision' | 'excellent';
   gradedAt?: string;
 }
 

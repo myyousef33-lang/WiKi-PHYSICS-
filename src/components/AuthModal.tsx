@@ -32,6 +32,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [grade, setGrade] = useState<GradeLevel>(GradeLevel.GRADE_12);
   const [governorate, setGovernorate] = useState('القاهرة');
+  const [gender, setGender] = useState<'male' | 'female'>('male');
 
   // Error & Status
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +95,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         parentPhone: parentPhone.trim() || '01000000000',
         password: regPassword.trim(),
         grade,
-        governorate
+        governorate,
+        gender
       });
       setLoading(false);
 
@@ -377,6 +379,39 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   title={showRegPassword ? 'إخفاء' : 'إظهار'}
                 >
                   {showRegPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Gender Selection */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-[#0D1B3E] flex items-center justify-between">
+                <span>الجنس (لتخصيص تجربتك وشخصيتك التعليمية) <span className="text-[#F5B301]">*</span></span>
+              </label>
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setGender('male')}
+                  className={`flex items-center justify-center gap-2 rounded-xl py-2.5 px-3 text-xs font-bold transition-all border cursor-pointer ${
+                    gender === 'male'
+                      ? 'border-[#1E4FD8] bg-blue-50 text-[#1E4FD8] shadow-xs ring-1 ring-[#1E4FD8]'
+                      : 'border-slate-200 bg-[#F5F7FA] text-slate-600 hover:bg-slate-100 hover:text-[#0D1B3E]'
+                  }`}
+                >
+                  <span className="text-base">👦</span>
+                  <span>طالب (ذكر)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGender('female')}
+                  className={`flex items-center justify-center gap-2 rounded-xl py-2.5 px-3 text-xs font-bold transition-all border cursor-pointer ${
+                    gender === 'female'
+                      ? 'border-[#1E4FD8] bg-blue-50 text-[#1E4FD8] shadow-xs ring-1 ring-[#1E4FD8]'
+                      : 'border-slate-200 bg-[#F5F7FA] text-slate-600 hover:bg-slate-100 hover:text-[#0D1B3E]'
+                  }`}
+                >
+                  <span className="text-base">👧</span>
+                  <span>طالبة (أنثى)</span>
                 </button>
               </div>
             </div>

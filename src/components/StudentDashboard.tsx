@@ -269,21 +269,40 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     }
   ];
 
+  const handleQuickSetGender = (g: 'male' | 'female') => {
+    if (student) {
+      StorageService.updateStudent(student.id, { gender: g });
+      const updated = { ...student, gender: g };
+      StorageService.setCurrentStudent(updated);
+      setStudent(updated);
+    }
+  };
+
+  const isFemale = activeStudent.gender === 'female';
+  const mascotSrc = isFemale ? '/images/student-mascot-female.png' : '/images/student-mascot-male.png';
+
   return (
     <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-5 sm:space-y-6 animate-in fade-in duration-300 pb-24 md:pb-12" dir="rtl">
       
       {/* ========================================================================= */}
-      {/* 1. Welcome Section (قسم الترحيب المدمج والاحترافي)                          */}
+      {/* 1. Welcome Section (قسم الترحيب مع الشخصية الكرتونية 3D Mascot)             */}
       {/* ========================================================================= */}
-      <section className="rounded-2xl sm:rounded-3xl border border-blue-100 bg-white p-4 sm:p-6 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <section className="rounded-2xl sm:rounded-3xl border border-blue-100 bg-gradient-to-l from-white via-white to-blue-50/40 p-4 sm:p-6 shadow-xs relative overflow-hidden">
+        {/* Subtle decorative physics glow in the background behind mascot */}
+        <div className="absolute -left-10 -top-10 h-44 w-44 rounded-full bg-blue-400/10 blur-3xl pointer-events-none" />
+        <div className="absolute -left-4 -bottom-4 h-32 w-32 rounded-full bg-amber-400/10 blur-2xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-row items-center justify-between gap-3 sm:gap-6">
           
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
+          {/* Right Side: Text & Actions */}
+          <div className="flex-1 space-y-2 sm:space-y-2.5 min-w-0">
+            {/* Badges */}
+            <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold text-[#1E4FD8]">
                 <Sparkles className="h-3 w-3 text-[#F5B301]" />
                 <span>{activeStudent.grade || 'الصف الثالث الثانوي'}</span>
               </span>
+
               {activeStudent.walletBalance !== undefined && (
                 <button 
                   onClick={onOpenWalletModal}
@@ -293,46 +312,87 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                   <span>المحفظة: {activeStudent.walletBalance} ج.م</span>
                 </button>
               )}
+
+              {/* Gender selector badge for older accounts if not set */}
+              {!activeStudent.gender && (
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-700 shadow-2xs">
+                  <span>اختر شخصيتك:</span>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickSetGender('male')}
+                    className="hover:scale-125 transition-transform cursor-pointer px-1"
+                    title="طالب (ذكر)"
+                  >
+                    👦
+                  </button>
+                  <span>|</span>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickSetGender('female')}
+                    className="hover:scale-125 transition-transform cursor-pointer px-1"
+                    title="طالبة (أنثى)"
+                  >
+                    👧
+                  </button>
+                </div>
+              )}
             </div>
 
-            <h1 className="text-xl sm:text-2xl font-black text-[#0D1B3E] tracking-tight">
-              مرحبًا بك يا {activeStudent.name || 'يوسف عماد'}
+            {/* Greeting Title */}
+            <h1 className="text-lg sm:text-2xl font-black text-[#0D1B3E] tracking-tight">
+              مرحبًا بك يا {activeStudent.name || 'طالبنا المتميز'}
             </h1>
 
-            <p className="text-xs sm:text-sm text-[#6B7280] font-medium leading-relaxed max-w-2xl">
+            {/* Subtitle description */}
+            <p className="text-xs sm:text-sm text-[#6B7280] font-medium leading-relaxed max-w-xl line-clamp-2 sm:line-clamp-none">
               {completedLessonsCount > 0 
                 ? `أكملت بنجاح ${completedLessonsCount} درسًا بنسبة إنجاز ${overallProgressPercent}%. استمر في تثبيت المفاهيم والمتابعة اليومية!`
                 : 'جاهز لرحلة التفوق في الفيزياء؟ ابدأ بالدرس التالي لتحقيق الـ 60 من 60!'}
             </p>
+
+            {/* Quick Actions (ملف شخصي، تشخيص، وتفعيل كود) */}
+            <div className="flex flex-wrap items-center gap-2 pt-0.5">
+              {onOpenEditProfileModal && (
+                <button
+                  onClick={onOpenEditProfileModal}
+                  title="تعديل الملف الشخصي"
+                  className="flex h-8 sm:h-9 items-center gap-1.5 px-2.5 sm:px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-[#0D1B3E] hover:border-blue-300 hover:bg-blue-50 hover:text-[#1E4FD8] transition-all cursor-pointer shadow-xs"
+                >
+                  <User className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">الملف الشخصي</span>
+                </button>
+              )}
+
+              <button
+                onClick={() => onNavigate('weakness-profile')}
+                title="تشخيص مستواي"
+                className="flex h-8 sm:h-9 items-center gap-1.5 px-2.5 sm:px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-[#0D1B3E] hover:border-blue-300 hover:bg-blue-50 hover:text-[#1E4FD8] transition-all cursor-pointer shadow-xs"
+              >
+                <Brain className="h-3.5 w-3.5 text-[#1E4FD8]" />
+                <span className="hidden sm:inline">تشخيص مستواي</span>
+              </button>
+
+              <button
+                onClick={onOpenActivationModal}
+                className="flex h-8 sm:h-9 items-center gap-1.5 rounded-xl bg-[#F5B301] px-3 sm:px-3.5 text-xs font-bold text-[#0D1B3E] hover:bg-[#e0a401] shadow-xs transition-all cursor-pointer"
+              >
+                <Key className="h-3.5 w-3.5" />
+                <span>تفعيل كود</span>
+              </button>
+            </div>
           </div>
 
-          {/* Quick Actions (إشعارات، ملف شخصي، وتفعيل كود) */}
-          <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
-            {onOpenEditProfileModal && (
-              <button
-                onClick={onOpenEditProfileModal}
-                title="تعديل الملف الشخصي"
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-[#0D1B3E] hover:border-blue-300 hover:bg-blue-50 hover:text-[#1E4FD8] transition-all cursor-pointer"
-              >
-                <User className="h-4 w-4" />
-              </button>
-            )}
-
-            <button
-              onClick={() => onNavigate('weakness-profile')}
-              title="تشخيص مستواي"
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-[#0D1B3E] hover:border-blue-300 hover:bg-blue-50 hover:text-[#1E4FD8] transition-all cursor-pointer"
-            >
-              <Brain className="h-4 w-4 text-[#1E4FD8]" />
-            </button>
-
-            <button
-              onClick={onOpenActivationModal}
-              className="flex items-center gap-1.5 rounded-xl bg-[#F5B301] px-3.5 py-2 text-xs font-bold text-[#0D1B3E] hover:bg-[#e0a401] shadow-xs transition-all cursor-pointer"
-            >
-              <Key className="h-3.5 w-3.5" />
-              <span>تفعيل كود</span>
-            </button>
+          {/* Left Side: 3D Mascot Illustration (شخصية ثلاثية الأبعاد) */}
+          <div className="relative shrink-0 w-24 sm:w-32 md:w-40 flex items-center justify-center">
+            {/* Soft backdrop glow blending into card */}
+            <div className="absolute inset-0 m-auto h-20 w-20 sm:h-28 sm:w-28 rounded-full bg-gradient-to-tr from-blue-100/50 to-amber-100/40 blur-md pointer-events-none" />
+            
+            <img
+              src={mascotSrc}
+              alt={isFemale ? "شخصية الطالبة المتميزة" : "شخصية الطالب المتميز"}
+              referrerPolicy="no-referrer"
+              className="relative z-10 w-full h-auto max-h-28 sm:max-h-36 md:max-h-44 object-contain drop-shadow-sm hover:scale-105 transition-transform duration-300 pointer-events-none select-none"
+            />
           </div>
 
         </div>

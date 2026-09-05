@@ -3324,10 +3324,17 @@ ${weakConceptsText}
                       <tr key={student.id} className="hover:bg-[#F5F7FA] transition-colors">
                         <td className="py-4 px-4 font-bold text-[#0D1B3E]">
                           <div className="flex items-center gap-2">
-                            <div className="h-7 w-7 rounded-full bg-blue-50 text-[#1E4FD8] flex items-center justify-center font-black text-xs">
-                              {student.name.charAt(0)}
+                            <div className="h-7 w-7 rounded-full bg-blue-50 text-[#1E4FD8] flex items-center justify-center font-black text-xs relative">
+                              {student.gender === 'female' ? '👧' : student.gender === 'male' ? '👦' : student.name.charAt(0)}
                             </div>
                             <span>{student.name}</span>
+                            {student.gender && (
+                              <span className={`text-[10px] px-1.5 py-0.2 rounded-full border ${
+                                student.gender === 'female' ? 'bg-pink-50 text-pink-700 border-pink-200' : 'bg-blue-50 text-blue-700 border-blue-200'
+                              }`}>
+                                {student.gender === 'female' ? 'طالبة' : 'طالب'}
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td className="py-4 px-4 font-mono text-[#0D1B3E]" dir="ltr">{student.phone}</td>

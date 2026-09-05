@@ -284,65 +284,105 @@ export const AdminAssignmentsTab: React.FC = () => {
                     <tr className="border-b border-slate-100 dark:border-[#24336A] bg-slate-50 dark:bg-[#0D1B3E] text-slate-500 dark:text-slate-400 text-xs font-bold">
                       <th className="p-4">الطالب</th>
                       <th className="p-4">الواجب الدراسي</th>
+                      <th className="p-4">نوع الحل المرفق</th>
                       <th className="p-4">تاريخ التسليم</th>
                       <th className="p-4">الحالة والدرجة</th>
                       <th className="p-4 text-center">الإجراء</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-[#24336A] text-xs">
-                    {filteredSubmissions.map(sub => (
-                      <tr key={sub.id} className="hover:bg-slate-50/80 dark:hover:bg-[#1A295C]/50 transition-colors">
-                        <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-[#1E4FD8] font-black text-sm">
-                              {sub.studentName.charAt(0)}
+                    {filteredSubmissions.map(sub => {
+                      const filesCount = sub.solutionFiles?.length || 0;
+                      return (
+                        <tr key={sub.id} className="hover:bg-slate-50/80 dark:hover:bg-[#1A295C]/50 transition-colors">
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-[#1E4FD8] font-black text-sm">
+                                {sub.studentName.charAt(0)}
+                              </div>
+                              <div>
+                                <p className="font-bold text-[#0D1B3E] dark:text-white text-sm">{sub.studentName}</p>
+                                <p className="text-[11px] text-slate-400">{sub.studentPhone || 'بدون هاتف'} • {sub.studentGrade || 'المرحلة الثانوية'}</p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-bold text-[#0D1B3E] dark:text-white text-sm">{sub.studentName}</p>
-                              <p className="text-[11px] text-slate-400">{sub.studentPhone || 'بدون هاتف'} • {sub.studentGrade || 'المرجلة الثانوية'}</p>
+                          </td>
+
+                          <td className="p-4">
+                            <p className="font-bold text-[#0D1B3E] dark:text-white">{sub.assignmentTitle}</p>
+                          </td>
+
+                          <td className="p-4">
+                            {filesCount > 0 ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-blue-50 border border-blue-200 text-[#1E4FD8] font-bold text-[11px]">
+                                <Upload className="h-3 w-3" />
+                                <span>مرفق {filesCount} {filesCount === 1 ? 'صفحة' : 'صفحات'} حل</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 text-slate-600 font-bold text-[11px]">
+                                <Edit3 className="h-3 w-3" />
+                                <span>حل رقمي بالقلم</span>
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="p-4 text-slate-500 dark:text-slate-400">
+                            {new Date(sub.submittedAt).toLocaleDateString('ar-EG', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </td>
+
+                          <td className="p-4">
+                            {sub.status === 'graded' ? (
+                              <div className="space-y-1">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 font-bold">
+                                  <CheckCircle2 className="h-4 w-4" />
+                                  {sub.grade} / {sub.maxGrade || 20}
+                                </span>
+                                {sub.feedbackStatus && (
+                                  <p className="text-[10px] text-slate-500 font-semibold">
+                                    {sub.feedbackStatus === 'excellent' ? '🌟 ممتاز' : sub.feedbackStatus === 'needs_revision' ? '⚠️ يحتاج إعادة' : '✅ معتمد'}
+                                  </p>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 font-bold animate-pulse">
+                                <Clock className="h-4 w-4" />
+                                بانتظار التصحيح
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="p-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                onClick={() => handleOpenGradingModal(sub)}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#1E4FD8] hover:bg-blue-700 text-white font-bold transition-all shadow-xs cursor-pointer"
+                              >
+                                <Edit3 className="h-3.5 w-3.5" />
+                                <span>{sub.status === 'graded' ? 'تعديل التصحيح' : 'تصحيح الواجب'}</span>
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  if (confirm(`هل أنت متأكد من حذف تسليم الطالب "${sub.studentName}"؟`)) {
+                                    StorageService.deleteAssignmentSubmission(sub.id);
+                                    setSubmissions(StorageService.getAssignmentSubmissions());
+                                  }
+                                }}
+                                className="p-2 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors cursor-pointer"
+                                title="حذف هذا التسليم"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
                             </div>
-                          </div>
-                        </td>
-
-                        <td className="p-4">
-                          <p className="font-bold text-[#0D1B3E] dark:text-white">{sub.assignmentTitle}</p>
-                        </td>
-
-                        <td className="p-4 text-slate-500 dark:text-slate-400">
-                          {new Date(sub.submittedAt).toLocaleDateString('ar-EG', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </td>
-
-                        <td className="p-4">
-                          {sub.status === 'graded' ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 font-bold">
-                              <CheckCircle2 className="h-4 w-4" />
-                              {sub.grade} / {sub.maxGrade || 20}
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 font-bold animate-pulse">
-                              <Clock className="h-4 w-4" />
-                              بانتظار التصحيح
-                            </span>
-                          )}
-                        </td>
-
-                        <td className="p-4 text-center">
-                          <button
-                            onClick={() => handleOpenGradingModal(sub)}
-                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1E4FD8] hover:bg-blue-700 text-white font-bold transition-all shadow-xs"
-                          >
-                            <Edit3 className="h-3.5 w-3.5" />
-                            {sub.status === 'graded' ? 'تعديل التصحيح' : 'فتح وتصحيح الواجب'}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

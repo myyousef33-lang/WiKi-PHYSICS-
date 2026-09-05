@@ -186,22 +186,20 @@ const initFirestoreSync = () => {
           } catch (_) {}
         }
 
-        const localUpdatedAt = localStorage.getItem(key + '_updated_at') || '';
-
         // Case: SETTINGS reconciliation
         if (key === STORAGE_KEYS.SETTINGS && typeof localVal === 'object' && localVal !== null && typeof remoteData === 'object' && remoteData !== null) {
           const isLocalCustomPhoto = localVal.instructorPhotoUrl && localVal.instructorPhotoUrl !== '/teacher.jpg' && localVal.instructorPhotoUrl.trim() !== '';
           const isRemoteDefaultPhoto = !remoteData.instructorPhotoUrl || remoteData.instructorPhotoUrl === '/teacher.jpg' || remoteData.instructorPhotoUrl.trim() === '';
 
-          // If local has a custom photo and remote has the default, or local was updated more recently: preserve local
-          if ((isLocalCustomPhoto && isRemoteDefaultPhoto) || (localUpdatedAt && remoteUpdatedAt && localUpdatedAt > remoteUpdatedAt)) {
+          // If local has a custom photo and remote has the default, preserve local photo
+          if (isLocalCustomPhoto && isRemoteDefaultPhoto) {
             const merged = { ...SEED_SETTINGS, ...remoteData, ...localVal };
             const mergedStr = JSON.stringify(merged);
             if (localStr !== mergedStr) {
               localStorage.setItem(key, mergedStr);
               notifyListeners();
             }
-            await setDoc(docRef, { data: sanitizeForFirestore(merged), updatedAt: localUpdatedAt || new Date().toISOString() }).catch(() => {});
+            await setDoc(docRef, { data: sanitizeForFirestore(merged), updatedAt: new Date().toISOString() }).catch(() => {});
             return;
           }
 
@@ -210,21 +208,17 @@ const initFirestoreSync = () => {
           const mergedStr = JSON.stringify(merged);
           if (localStr !== mergedStr) {
             localStorage.setItem(key, mergedStr);
-            localStorage.setItem(key + '_updated_at', remoteUpdatedAt || new Date().toISOString());
+            if (remoteUpdatedAt) {
+              localStorage.setItem(key + '_updated_at', remoteUpdatedAt);
+            }
             notifyListeners();
           }
           return;
         }
 
-        // Timestamp comparison: if local was modified more recently than remote, push local to remote!
-        if (localUpdatedAt && remoteUpdatedAt && localUpdatedAt > remoteUpdatedAt) {
-          if (localVal !== null && localVal !== undefined) {
-            await setDoc(docRef, { data: sanitizeForFirestore(localVal), updatedAt: localUpdatedAt }).catch(() => {});
-          }
-          return;
-        }
-
-        // If remote is newer or local has no timestamp, accept remote directly (including deletions)
+        // For all collections (Courses, Exams, Assignments, PDFs, etc.):
+        // Remote Firestore data is the authoritative truth across all student and admin devices.
+        // Update local storage directly to reflect remote state (including deletions)
         const remoteStr = JSON.stringify(remoteData);
         if (localStr !== remoteStr) {
           localStorage.setItem(key, remoteStr);
@@ -437,6 +431,7 @@ export const StorageService = {
     password?: string;
     grade: string;
     governorate: string;
+    gender?: 'male' | 'female';
   }): Promise<{ success: boolean; student?: Student; error?: string }> {
     const students = this.getStudents();
     const cleanPhone = data.phone.trim();
@@ -456,6 +451,7 @@ export const StorageService = {
       password: hashedPassword,
       grade: data.grade,
       governorate: data.governorate,
+      gender: data.gender || 'male',
       walletBalance: 0,
       registeredAt: new Date().toISOString(),
       lastActiveAt: new Date().toISOString(),
@@ -479,6 +475,7 @@ export const StorageService = {
     password?: string;
     grade: string;
     governorate: string;
+    gender?: 'male' | 'female';
   }): Promise<{ success: boolean; student?: Student; error?: string }> {
     return this.registerStudent(data);
   },
@@ -636,6 +633,44 @@ export const StorageService = {
   deleteCourse(courseId: string): void {
     const courses = this.getCourses().filter(c => c.id !== courseId);
     setStored(STORAGE_KEYS.COURSES, courses);
+
+    // Clean up enrolled courses and expiration from students
+    try {
+      const students = this.getStudents();
+      let studentsUpdated = false;
+      students.forEach(s => {
+        if (s.enrolledCourseIds?.includes(courseId)) {
+          s.enrolledCourseIds = s.enrolledCourseIds.filter(id => id !== courseId);
+          if (s.courseExpiryDates && s.courseExpiryDates[courseId]) {
+            delete s.courseExpiryDates[courseId];
+          }
+          studentsUpdated = true;
+        }
+      });
+      if (studentsUpdated) {
+        setStored(STORAGE_KEYS.STUDENTS, students);
+        const current = this.getCurrentStudent();
+        if (current && current.enrolledCourseIds?.includes(courseId)) {
+          current.enrolledCourseIds = current.enrolledCourseIds.filter(id => id !== courseId);
+          if (current.courseExpiryDates && current.courseExpiryDates[courseId]) {
+            delete current.courseExpiryDates[courseId];
+          }
+          this.setCurrentStudent(current);
+        }
+      }
+    } catch (_) {}
+
+    // Clean up assignments linked to this course
+    try {
+      const assignments = this.getAssignments().filter(a => a.courseId !== courseId);
+      setStored(STORAGE_KEYS.ASSIGNMENTS, assignments);
+    } catch (_) {}
+
+    // Clean up exams linked to this course
+    try {
+      const exams = this.getExams().filter(e => e.courseId !== courseId);
+      setStored(STORAGE_KEYS.EXAMS, exams);
+    } catch (_) {}
   },
   reorderCourses(orderedCourses: Course[]): void {
     setStored(STORAGE_KEYS.COURSES, orderedCourses);
@@ -874,6 +909,29 @@ export const StorageService = {
   deleteExam(examId: string): void {
     const exams = this.getExams().filter(e => e.id !== examId);
     setStored(STORAGE_KEYS.EXAMS, exams);
+
+    // Clean up references in courses (unitExamId or quizId)
+    try {
+      const courses = this.getCourses();
+      let coursesUpdated = false;
+      courses.forEach(c => {
+        c.units?.forEach(u => {
+          if (u.unitExamId === examId) {
+            u.unitExamId = undefined;
+            coursesUpdated = true;
+          }
+          u.lessons?.forEach(l => {
+            if (l.quizId === examId) {
+              l.quizId = undefined;
+              coursesUpdated = true;
+            }
+          });
+        });
+      });
+      if (coursesUpdated) {
+        setStored(STORAGE_KEYS.COURSES, courses);
+      }
+    } catch (_) {}
   },
 
   // === Exam Attempts & Results ===
@@ -2081,13 +2139,7 @@ export const StorageService = {
 
   // === Assignments & Submissions ===
   getAssignments(): Assignment[] {
-    const data = localStorage.getItem(STORAGE_KEYS.ASSIGNMENTS);
-    if (!data) return [];
-    try {
-      return JSON.parse(data);
-    } catch {
-      return [];
-    }
+    return getStored<Assignment[]>(STORAGE_KEYS.ASSIGNMENTS, []);
   },
 
   getAssignmentsByCourse(courseId: string): Assignment[] {
@@ -2103,30 +2155,24 @@ export const StorageService = {
     } else {
       list.unshift(assignment);
     }
-    localStorage.setItem(STORAGE_KEYS.ASSIGNMENTS, JSON.stringify(list));
-    localStorage.setItem(STORAGE_KEYS.ASSIGNMENTS + '_updated_at', new Date().toISOString());
-    notifyListeners();
-    syncToFirestore(STORAGE_KEYS.ASSIGNMENTS, list);
+    setStored(STORAGE_KEYS.ASSIGNMENTS, list);
     return assignment;
   },
 
   deleteAssignment(id: string): void {
     let list = this.getAssignments();
     list = list.filter(a => a.id !== id);
-    localStorage.setItem(STORAGE_KEYS.ASSIGNMENTS, JSON.stringify(list));
-    localStorage.setItem(STORAGE_KEYS.ASSIGNMENTS + '_updated_at', new Date().toISOString());
-    notifyListeners();
-    syncToFirestore(STORAGE_KEYS.ASSIGNMENTS, list);
+    setStored(STORAGE_KEYS.ASSIGNMENTS, list);
+
+    // Also clean up submissions for this assignment
+    try {
+      const subs = this.getAssignmentSubmissions().filter(s => s.assignmentId !== id);
+      setStored(STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS, subs);
+    } catch (_) {}
   },
 
   getAssignmentSubmissions(): AssignmentSubmission[] {
-    const data = localStorage.getItem(STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS);
-    if (!data) return [];
-    try {
-      return JSON.parse(data);
-    } catch {
-      return [];
-    }
+    return getStored<AssignmentSubmission[]>(STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS, []);
   },
 
   getStudentAssignmentSubmissions(studentId: string): AssignmentSubmission[] {
@@ -2142,14 +2188,22 @@ export const StorageService = {
     } else {
       list.unshift(submission);
     }
-    localStorage.setItem(STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS, JSON.stringify(list));
-    localStorage.setItem(STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS + '_updated_at', new Date().toISOString());
-    notifyListeners();
-    syncToFirestore(STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS, list);
+    setStored(STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS, list);
     return submission;
   },
 
-  gradeAssignmentSubmission(submissionId: string, grade: number, teacherNotes?: string, teacherAnnotatedData?: string): AssignmentSubmission | null {
+  deleteAssignmentSubmission(id: string): void {
+    const list = this.getAssignmentSubmissions().filter(s => s.id !== id);
+    setStored(STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS, list);
+  },
+
+  gradeAssignmentSubmission(
+    submissionId: string, 
+    grade: number, 
+    teacherNotes?: string, 
+    teacherAnnotatedData?: string,
+    feedbackStatus?: 'approved' | 'needs_revision' | 'excellent'
+  ): AssignmentSubmission | null {
     const list = this.getAssignmentSubmissions();
     const idx = list.findIndex(s => s.id === submissionId);
     if (idx === -1) return null;
@@ -2159,13 +2213,11 @@ export const StorageService = {
     sub.grade = grade;
     if (teacherNotes !== undefined) sub.teacherNotes = teacherNotes;
     if (teacherAnnotatedData !== undefined) sub.teacherAnnotatedData = teacherAnnotatedData;
+    if (feedbackStatus !== undefined) sub.feedbackStatus = feedbackStatus;
     sub.gradedAt = new Date().toISOString();
 
     list[idx] = sub;
-    localStorage.setItem(STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS, JSON.stringify(list));
-    localStorage.setItem(STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS + '_updated_at', new Date().toISOString());
-    notifyListeners();
-    syncToFirestore(STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS, list);
+    setStored(STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS, list);
 
     try {
       this.sendNotification({

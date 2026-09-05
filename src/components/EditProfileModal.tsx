@@ -41,6 +41,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const [phone, setPhone] = useState(student.phone || '');
   const [parentPhone, setParentPhone] = useState(student.parentPhone || '');
   const [avatarUrl, setAvatarUrl] = useState(student.avatarUrl || '');
+  const [gender, setGender] = useState<'male' | 'female'>(student.gender || 'male');
   
   // Password change fields
   const [currentPassword, setCurrentPassword] = useState('');
@@ -208,6 +209,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         phone: phone.trim(),
         parentPhone: parentPhone.trim(),
         avatarUrl,
+        gender: gender || 'male',
         password: updatedPasswordHash,
         lastActiveAt: new Date().toISOString()
       };
@@ -370,6 +372,55 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   ))}
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Gender / Mascot Selection */}
+          <div className="space-y-2 rounded-2xl border border-slate-200 bg-[#F5F7FA] p-4">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-[#0D1B3E] block">
+                الجنس والشخصية التعليمية (Mascot):
+              </label>
+              {!student.gender && (
+                <span className="text-[10px] font-bold text-[#1E4FD8] bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+                  يرجى التحديد لأول مرة
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-[#6B7280]">
+              تحدد شخصيتك الكرتونية التي ترحب بك في لوحة التحكم وترافقك في رحلة تعلم الفيزياء.
+            </p>
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => setGender('male')}
+                className={`flex items-center justify-center gap-2.5 rounded-xl py-2.5 px-3 text-xs font-bold transition-all border cursor-pointer ${
+                  gender === 'male'
+                    ? 'border-[#1E4FD8] bg-blue-50 text-[#1E4FD8] shadow-xs ring-2 ring-[#1E4FD8]/20'
+                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-[#0D1B3E]'
+                }`}
+              >
+                <span className="text-lg">👦</span>
+                <div className="text-right">
+                  <div className="font-black">طالب (ذكر)</div>
+                  <div className="text-[10px] text-[#6B7280]">شخصية الطالب المتفوق</div>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setGender('female')}
+                className={`flex items-center justify-center gap-2.5 rounded-xl py-2.5 px-3 text-xs font-bold transition-all border cursor-pointer ${
+                  gender === 'female'
+                    ? 'border-[#1E4FD8] bg-blue-50 text-[#1E4FD8] shadow-xs ring-2 ring-[#1E4FD8]/20'
+                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-[#0D1B3E]'
+                }`}
+              >
+                <span className="text-lg">👧</span>
+                <div className="text-right">
+                  <div className="font-black">طالبة (أنثى)</div>
+                  <div className="text-[10px] text-[#6B7280]">شخصية الطالبة المتفوقة</div>
+                </div>
+              </button>
             </div>
           </div>
 
