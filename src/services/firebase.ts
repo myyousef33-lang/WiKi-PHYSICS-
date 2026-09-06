@@ -115,19 +115,33 @@ export const onSnapshot = (
     }
   };
 
-  // Stagger the initial check by random 200ms - 2000ms to avoid hammering network simultaneously
-  const initialDelay = Math.floor(Math.random() * 1800) + 200;
+  // Stagger the initial check by random 100ms - 1000ms to load rapidly on mount
+  const initialDelay = Math.floor(Math.random() * 900) + 100;
   const initialTimer = setTimeout(() => {
     void check();
   }, initialDelay);
 
-  // Poll every 25 seconds instead of 5 seconds to reduce background load
-  const timer = window.setInterval(check, 25000);
+  // Poll every 12 seconds to keep data fresh without overloading
+  const timer = window.setInterval(check, 12000);
+
+  // When user switches back to this tab, immediately check for changes
+  const onVisibilityChange = () => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'visible' && !stopped) {
+      void check();
+    }
+  };
+
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', onVisibilityChange);
+  }
 
   return () => {
     stopped = true;
     clearTimeout(initialTimer);
     window.clearInterval(timer);
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    }
   };
 };
 

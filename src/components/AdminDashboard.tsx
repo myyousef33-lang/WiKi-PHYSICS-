@@ -789,6 +789,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       price: Number(courseForm.price) || 200,
       units: []
     });
+    setCourses(StorageService.getCourses());
     setShowAddCourse(false);
     setCourseForm({
       title: '',
@@ -816,6 +817,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
 
     const updatedUnits = [...(targetCourse.units || []), newUnit];
     StorageService.updateCourse(courseId, { units: updatedUnits });
+    setCourses(StorageService.getCourses());
     setUnitTitle('');
   };
 
@@ -851,6 +853,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     });
 
     StorageService.updateCourse(courseId, { units: updatedUnits });
+    setCourses(StorageService.getCourses());
     setLessonForm({
       unitId: '',
       title: '',
@@ -888,6 +891,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       questions: examForm.questions
     });
 
+    setExams(StorageService.getExams());
     setShowAddExam(false);
     setExamForm({
       title: '',
@@ -915,6 +919,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     if (!editingExam || !editingExam.title) return;
 
     StorageService.saveExam(editingExam);
+    setExams(StorageService.getExams());
     setEditingExam(null);
   };
 
@@ -957,6 +962,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     }
 
     StorageService.createActivationCodes(newCodes);
+    setCodes(StorageService.getCodes());
     setRecentlyGeneratedCodes(newCodes);
     setShowAddCode(false);
     setShowGeneratedSuccessModal(true);
@@ -983,6 +989,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       associatedCourseId: pdfForm.associatedCourseId || undefined
     });
 
+    setPdfs(StorageService.getPdfs());
     setShowAddPdf(false);
     setPdfForm({
       title: '',
@@ -1014,6 +1021,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     };
 
     StorageService.savePdfFile(updatedPdf);
+    setPdfs(StorageService.getPdfs());
     setEditingPdf(null);
   };
 
@@ -1036,6 +1044,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       readBy: []
     });
 
+    setNotifs(StorageService.getNotifications());
     setShowAddNotif(false);
     setNotifForm({ title: '', message: '', targetType: 'all', targetGrade: 'all', targetStudentId: '' });
     alert('تم إرسال الإشعار بنجاح!');
@@ -1044,11 +1053,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
   // Toggle Student Block
   const handleToggleBlockStudent = (student: Student) => {
     StorageService.updateStudent(student.id, { isBlocked: !student.isBlocked });
+    setStudents(StorageService.getStudents());
   };
 
   // Reset Student Devices
   const handleResetDevices = (student: Student) => {
     StorageService.updateStudent(student.id, { registeredDevices: [] });
+    setStudents(StorageService.getStudents());
     alert(`تم تفريغ الأجهزة المسجلة للطالب ${student.name} بنجاح.`);
   };
 
@@ -1056,6 +1067,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     StorageService.saveSettings(settings);
+    setSettings(StorageService.getSettings());
     alert('تم حفظ إعدادات المنصة بنجاح.');
   };
 

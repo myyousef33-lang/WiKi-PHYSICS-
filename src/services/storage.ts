@@ -113,7 +113,35 @@ export const verifyPassword = async (inputPassword: string, storedHashOrPlain?: 
 // In-memory cache for ultra-fast zero-latency reads without repeated JSON.parse overhead
 const memoryCache: Record<string, any> = {};
 
-// Event listener mechanism for reactive updates with frame throttling
+// Cross-tab real-time communication channel
+let broadcastChannel: BroadcastChannel | null = null;
+try {
+  if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+    broadcastChannel = new BroadcastChannel('wikifizya_storage_sync');
+    broadcastChannel.onmessage = (event) => {
+      const key = event.data?.key;
+      if (key) {
+        delete memoryCache[key];
+      } else {
+        Object.keys(memoryCache).forEach(k => delete memoryCache[k]);
+      }
+      notifyListeners();
+    };
+  }
+} catch (_) {}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key) {
+      delete memoryCache[event.key];
+    } else {
+      Object.keys(memoryCache).forEach(k => delete memoryCache[k]);
+    }
+    notifyListeners();
+  });
+}
+
+// Event listener mechanism for reactive updates with microtask dispatch
 const listeners: (() => void)[] = [];
 export const subscribeToStorage = (callback: () => void) => {
   listeners.push(callback);
@@ -123,15 +151,16 @@ export const subscribeToStorage = (callback: () => void) => {
   };
 };
 
-let notifyTimer: any = null;
-const notifyListeners = () => {
-  if (notifyTimer) return;
-  notifyTimer = setTimeout(() => {
-    notifyTimer = null;
+let isNotifyPending = false;
+export const notifyListeners = () => {
+  if (isNotifyPending) return;
+  isNotifyPending = true;
+  queueMicrotask(() => {
+    isNotifyPending = false;
     listeners.forEach(cb => {
       try { cb(); } catch (e) { console.error('Listener error:', e); }
     });
-  }, 32);
+  });
 };
 
 // Sanitizer to remove any undefined fields before sending to Firestore
@@ -205,9 +234,16 @@ const initFirestoreSync = () => {
       const processRemoteData = async (remoteData: any, remoteUpdatedAt?: string) => {
         if (remoteData === undefined || remoteData === null) return;
 
-        // If this client wrote locally in the last 15 seconds, local state is authority
+        const localUpdatedAt = localStorage.getItem(key + '_updated_at') || '';
+        const isRemoteNewer = Boolean(
+          remoteUpdatedAt &&
+          localUpdatedAt &&
+          new Date(remoteUpdatedAt).getTime() > new Date(localUpdatedAt).getTime()
+        );
+
+        // If this client wrote locally in the last 5 seconds and remote is not newer, keep local authority
         const lastWrite = lastLocalWriteTime[key] || 0;
-        if (Date.now() - lastWrite < 15000) {
+        if (!isRemoteNewer && Date.now() - lastWrite < 5000) {
           return;
         }
 
@@ -229,7 +265,10 @@ const initFirestoreSync = () => {
             const merged = { ...SEED_SETTINGS, ...remoteData, ...localVal };
             const mergedStr = JSON.stringify(merged);
             if (localStr !== mergedStr) {
-              localStorage.setItem(key, mergedStr);
+              memoryCache[key] = cloneData(merged);
+              try {
+                localStorage.setItem(key, mergedStr);
+              } catch (_) {}
               notifyListeners();
             }
             await setDoc(docRef, { data: sanitizeForFirestore(merged), updatedAt: new Date().toISOString() }).catch(() => {});
@@ -240,10 +279,13 @@ const initFirestoreSync = () => {
           const merged = { ...SEED_SETTINGS, ...localVal, ...remoteData };
           const mergedStr = JSON.stringify(merged);
           if (localStr !== mergedStr) {
-            localStorage.setItem(key, mergedStr);
-            if (remoteUpdatedAt) {
-              localStorage.setItem(key + '_updated_at', remoteUpdatedAt);
-            }
+            memoryCache[key] = cloneData(merged);
+            try {
+              localStorage.setItem(key, mergedStr);
+              if (remoteUpdatedAt) {
+                localStorage.setItem(key + '_updated_at', remoteUpdatedAt);
+              }
+            } catch (_) {}
             notifyListeners();
           }
           return;
@@ -254,11 +296,13 @@ const initFirestoreSync = () => {
         // Update local storage directly to reflect remote state (including deletions)
         const remoteStr = JSON.stringify(remoteData);
         if (localStr !== remoteStr) {
-          memoryCache[key] = remoteData;
-          localStorage.setItem(key, remoteStr);
-          if (remoteUpdatedAt) {
-            localStorage.setItem(key + '_updated_at', remoteUpdatedAt);
-          }
+          memoryCache[key] = cloneData(remoteData);
+          try {
+            localStorage.setItem(key, remoteStr);
+            if (remoteUpdatedAt) {
+              localStorage.setItem(key + '_updated_at', remoteUpdatedAt);
+            }
+          } catch (_) {}
           notifyListeners();
         }
       };
@@ -315,36 +359,64 @@ const SEED_SETTINGS: PlatformSettings = {
 
 const lastLocalWriteTime: Record<string, number> = {};
 
+// Helper to guarantee fresh object/array references for React's Object.is state checks
+const cloneData = <T>(val: T): T => {
+  if (val === null || val === undefined) return val;
+  if (Array.isArray(val)) {
+    return [...val] as unknown as T;
+  }
+  if (typeof val === 'object') {
+    return { ...val } as unknown as T;
+  }
+  return val;
+};
+
 // Helper functions for safe local persistence with fast in-memory caching
 const getStored = <T>(key: string, defaultVal: T): T => {
+  let val: T;
   if (memoryCache[key] !== undefined) {
-    return memoryCache[key] as T;
-  }
-  try {
-    const item = localStorage.getItem(key);
-    if (!item) {
-      localStorage.setItem(key, JSON.stringify(defaultVal));
+    val = memoryCache[key] as T;
+  } else {
+    try {
+      const item = localStorage.getItem(key);
+      if (!item) {
+        localStorage.setItem(key, JSON.stringify(defaultVal));
+        memoryCache[key] = defaultVal;
+        val = defaultVal;
+      } else {
+        val = JSON.parse(item) as T;
+        memoryCache[key] = val;
+      }
+    } catch (e) {
+      console.error(`Error reading ${key} from storage:`, e);
       memoryCache[key] = defaultVal;
-      return defaultVal;
+      val = defaultVal;
     }
-    const parsed = JSON.parse(item) as T;
-    memoryCache[key] = parsed;
-    return parsed;
-  } catch (e) {
-    console.error(`Error reading ${key} from storage:`, e);
-    memoryCache[key] = defaultVal;
-    return defaultVal;
   }
+  return cloneData(val);
 };
 
 const setStored = <T>(key: string, val: T): void => {
   try {
-    memoryCache[key] = val;
+    memoryCache[key] = cloneData(val);
     lastLocalWriteTime[key] = Date.now();
     const nowIso = new Date().toISOString();
-    localStorage.setItem(key + '_updated_at', nowIso);
-    localStorage.setItem(key, JSON.stringify(val));
+
+    try {
+      localStorage.setItem(key + '_updated_at', nowIso);
+      localStorage.setItem(key, JSON.stringify(val));
+    } catch (storageErr) {
+      console.warn(`LocalStorage write error for ${key}:`, storageErr);
+    }
+
     notifyListeners();
+
+    if (broadcastChannel) {
+      try {
+        broadcastChannel.postMessage({ key, timestamp: Date.now() });
+      } catch (_) {}
+    }
+
     if (
       key !== STORAGE_KEYS.ADMIN_AUTH && 
       key !== STORAGE_KEYS.CURRENT_STUDENT && 
@@ -534,14 +606,14 @@ export const StorageService = {
     const students = this.getStudents();
     const idx = students.findIndex(s => s.id === student.id);
     if (idx !== -1) {
-      students[idx] = student;
+      students[idx] = { ...student };
     } else {
-      students.push(student);
+      students.push({ ...student });
     }
     setStored(STORAGE_KEYS.STUDENTS, students);
     const current = this.getCurrentStudent();
     if (current && current.id === student.id) {
-      this.setCurrentStudent(student);
+      this.setCurrentStudent({ ...student });
     }
   },
   deleteStudent(studentId: string): void {
@@ -554,17 +626,17 @@ export const StorageService = {
   },
   toggleStudentBlock(studentId: string): void {
     const students = this.getStudents();
-    const student = students.find(s => s.id === studentId);
-    if (student) {
-      student.isBlocked = !student.isBlocked;
+    const idx = students.findIndex(s => s.id === studentId);
+    if (idx !== -1) {
+      students[idx] = { ...students[idx], isBlocked: !students[idx].isBlocked };
       setStored(STORAGE_KEYS.STUDENTS, students);
     }
   },
   resetStudentDevices(studentId: string): void {
     const students = this.getStudents();
-    const student = students.find(s => s.id === studentId);
-    if (student) {
-      student.registeredDevices = [];
+    const idx = students.findIndex(s => s.id === studentId);
+    if (idx !== -1) {
+      students[idx] = { ...students[idx], registeredDevices: [] };
       setStored(STORAGE_KEYS.STUDENTS, students);
     }
   },
@@ -584,10 +656,16 @@ export const StorageService = {
     return this.getStudents().find(s => s.id === id);
   },
   updateStudent(id: string, updates: Partial<Student>): void {
-    const student = this.getStudentById(id);
-    if (student) {
-      Object.assign(student, updates);
-      this.saveStudent(student);
+    const students = this.getStudents();
+    const idx = students.findIndex(s => s.id === id);
+    if (idx !== -1) {
+      const updated = { ...students[idx], ...updates };
+      students[idx] = updated;
+      setStored(STORAGE_KEYS.STUDENTS, students);
+      const current = this.getCurrentStudent();
+      if (current && current.id === id) {
+        this.setCurrentStudent(updated);
+      }
     }
   },
   checkAndUpdateStudentStreak(studentId: string): { streakDays: number; isNewStreak: boolean } {
@@ -670,9 +748,9 @@ export const StorageService = {
     const courses = this.getCourses();
     const idx = courses.findIndex(c => c.id === course.id);
     if (idx !== -1) {
-      courses[idx] = course;
+      courses[idx] = { ...course };
     } else {
-      courses.unshift(course);
+      courses.unshift({ ...course });
     }
     setStored(STORAGE_KEYS.COURSES, courses);
   },
@@ -694,10 +772,11 @@ export const StorageService = {
     return newCourse;
   },
   updateCourse(id: string, updates: Partial<Course>): void {
-    const course = this.getCourseById(id);
-    if (course) {
-      Object.assign(course, updates);
-      this.saveCourse(course);
+    const courses = this.getCourses();
+    const idx = courses.findIndex(c => c.id === id);
+    if (idx !== -1) {
+      courses[idx] = { ...courses[idx], ...updates };
+      setStored(STORAGE_KEYS.COURSES, courses);
     }
   },
   deleteCourse(courseId: string): void {
@@ -953,9 +1032,9 @@ export const StorageService = {
     const exams = this.getExams();
     const idx = exams.findIndex(e => e.id === exam.id);
     if (idx !== -1) {
-      exams[idx] = exam;
+      exams[idx] = { ...exam };
     } else {
-      exams.unshift(exam);
+      exams.unshift({ ...exam });
     }
     setStored(STORAGE_KEYS.EXAMS, exams);
   },
