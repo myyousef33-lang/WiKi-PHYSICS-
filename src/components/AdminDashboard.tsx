@@ -58,7 +58,8 @@ import {
   GripVertical,
   Wallet,
   MessageSquare,
-  FileSpreadsheet
+  FileSpreadsheet,
+  AlertTriangle
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { MediaStore } from '../services/mediaStore';
@@ -741,6 +742,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     };
   })();
 
+  const [cloudSyncState, setCloudSyncState] = useState<'synced' | 'syncing' | 'error'>(() => StorageService.getCloudSyncStatus());
+  const [hasPendingCloudSync, setHasPendingCloudSync] = useState<boolean>(() => StorageService.hasPendingCloudSync());
+
   useEffect(() => {
     const update = () => {
       setStudents(StorageService.getStudents());
@@ -751,6 +755,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       setNotifs(StorageService.getNotifications());
       setAttempts(StorageService.getAttempts());
       setSettings(StorageService.getSettings());
+      setCloudSyncState(StorageService.getCloudSyncStatus());
+      setHasPendingCloudSync(StorageService.hasPendingCloudSync());
     };
     update();
     return subscribeToStorage(update);
@@ -1280,6 +1286,31 @@ ${weakConceptsText}
 
             {/* Left in RTL: Action Buttons (Firestore Sync, Theme Toggle, Student View, Logout) */}
             <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+              {/* Cloud Sync Pending / Saving Indicator */}
+              {(hasPendingCloudSync || cloudSyncState === 'syncing') && (
+                <div 
+                  className="flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs font-bold text-amber-800 shadow-xs animate-pulse"
+                  title="توجد تعديلات جاري رفعها وحفظها على السحابة الآن"
+                >
+                  <RefreshCw className="h-3.5 w-3.5 shrink-0 animate-spin text-amber-600" />
+                  <span className="hidden sm:inline">لسه بيتم الحفظ على السحابة...</span>
+                  <span className="sm:hidden">جاري الحفظ...</span>
+                </div>
+              )}
+
+              {/* Cloud Sync Transient Error / Retry Indicator */}
+              {cloudSyncState === 'error' && !hasPendingCloudSync && (
+                <button
+                  onClick={handleForceSyncCloud}
+                  className="flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50 px-2.5 py-1.5 text-xs font-bold text-rose-800 shadow-xs hover:bg-rose-100 transition-colors"
+                  title="تعذر الحفظ على السحابة مؤقتاً. اضغط هنا لإعادة المحاولة"
+                >
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-rose-600" />
+                  <span className="hidden sm:inline">تعذر الحفظ (إعادة المحاولة)</span>
+                  <span className="sm:hidden">إعادة المحاولة</span>
+                </button>
+              )}
+
               <ThemeToggle />
 
               <button

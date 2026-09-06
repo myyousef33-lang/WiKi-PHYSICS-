@@ -14,7 +14,49 @@ if (!fs.existsSync(uploadsDir)) {
 
 // Security & Secret Store
 const ADMIN_SECRET = process.env.ADMIN_JWT_SECRET || 'wikifizya_sec_token_' + crypto.randomBytes(16).toString('hex');
-let currentAdminPinHash = crypto.createHash('sha256').update(process.env.ADMIN_PIN || 'WikiPhys@9988#Master').digest('hex');
+
+const ADMIN_CONFIG_DIR = path.join(process.cwd(), '.data');
+const ADMIN_CONFIG_FILE = path.join(ADMIN_CONFIG_DIR, 'admin-auth.json');
+
+const saveAdminPinHash = (hash: string) => {
+  try {
+    if (!fs.existsSync(ADMIN_CONFIG_DIR)) {
+      fs.mkdirSync(ADMIN_CONFIG_DIR, { recursive: true });
+    }
+    fs.writeFileSync(
+      ADMIN_CONFIG_FILE,
+      JSON.stringify({ pinHash: hash, updatedAt: new Date().toISOString() }, null, 2),
+      'utf-8'
+    );
+  } catch (err) {
+    console.error('Failed to persist admin pin hash to disk:', err);
+  }
+  currentAdminPinHash = hash;
+};
+
+const loadAdminPinHash = (): string => {
+  try {
+    if (fs.existsSync(ADMIN_CONFIG_FILE)) {
+      const data = JSON.parse(fs.readFileSync(ADMIN_CONFIG_FILE, 'utf-8'));
+      if (data && typeof data.pinHash === 'string' && data.pinHash.length > 0) {
+        return data.pinHash;
+      }
+    }
+  } catch (err) {
+    console.warn('Could not read admin-auth.json:', err);
+  }
+
+  // If environment variable ADMIN_PIN is set, initialize and persist it
+  if (process.env.ADMIN_PIN && process.env.ADMIN_PIN.trim()) {
+    const hash = crypto.createHash('sha256').update(process.env.ADMIN_PIN.trim()).digest('hex');
+    saveAdminPinHash(hash);
+    return hash;
+  }
+
+  return '';
+};
+
+let currentAdminPinHash = loadAdminPinHash();
 
 // In-Memory Rate Limiting Stores
 const loginAttempts = new Map<string, { count: number; lockedUntil: number }>();
@@ -312,10 +354,18 @@ async function startServer() {
     }
 
     const trimmedPin = pin.trim();
-    const validMasterPins = ['WikiPhys@9988#Master', '1234', '123456', 'admin', '0000', '2026'];
+
+    if (!currentAdminPinHash) {
+      return res.status(403).json({
+        success: false,
+        requiresInitialSetup: true,
+        error: 'لم يتم تعيين رمز مرور للمسؤول بعد. يرجى تعيين رمز الدخول لأول مرة.'
+      });
+    }
+
     const submittedHash = crypto.createHash('sha256').update(trimmedPin).digest('hex');
 
-    if (submittedHash === currentAdminPinHash || validMasterPins.includes(trimmedPin)) {
+    if (submittedHash === currentAdminPinHash) {
       resetLoginAttempts(clientIp);
       const token = generateAdminToken();
       return res.json({
@@ -329,7 +379,7 @@ async function startServer() {
     recordFailedAttempt(clientIp);
     return res.status(401).json({
       success: false,
-      error: 'رمز الدخول السري غير صحيح. يمكنك استخدام 1234 أو WikiPhys@9988#Master'
+      error: 'رمز الدخول غير صحيح'
     });
   });
 
@@ -338,8 +388,23 @@ async function startServer() {
     if (!newPin || typeof newPin !== 'string' || newPin.trim().length < 6) {
       return res.status(400).json({ success: false, error: 'كلمة المرور الجديدة يجب ألا تقل عن 6 أحرف/أرقام' });
     }
-    currentAdminPinHash = crypto.createHash('sha256').update(newPin.trim()).digest('hex');
+    const hash = crypto.createHash('sha256').update(newPin.trim()).digest('hex');
+    saveAdminPinHash(hash);
     return res.json({ success: true, message: 'تم تحديث كلمة المرور الرئيسية بنجاح' });
+  });
+
+  app.post('/api/admin/setup-pin', (req, res): any => {
+    if (currentAdminPinHash) {
+      return res.status(400).json({ success: false, error: 'تم تعيين رمز المرور مسبقاً.' });
+    }
+    const { newPin } = req.body;
+    if (!newPin || typeof newPin !== 'string' || newPin.trim().length < 6) {
+      return res.status(400).json({ success: false, error: 'رمز الدخول الجديد يجب ألا يقل عن 6 أحرف أو أرقام' });
+    }
+    const hash = crypto.createHash('sha256').update(newPin.trim()).digest('hex');
+    saveAdminPinHash(hash);
+    const token = generateAdminToken();
+    return res.json({ success: true, message: 'تم تعيين رمز الدخول بنجاح', token });
   });
 
   // ==========================================
@@ -822,9 +887,22 @@ ${linkUrl ? `للدخول مباشرة: ${linkUrl}` : ''}
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use('/uploads', express.static(uploadsDir));
-    app.use(express.static(distPath));
+    app.use('/uploads', express.static(uploadsDir, {
+      maxAge: '1d'
+    }));
+    app.use(express.static(distPath, {
+      setHeaders: (res, filePath) => {
+        // Vite hashed assets under /assets/ are immutable and can be cached for 1 year
+        if (filePath.includes(path.sep + 'assets' + path.sep)) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        } else if (filePath.endsWith('.html')) {
+          // HTML entry points must never be cached so users always get the latest bundle
+          res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+        }
+      }
+    }));
     app.get('*', (_req, res) => {
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

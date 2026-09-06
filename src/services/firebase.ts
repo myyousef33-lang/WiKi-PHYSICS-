@@ -68,23 +68,18 @@ export const getDoc = async (ref: DocRef): Promise<Snapshot> => {
 };
 
 export const setDoc = async (ref: DocRef, value: { data: any; updatedAt?: string }): Promise<void> => {
-  try {
-    const response = await safeFetch(REST_URL, {
-      method: 'POST',
-      headers: { ...getHeaders(), Prefer: 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify({
-        key: ref.id,
-        data: value.data,
-        updated_at: value.updatedAt || new Date().toISOString()
-      })
-    });
+  const response = await safeFetch(REST_URL, {
+    method: 'POST',
+    headers: { ...getHeaders(), Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({
+      key: ref.id,
+      data: value.data,
+      updated_at: value.updatedAt || new Date().toISOString()
+    })
+  });
 
-    if (!response || !response.ok) {
-      // Offline or transient network issue - local storage is the source of truth
-      return;
-    }
-  } catch {
-    // Graceful offline fallback
+  if (!response || !response.ok) {
+    throw new Error(`Failed to save document ${ref.id}: HTTP ${response?.status || 'Network Error'}`);
   }
 };
 

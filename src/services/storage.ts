@@ -194,28 +194,114 @@ const syncKeys = [
   STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS
 ];
 
-// Cloud Sync Helpers with debouncing
+// Cloud Sync Helpers with debouncing and retry queue (exponential backoff)
+interface SyncTask {
+  key: string;
+  data: any;
+  timestamp: string;
+  attempts: number;
+  nextRetry: number;
+}
+
+const syncQueue = new Map<string, SyncTask>();
+let isProcessingSyncQueue = false;
 const pendingSyncTimers: Record<string, any> = {};
+
+const processSyncQueue = async () => {
+  if (isProcessingSyncQueue) return;
+  if (syncQueue.size === 0) {
+    cloudSyncStatus = 'synced';
+    notifyListeners();
+    return;
+  }
+
+  isProcessingSyncQueue = true;
+  const now = Date.now();
+
+  for (const [key, task] of Array.from(syncQueue.entries())) {
+    if (task.nextRetry > now) {
+      continue;
+    }
+
+    try {
+      cloudSyncStatus = 'syncing';
+      notifyListeners();
+
+      const docRef = doc(db, 'app_data', key);
+      const cleanData = sanitizeForFirestore(task.data);
+      await setDoc(docRef, { data: cleanData, updatedAt: task.timestamp });
+
+      // Successful sync
+      syncQueue.delete(key);
+      lastSyncTimestamp = task.timestamp;
+    } catch (err) {
+      task.attempts += 1;
+      console.warn(`[Sync Queue] Error syncing ${key} (attempt ${task.attempts}):`, err);
+
+      if (task.attempts >= 4) {
+        // Stop aggressive backoff after 4 attempts, retry every 30s or on online/visibility event
+        cloudSyncStatus = 'error';
+        task.nextRetry = Date.now() + 30000;
+      } else {
+        // Exponential backoff: 1s, 2s, 4s
+        const backoffMs = Math.pow(2, task.attempts - 1) * 1000;
+        task.nextRetry = Date.now() + backoffMs;
+        setTimeout(() => processSyncQueue(), backoffMs + 50);
+      }
+    }
+  }
+
+  isProcessingSyncQueue = false;
+
+  if (syncQueue.size === 0) {
+    cloudSyncStatus = 'synced';
+  } else if (Array.from(syncQueue.values()).some(t => t.attempts >= 4)) {
+    cloudSyncStatus = 'error';
+  } else {
+    cloudSyncStatus = 'syncing';
+  }
+  notifyListeners();
+};
+
+const retryPendingSyncs = () => {
+  if (syncQueue.size > 0) {
+    for (const task of syncQueue.values()) {
+      task.nextRetry = 0; // immediate retry
+    }
+    processSyncQueue();
+  }
+};
+
+// Listen to browser network reconnection and tab visibility to retry pending syncs immediately
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    retryPendingSyncs();
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      retryPendingSyncs();
+    }
+  });
+}
 
 const syncToFirestore = async (key: string, data: any) => {
   if (pendingSyncTimers[key]) {
     clearTimeout(pendingSyncTimers[key]);
   }
 
-  pendingSyncTimers[key] = setTimeout(async () => {
+  pendingSyncTimers[key] = setTimeout(() => {
     delete pendingSyncTimers[key];
-    try {
-      cloudSyncStatus = 'syncing';
-      const docRef = doc(db, 'app_data', key);
-      const cleanData = sanitizeForFirestore(data);
-      const nowIso = localStorage.getItem(key + '_updated_at') || new Date().toISOString();
-      await setDoc(docRef, { data: cleanData, updatedAt: nowIso });
-      cloudSyncStatus = 'synced';
-      lastSyncTimestamp = nowIso;
-    } catch (err) {
-      // Local storage remains the authoritative offline store
-      cloudSyncStatus = 'error';
-    }
+    const nowIso = localStorage.getItem(key + '_updated_at') || new Date().toISOString();
+
+    syncQueue.set(key, {
+      key,
+      data,
+      timestamp: nowIso,
+      attempts: 0,
+      nextRetry: Date.now()
+    });
+
+    processSyncQueue();
   }, 300);
 };
 
@@ -231,81 +317,98 @@ const initFirestoreSync = () => {
         const docRef = doc(db, 'app_data', key);
 
         // Helper function to safely reconcile local and remote data with deterministic timestamps
-      const processRemoteData = async (remoteData: any, remoteUpdatedAt?: string) => {
-        if (remoteData === undefined || remoteData === null) return;
+        const processRemoteData = async (remoteData: any, remoteUpdatedAt?: string) => {
+          if (remoteData === undefined || remoteData === null) return;
 
-        const localUpdatedAt = localStorage.getItem(key + '_updated_at') || '';
-        const isRemoteNewer = Boolean(
-          remoteUpdatedAt &&
-          localUpdatedAt &&
-          new Date(remoteUpdatedAt).getTime() > new Date(localUpdatedAt).getTime()
-        );
+          // 1. If this key has an unsynced local mutation queued, DO NOT overwrite local state with server data
+          if (syncQueue.has(key)) {
+            return;
+          }
 
-        // If this client wrote locally in the last 5 seconds and remote is not newer, keep local authority
-        const lastWrite = lastLocalWriteTime[key] || 0;
-        if (!isRemoteNewer && Date.now() - lastWrite < 5000) {
-          return;
-        }
+          const localUpdatedAt = localStorage.getItem(key + '_updated_at') || '';
+          const localTime = localUpdatedAt ? new Date(localUpdatedAt).getTime() : 0;
+          const remoteTime = remoteUpdatedAt ? new Date(remoteUpdatedAt).getTime() : 0;
 
-        const localStr = localStorage.getItem(key);
-        let localVal: any = null;
-        if (localStr) {
-          try {
-            localVal = JSON.parse(localStr);
-          } catch (_) {}
-        }
+          // 2. Deterministic timestamp comparison: if local is strictly newer than remote, keep local authority
+          if (localTime > 0 && remoteTime > 0 && localTime > remoteTime) {
+            // Local is newer (e.g. deletion or edit happened locally while offline/unsynced)
+            // Re-sync local to cloud so the cloud gets updated with the user's changes
+            const localStr = localStorage.getItem(key);
+            if (localStr) {
+              try {
+                const localVal = JSON.parse(localStr);
+                syncToFirestore(key, localVal);
+              } catch (_) {}
+            }
+            return;
+          }
 
-        // Case: SETTINGS reconciliation
-        if (key === STORAGE_KEYS.SETTINGS && typeof localVal === 'object' && localVal !== null && typeof remoteData === 'object' && remoteData !== null) {
-          const isLocalCustomPhoto = localVal.instructorPhotoUrl && localVal.instructorPhotoUrl !== '/teacher.jpg' && localVal.instructorPhotoUrl.trim() !== '';
-          const isRemoteDefaultPhoto = !remoteData.instructorPhotoUrl || remoteData.instructorPhotoUrl === '/teacher.jpg' || remoteData.instructorPhotoUrl.trim() === '';
+          // 3. Keep local authority if user performed a local write in the last 5 seconds and remote is not strictly newer
+          const lastWrite = lastLocalWriteTime[key] || 0;
+          const isRemoteStrictlyNewer = remoteTime > 0 && localTime > 0 && remoteTime > localTime;
+          if (!isRemoteStrictlyNewer && (Date.now() - lastWrite < 5000)) {
+            return;
+          }
 
-          // If local has a custom photo and remote has the default, preserve local photo
-          if (isLocalCustomPhoto && isRemoteDefaultPhoto) {
-            const merged = { ...SEED_SETTINGS, ...remoteData, ...localVal };
+          const localStr = localStorage.getItem(key);
+          let localVal: any = null;
+          if (localStr) {
+            try {
+              localVal = JSON.parse(localStr);
+            } catch (_) {}
+          }
+
+          // Case: SETTINGS reconciliation
+          if (key === STORAGE_KEYS.SETTINGS && typeof localVal === 'object' && localVal !== null && typeof remoteData === 'object' && remoteData !== null) {
+            const isLocalCustomPhoto = localVal.instructorPhotoUrl && localVal.instructorPhotoUrl !== '/teacher.jpg' && localVal.instructorPhotoUrl.trim() !== '';
+            const isRemoteDefaultPhoto = !remoteData.instructorPhotoUrl || remoteData.instructorPhotoUrl === '/teacher.jpg' || remoteData.instructorPhotoUrl.trim() === '';
+
+            // If local has a custom photo and remote has the default, preserve local photo
+            if (isLocalCustomPhoto && isRemoteDefaultPhoto) {
+              const merged = { ...SEED_SETTINGS, ...remoteData, ...localVal };
+              const mergedStr = JSON.stringify(merged);
+              if (localStr !== mergedStr) {
+                memoryCache[key] = cloneData(merged);
+                try {
+                  localStorage.setItem(key, mergedStr);
+                  localStorage.setItem(key + '_updated_at', new Date().toISOString());
+                } catch (_) {}
+                notifyListeners();
+              }
+              syncToFirestore(key, merged);
+              return;
+            }
+
+            // Otherwise merge remote over local gracefully
+            const merged = { ...SEED_SETTINGS, ...localVal, ...remoteData };
             const mergedStr = JSON.stringify(merged);
             if (localStr !== mergedStr) {
               memoryCache[key] = cloneData(merged);
               try {
                 localStorage.setItem(key, mergedStr);
+                if (remoteUpdatedAt) {
+                  localStorage.setItem(key + '_updated_at', remoteUpdatedAt);
+                }
               } catch (_) {}
               notifyListeners();
             }
-            await setDoc(docRef, { data: sanitizeForFirestore(merged), updatedAt: new Date().toISOString() }).catch(() => {});
             return;
           }
 
-          // Otherwise merge remote over local gracefully
-          const merged = { ...SEED_SETTINGS, ...localVal, ...remoteData };
-          const mergedStr = JSON.stringify(merged);
-          if (localStr !== mergedStr) {
-            memoryCache[key] = cloneData(merged);
+          // For all collections (Courses, Exams, Assignments, PDFs, Students, Codes, etc.):
+          // Update local storage directly to reflect verified remote state
+          const remoteStr = JSON.stringify(remoteData);
+          if (localStr !== remoteStr) {
+            memoryCache[key] = cloneData(remoteData);
             try {
-              localStorage.setItem(key, mergedStr);
+              localStorage.setItem(key, remoteStr);
               if (remoteUpdatedAt) {
                 localStorage.setItem(key + '_updated_at', remoteUpdatedAt);
               }
             } catch (_) {}
             notifyListeners();
           }
-          return;
-        }
-
-        // For all collections (Courses, Exams, Assignments, PDFs, etc.):
-        // Remote Firestore data is the authoritative truth across all student and admin devices.
-        // Update local storage directly to reflect remote state (including deletions)
-        const remoteStr = JSON.stringify(remoteData);
-        if (localStr !== remoteStr) {
-          memoryCache[key] = cloneData(remoteData);
-          try {
-            localStorage.setItem(key, remoteStr);
-            if (remoteUpdatedAt) {
-              localStorage.setItem(key + '_updated_at', remoteUpdatedAt);
-            }
-          } catch (_) {}
-          notifyListeners();
-        }
-      };
+        };
 
       // Active snapshot listener (automatically emits initial state on attach)
       onSnapshot(docRef, (snapshot) => {
@@ -349,7 +452,7 @@ const SEED_SETTINGS: PlatformSettings = {
   instructorPhotoUrl: '/teacher.jpg',
   telegramChannel: 'https://t.me/wikifizya_physics',
   whatsappNumber: '01012345678',
-  adminPin: '********',
+  adminPin: '',
   maxDevicesPerStudent: 2,
   maintenanceMode: false,
   ministryExamDate: '2027-06-14T09:00:00.000Z',
@@ -1563,19 +1666,11 @@ export const StorageService = {
       console.error('Admin backend login error:', e);
     }
 
-    // Client-side fallback: check against master PINs & platform settings
+    // Client-side fallback: check strictly against configured platform settings
     const settings = this.getSettings();
-    const validPins = [
-      'WikiPhys@9988#Master',
-      '1234',
-      '123456',
-      'admin',
-      '0000',
-      '2026',
-      settings?.adminPin
-    ].filter(Boolean);
+    const configuredPin = settings?.adminPin?.trim();
 
-    if (validPins.includes(trimmed)) {
+    if (configuredPin && configuredPin !== '********' && trimmed === configuredPin) {
       this.setAdminLoggedIn(true, 'local-admin-token-' + Date.now());
       this.addAuditLog({
         action: 'تسجيل دخول لوحة الإدارة',
@@ -1586,7 +1681,7 @@ export const StorageService = {
       return { success: true };
     }
 
-    return { success: false, error: 'رمز الدخول السري غير صحيح. يمكنك استخدام الرمز الافتراضي: 1234 أو WikiPhys@9988#Master' };
+    return { success: false, error: 'رمز الدخول غير صحيح' };
   },
   logoutAdmin(): void {
     this.setAdminLoggedIn(false);
@@ -2426,6 +2521,15 @@ export const StorageService = {
   getCloudSyncStatus(): 'synced' | 'syncing' | 'error' {
     return cloudSyncStatus;
   },
+  hasPendingCloudSync(): boolean {
+    return syncQueue.size > 0 || cloudSyncStatus === 'syncing';
+  },
+  getPendingSyncCount(): number {
+    return syncQueue.size;
+  },
+  retryPendingSyncs(): void {
+    retryPendingSyncs();
+  },
   getLastSyncTimestamp(): string {
     return lastSyncTimestamp;
   },
@@ -2441,6 +2545,7 @@ export const StorageService = {
           await setDoc(docRef, { data: sanitizeForFirestore(localData), updatedAt: new Date().toISOString() });
         }
       }
+      syncQueue.clear();
       cloudSyncStatus = 'synced';
       lastSyncTimestamp = new Date().toISOString();
       notifyListeners();
