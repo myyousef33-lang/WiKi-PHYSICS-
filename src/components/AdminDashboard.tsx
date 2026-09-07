@@ -252,7 +252,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     unitId: '',
     title: '',
     videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-    videoType: 'youtube' as const,
+    videoType: 'youtube' as 'youtube' | 'external' | 'uploaded',
     durationMinutes: 45,
     description: '',
     pdfUrl: '',
@@ -261,7 +261,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
   });
 
   // Exam Form
-  const [examForm, setExamForm] = useState({
+  const [examForm, setExamForm] = useState<{
+    title: string;
+    courseId: string;
+    grade: GradeLevel | string;
+    durationMinutes: number;
+    passingPercentage: number;
+    type: 'quiz';
+    questions: Question[];
+  }>({
     title: '',
     courseId: '',
     grade: GradeLevel.GRADE_12,
@@ -2197,10 +2205,10 @@ ${weakConceptsText}
                           <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
                             <input
                               type="datetime-local"
-                              value={settings.examDate ? settings.examDate.substring(0, 16) : '2027-06-14T09:00'}
+                              value={settings.ministryExamDate ? settings.ministryExamDate.substring(0, 16) : '2027-06-14T09:00'}
                               onChange={(e) => {
                                 const newDate = e.target.value;
-                                const updated = { ...settings, examDate: newDate };
+                                const updated = { ...settings, ministryExamDate: newDate };
                                 setSettings(updated);
                                 StorageService.updateSettings(updated);
                               }}
@@ -2209,7 +2217,7 @@ ${weakConceptsText}
                             <button
                               type="button"
                               onClick={() => {
-                                const updated = { ...settings, examDate: '2027-06-14T09:00' };
+                                const updated = { ...settings, ministryExamDate: '2027-06-14T09:00' };
                                 setSettings(updated);
                                 StorageService.updateSettings(updated);
                               }}
@@ -3969,7 +3977,8 @@ ${weakConceptsText}
                             url: pdfForm.url,
                             pageCount: Number(pdfForm.pageCount) || 1,
                             fileSize: pdfForm.fileSize,
-                            isLocked: !pdfForm.isFree
+                            isLocked: !pdfForm.isFree,
+                            createdAt: new Date().toISOString()
                           })}
                           className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 hover:bg-emerald-200 text-[10px] font-bold transition-colors"
                         >
@@ -5121,11 +5130,12 @@ ${weakConceptsText}
                 {/* Current Photo Preview with Background Arch Simulation */}
                 <div className="relative h-36 w-32 shrink-0 rounded-2xl overflow-hidden border-2 border-[#1E4FD8]/40 bg-gradient-to-b from-blue-100 to-white shadow-md flex items-end justify-center p-1">
                   <img
-                    src={settings.instructorPhotoUrl || '/teacher.jpg'}
+                    src={settings.instructorPhotoUrl || '/teacher-cutout.webp'}
                     alt="صورة المعلم"
                     className="h-full w-auto max-w-full object-contain object-bottom drop-shadow-md"
+                    referrerPolicy="no-referrer"
                     onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = '/teacher.jpg';
+                      (e.currentTarget as HTMLImageElement).src = '/teacher-cutout.webp';
                     }}
                   />
                   <div className="absolute top-2 right-2 rounded-full bg-white/90 px-2 py-0.5 text-[9px] font-bold text-[#1E4FD8] border border-blue-200 shadow-xs">
@@ -5169,7 +5179,7 @@ ${weakConceptsText}
                   </div>
 
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-0.5">
-                    <span className="text-[11px] text-[#6B7280] shrink-0 font-medium">أو إدخال رابط خارجي (Google Drive / Direct URL):</span>
+                    <span className="text-[11px] text-[#6B7280] shrink-0 font-medium">أو إدخال رابط خارجي (مباشر Direct URL):</span>
                     <input
                       type="text"
                       placeholder="https://..."
@@ -5185,7 +5195,7 @@ ${weakConceptsText}
                       type="button"
                       onClick={async () => {
                         const raw = (settings.instructorPhotoUrl || '').trim();
-                        const normalized = normalizeImageUrl(raw) || '/teacher.jpg';
+                        const normalized = normalizeImageUrl(raw) || '/teacher-cutout.webp';
                         const updated = { ...settings, instructorPhotoUrl: normalized };
                         setSettings(updated);
                         StorageService.saveSettings(updated);
@@ -5200,7 +5210,7 @@ ${weakConceptsText}
                     <button
                       type="button"
                       onClick={async () => {
-                        const updated = { ...settings, instructorPhotoUrl: '/teacher.jpg' };
+                        const updated = { ...settings, instructorPhotoUrl: '/teacher-cutout.webp' };
                         setSettings(updated);
                         StorageService.saveSettings(updated);
                         await StorageService.forceSyncAllToFirestore();
@@ -5212,6 +5222,9 @@ ${weakConceptsText}
                       استعادة الافتراضية
                     </button>
                   </div>
+                  <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                    💡 <strong>نصيحة هامة:</strong> روابط Google Drive المحمية بخصوصية تتطلب تسجيل الدخول وتمنع المتصفح من إظهار الصورة. الخيار الأفضل والأضمن هو الضغط على <strong>"اختيار صورة جديدة من جهازك"</strong> بالأعلى لرفع صورة المعلم مباشرة بجودة عالية.
+                  </p>
                 </div>
               </div>
             </div>

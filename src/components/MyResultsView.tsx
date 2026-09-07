@@ -237,6 +237,8 @@ export const MyResultsView: React.FC<MyResultsViewProps> = ({ onNavigate }) => {
                           <button
                             onClick={() => setSelectedCert({
                               id: `cert-${attempt.id}`,
+                              title: `شهادة تفوق في ${attempt.examTitle}`,
+                              type: 'exam',
                               examOrUnitName: attempt.examTitle,
                               score: attempt.score,
                               maxScore: attempt.maxScore,

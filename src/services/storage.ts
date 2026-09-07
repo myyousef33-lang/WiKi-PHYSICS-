@@ -141,7 +141,7 @@ if (typeof window !== 'undefined') {
   });
 }
 
-// Event listener mechanism for reactive updates with microtask dispatch
+// Event listener mechanism for reactive updates with frame-debounced dispatch
 const listeners: (() => void)[] = [];
 export const subscribeToStorage = (callback: () => void) => {
   listeners.push(callback);
@@ -155,12 +155,13 @@ let isNotifyPending = false;
 export const notifyListeners = () => {
   if (isNotifyPending) return;
   isNotifyPending = true;
-  queueMicrotask(() => {
+  // Use a 16ms debounce to batch synchronous writes into a single animation frame update
+  setTimeout(() => {
     isNotifyPending = false;
     listeners.forEach(cb => {
       try { cb(); } catch (e) { console.error('Listener error:', e); }
     });
-  });
+  }, 16);
 };
 
 // Sanitizer to remove any undefined fields before sending to Firestore
@@ -211,7 +212,6 @@ const processSyncQueue = async () => {
   if (isProcessingSyncQueue) return;
   if (syncQueue.size === 0) {
     cloudSyncStatus = 'synced';
-    notifyListeners();
     return;
   }
 
@@ -225,7 +225,6 @@ const processSyncQueue = async () => {
 
     try {
       cloudSyncStatus = 'syncing';
-      notifyListeners();
 
       const docRef = doc(db, 'app_data', key);
       const cleanData = sanitizeForFirestore(task.data);
@@ -260,7 +259,6 @@ const processSyncQueue = async () => {
   } else {
     cloudSyncStatus = 'syncing';
   }
-  notifyListeners();
 };
 
 const retryPendingSyncs = () => {
@@ -360,12 +358,20 @@ const initFirestoreSync = () => {
 
           // Case: SETTINGS reconciliation
           if (key === STORAGE_KEYS.SETTINGS && typeof localVal === 'object' && localVal !== null && typeof remoteData === 'object' && remoteData !== null) {
-            const isLocalCustomPhoto = localVal.instructorPhotoUrl && localVal.instructorPhotoUrl !== '/teacher.jpg' && localVal.instructorPhotoUrl.trim() !== '';
-            const isRemoteDefaultPhoto = !remoteData.instructorPhotoUrl || remoteData.instructorPhotoUrl === '/teacher.jpg' || remoteData.instructorPhotoUrl.trim() === '';
+            const cleanRemote = { ...remoteData };
+            // If remote has a broken or inaccessible drive link, clean it
+            if (isBrokenOrInaccessibleImageUrl(cleanRemote.instructorPhotoUrl)) {
+              cleanRemote.instructorPhotoUrl = localVal.instructorPhotoUrl && !isBrokenOrInaccessibleImageUrl(localVal.instructorPhotoUrl)
+                ? localVal.instructorPhotoUrl
+                : '/teacher-cutout.webp';
+            }
+
+            const isLocalCustomPhoto = localVal.instructorPhotoUrl && !isBrokenOrInaccessibleImageUrl(localVal.instructorPhotoUrl);
+            const isRemoteDefaultPhoto = isBrokenOrInaccessibleImageUrl(remoteData.instructorPhotoUrl);
 
             // If local has a custom photo and remote has the default, preserve local photo
             if (isLocalCustomPhoto && isRemoteDefaultPhoto) {
-              const merged = { ...SEED_SETTINGS, ...remoteData, ...localVal };
+              const merged = { ...SEED_SETTINGS, ...cleanRemote, ...localVal };
               const mergedStr = JSON.stringify(merged);
               if (localStr !== mergedStr) {
                 memoryCache[key] = cloneData(merged);
@@ -380,7 +386,7 @@ const initFirestoreSync = () => {
             }
 
             // Otherwise merge remote over local gracefully
-            const merged = { ...SEED_SETTINGS, ...localVal, ...remoteData };
+            const merged = { ...SEED_SETTINGS, ...localVal, ...cleanRemote };
             const mergedStr = JSON.stringify(merged);
             if (localStr !== mergedStr) {
               memoryCache[key] = cloneData(merged);
@@ -443,13 +449,31 @@ const initFirestoreSync = () => {
   });
 };
 
+// Helper to detect broken or inaccessible image links (such as Google Drive/Usercontent private links)
+export const isBrokenOrInaccessibleImageUrl = (url?: string): boolean => {
+  if (!url || typeof url !== 'string') return true;
+  const trimmed = url.trim();
+  if (!trimmed) return true;
+  if (trimmed === '/teacher.jpg' || trimmed === '/teacher-cutout.webp' || trimmed === '/teacher.webp') return false;
+  // Google Drive and Google Usercontent direct links require authorization and break when hotlinked
+  if (
+    trimmed.includes('lh3.googleusercontent.com/d/') ||
+    trimmed.includes('drive.google.com/file/d/') ||
+    trimmed.includes('drive.google.com/uc?') ||
+    trimmed.includes('drive.usercontent.google.com')
+  ) {
+    return true;
+  }
+  return false;
+};
+
 // Platform Default Settings
 const SEED_SETTINGS: PlatformSettings = {
   platformName: 'ويكيفزياء | منصة الفيزياء للثانوية العامة',
   instructorName: 'أ / إبراهيم خليل (مستر الفيزياء)',
   instructorTitle: 'كبير معلمي ومعد مادة الفيزياء للثانوية العامة',
   instructorPhone: '01012345678',
-  instructorPhotoUrl: '/teacher.jpg',
+  instructorPhotoUrl: '/teacher-cutout.webp',
   telegramChannel: 'https://t.me/wikifizya_physics',
   whatsappNumber: '01012345678',
   adminPin: 'WikiPhys@9988#Master',
@@ -499,7 +523,7 @@ const getStored = <T>(key: string, defaultVal: T): T => {
   return cloneData(val);
 };
 
-const setStored = <T>(key: string, val: T): void => {
+const setStored = <T>(key: string, val: T, silent: boolean = false): void => {
   try {
     memoryCache[key] = cloneData(val);
     lastLocalWriteTime[key] = Date.now();
@@ -512,9 +536,11 @@ const setStored = <T>(key: string, val: T): void => {
       console.warn(`LocalStorage write error for ${key}:`, storageErr);
     }
 
-    notifyListeners();
+    if (!silent) {
+      notifyListeners();
+    }
 
-    if (broadcastChannel) {
+    if (broadcastChannel && !silent) {
       try {
         broadcastChannel.postMessage({ key, timestamp: Date.now() });
       } catch (_) {}
@@ -583,7 +609,11 @@ export const StorageService = {
   // === Settings ===
   getSettings(): PlatformSettings {
     const stored = getStored(STORAGE_KEYS.SETTINGS, SEED_SETTINGS);
-    return { ...SEED_SETTINGS, ...stored };
+    const result = { ...SEED_SETTINGS, ...stored };
+    if (isBrokenOrInaccessibleImageUrl(result.instructorPhotoUrl)) {
+      result.instructorPhotoUrl = '/teacher-cutout.webp';
+    }
+    return result;
   },
   updateSettings(settings: Partial<PlatformSettings>): PlatformSettings {
     const current = this.getSettings();
@@ -651,6 +681,27 @@ export const StorageService = {
     return { success: true, student: found };
   },
   async loginStudentAsync(phone: string, password?: string): Promise<{ success: boolean; student?: Student; error?: string }> {
+    try {
+      const res = await fetch('/api/student/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, password })
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.student) {
+        if (data.token) {
+          sessionStorage.setItem('wikifizya_student_token', data.token);
+        }
+        this.saveStudent(data.student);
+        this.setCurrentStudent(data.student);
+        return { success: true, student: data.student };
+      }
+      if (data.error) {
+        return { success: false, error: data.error };
+      }
+    } catch (err) {
+      console.warn('Backend student login fetch failed, trying local fallback:', err);
+    }
     return this.loginStudent(phone, password);
   },
   async registerStudent(data: {
@@ -662,6 +713,27 @@ export const StorageService = {
     governorate: string;
     gender?: 'male' | 'female';
   }): Promise<{ success: boolean; student?: Student; error?: string }> {
+    try {
+      const res = await fetch('/api/student/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const resData = await res.json();
+      if (res.ok && resData.success && resData.student) {
+        if (resData.token) {
+          sessionStorage.setItem('wikifizya_student_token', resData.token);
+        }
+        this.saveStudent(resData.student);
+        this.setCurrentStudent(resData.student);
+        return { success: true, student: resData.student };
+      }
+      if (resData.error) {
+        return { success: false, error: resData.error };
+      }
+    } catch (err) {
+      console.warn('Backend student register fetch failed, trying local fallback:', err);
+    }
     const students = this.getStudents();
     const cleanPhone = normalizePhoneNumber(data.phone) || data.phone.trim();
     const cleanParent = normalizePhoneNumber(data.parentPhone) || data.parentPhone.trim();
@@ -710,6 +782,8 @@ export const StorageService = {
     return this.registerStudent(data);
   },
   logoutStudent(): void {
+    fetch('/api/student/logout', { method: 'POST' }).catch(() => {});
+    sessionStorage.removeItem('wikifizya_student_token');
     this.setCurrentStudent(null);
   },
   saveStudent(student: Student): void {
@@ -1437,9 +1511,43 @@ export const StorageService = {
     return { success: true, message: 'تم تفعيل الكود بنجاح!' };
   },
 
-  // Async code activation with live fallback
+  // Async code activation with secure server-side verification and consumption
   async redeemCode(rawCode: string, studentId: string): Promise<{ success: boolean; message: string; targetType?: 'course' | 'pdf'; targetId?: string; itemTitle?: string }> {
-    // 1. Try local activation first
+    try {
+      const studentToken = sessionStorage.getItem('wikifizya_student_token');
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (studentToken) {
+        headers['Authorization'] = `Bearer ${studentToken}`;
+        headers['x-student-token'] = studentToken;
+      }
+
+      const res = await fetch('/api/student/activate-code', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ code: rawCode })
+      });
+      const data = await res.json();
+      if (data && data.success) {
+        if (data.student) {
+          this.saveStudent(data.student);
+          this.setCurrentStudent(data.student);
+        }
+        return {
+          success: true,
+          message: data.message || 'تم تفعيل الكود بنجاح!',
+          targetType: data.targetType,
+          targetId: data.targetId,
+          itemTitle: data.itemTitle
+        };
+      }
+      if (data && data.error) {
+        return { success: false, message: data.error };
+      }
+    } catch (err) {
+      console.warn('Backend activation API failed, trying fallback:', err);
+    }
+
+    // Fallback to local activation if server call fails
     let res = this.activateKey(studentId, rawCode);
     if (res.success) {
       const keys = this.getKeys();
@@ -1452,33 +1560,6 @@ export const StorageService = {
         targetId: key?.targetId,
         itemTitle: res.itemTitle
       };
-    }
-
-    // 2. If not found locally, query Firestore directly for freshest cloud keys
-    try {
-      const docRef = doc(db, 'app_data', STORAGE_KEYS.KEYS);
-      const snap = await getDoc(docRef);
-      if (snap.exists()) {
-        const remoteData = snap.data()?.data;
-        if (Array.isArray(remoteData) && remoteData.length > 0) {
-          localStorage.setItem(STORAGE_KEYS.KEYS, JSON.stringify(remoteData));
-          notifyListeners();
-          
-          res = this.activateKey(studentId, rawCode);
-          const keys = this.getKeys();
-          const norm = this.normalizeActivationCode(rawCode);
-          const key = keys.find(k => this.normalizeActivationCode(k.code) === norm || k.code.trim().toUpperCase() === rawCode.trim().toUpperCase());
-          return {
-            success: res.success,
-            message: res.message,
-            targetType: res.type,
-            targetId: key?.targetId,
-            itemTitle: res.itemTitle
-          };
-        }
-      }
-    } catch (e) {
-      console.warn('Direct keys query note:', e);
     }
 
     return {
@@ -1834,7 +1915,9 @@ export const StorageService = {
     });
 
     const sorted = dynamicEntries.sort((a, b) => b.points - a.points).map((entry, idx) => ({ ...entry, rank: idx + 1 }));
-    setStored(STORAGE_KEYS.LEADERBOARD, sorted);
+    if (sorted.length > 0) {
+      setStored(STORAGE_KEYS.LEADERBOARD, sorted, true);
+    }
     return sorted;
   },
   saveLeaderboard(leaderboard: LeaderboardEntry[]): void {
@@ -1874,7 +1957,7 @@ export const StorageService = {
         }
       ]
     };
-    setStored(STORAGE_KEYS.WEEKLY_CHALLENGES, [defaultChallenge]);
+    setStored(STORAGE_KEYS.WEEKLY_CHALLENGES, [defaultChallenge], true);
     return [defaultChallenge];
   },
   saveWeeklyChallenge(challenge: WeeklyChallenge): void {
@@ -2025,7 +2108,7 @@ export const StorageService = {
       }
     ];
 
-    setStored(STORAGE_KEYS.PAYMENT_METHODS, defaultMethods);
+    setStored(STORAGE_KEYS.PAYMENT_METHODS, defaultMethods, true);
     return defaultMethods;
   },
 
@@ -2367,7 +2450,7 @@ export const StorageService = {
   // === Smart Study Path & Weakness Recommendations ===
   getStudentRecommendations(studentId: string): SmartStudyRecommendation[] {
     const stored = getStored<Record<string, SmartStudyRecommendation[]>>(STORAGE_KEYS.STUDY_RECOMMENDATIONS, {});
-    if (stored[studentId] && stored[studentId].length > 0) {
+    if (stored && stored[studentId] !== undefined) {
       return stored[studentId];
     }
     return this.generateSmartRecommendations(studentId);
@@ -2411,7 +2494,8 @@ export const StorageService = {
 
     const stored = getStored<Record<string, SmartStudyRecommendation[]>>(STORAGE_KEYS.STUDY_RECOMMENDATIONS, {});
     stored[studentId] = recommendations;
-    setStored(STORAGE_KEYS.STUDY_RECOMMENDATIONS, stored);
+    // Store silently without triggering an infinite reactive re-render loop
+    setStored(STORAGE_KEYS.STUDY_RECOMMENDATIONS, stored, true);
     return recommendations;
   },
 

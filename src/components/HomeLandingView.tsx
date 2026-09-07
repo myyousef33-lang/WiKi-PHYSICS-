@@ -154,6 +154,33 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
   const coursesScrollRef = useRef<HTMLDivElement>(null);
   const [settings, setSettings] = useState(StorageService.getSettings());
 
+  const getSafeTeacherPhoto = (url?: string): string => {
+    if (!url || typeof url !== 'string') return teacherCutout;
+    const trimmed = url.trim();
+    if (!trimmed || trimmed.includes('lh3.googleusercontent.com/d/') || trimmed.includes('drive.google.com')) {
+      return teacherCutout;
+    }
+    return trimmed;
+  };
+
+  const [teacherPhotoSrc, setTeacherPhotoSrc] = useState<string>(() =>
+    getSafeTeacherPhoto(settings.instructorPhotoUrl)
+  );
+
+  useEffect(() => {
+    setTeacherPhotoSrc(getSafeTeacherPhoto(settings.instructorPhotoUrl));
+  }, [settings.instructorPhotoUrl]);
+
+  const handleTeacherPhotoError = () => {
+    if (teacherPhotoSrc !== teacherCutout) {
+      setTeacherPhotoSrc(teacherCutout);
+    } else if (teacherPhotoSrc !== '/teacher-cutout.webp') {
+      setTeacherPhotoSrc('/teacher-cutout.webp');
+    } else {
+      setTeacherPhotoSrc('/teacher.jpg');
+    }
+  };
+
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeftPos, setScrollLeftPos] = useState(0);
@@ -306,20 +333,14 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
 
               {/* The Real Teacher Cutout / Custom Hero Photo overlapping the blue semi-circle */}
               <img
-                key={settings.instructorPhotoUrl || 'default-teacher-photo'}
-                src={settings.instructorPhotoUrl && settings.instructorPhotoUrl.trim() !== '' ? settings.instructorPhotoUrl : teacherCutout}
+                key={teacherPhotoSrc}
+                src={teacherPhotoSrc}
                 alt={settings.instructorTitle || "أ / إبراهيم خليل"}
                 className="relative z-10 h-full w-auto object-contain object-bottom drop-shadow-2xl transition-transform duration-500 hover:scale-[1.02]"
-                onError={(e) => {
-                  const target = e.currentTarget;
-                  if (!target.dataset.triedFallback1) {
-                    target.dataset.triedFallback1 = 'true';
-                    target.src = teacherCutout;
-                  } else if (!target.dataset.triedFallback2) {
-                    target.dataset.triedFallback2 = 'true';
-                    target.src = '/teacher.jpg';
-                  }
-                }}
+                referrerPolicy="no-referrer"
+                loading="eager"
+                decoding="async"
+                onError={handleTeacherPhotoError}
               />
               
               {/* Instructor Title Badge at Bottom */}

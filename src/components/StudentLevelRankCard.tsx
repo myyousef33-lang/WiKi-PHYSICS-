@@ -27,18 +27,17 @@ export const StudentLevelRankCard: React.FC<StudentLevelRankCardProps> = ({
   className = '',
   compact = false
 }) => {
-  const {
-    points,
-    rank,
-    totalStudents,
-    isFirstOnPlatform,
-    isTopThree,
-    level,
-    nextLevel,
-    progressToNextLevel,
-    pointsToNextLevel,
-    rankTitleArabic
-  } = stats;
+  const safeStats: Partial<StudentRankStats> = stats || {};
+  const points = safeStats.points ?? 0;
+  const rank = safeStats.rank ?? 1;
+  const totalStudents = safeStats.totalStudents ?? 1;
+  const isFirstOnPlatform = Boolean(safeStats.isFirstOnPlatform);
+  const isTopThree = Boolean(safeStats.isTopThree);
+  const level = safeStats.level || STUDENT_LEVELS[0];
+  const nextLevel = safeStats.nextLevel || null;
+  const progressToNextLevel = safeStats.progressToNextLevel ?? 0;
+  const pointsToNextLevel = safeStats.pointsToNextLevel ?? 0;
+  const rankTitleArabic = safeStats.rankTitleArabic || 'طالب فيزيائي';
 
   if (compact) {
     return (

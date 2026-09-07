@@ -3,8 +3,11 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import multer from 'multer';
+import cookieParser from 'cookie-parser';
+import bcrypt from 'bcryptjs';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
+import { createClient } from '@supabase/supabase-js';
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
@@ -12,8 +15,53 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
+// Server-Side Supabase Client (uses SUPABASE_SERVICE_ROLE_KEY to bypass RLS securely on server)
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://dvpylfutvykzanxxabko.supabase.co';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_KtItaIZhKU149HjbPkWd2g_ni_cjrHr';
+
+export const supabaseServer = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { persistSession: false }
+});
+
+// AppData persistence helpers
+const getAppDataDoc = async (key: string): Promise<any> => {
+  try {
+    const { data, error } = await supabaseServer
+      .from('app_data')
+      .select('key, data, updated_at')
+      .eq('key', key)
+      .maybeSingle();
+    if (error || !data) return null;
+    return data.data;
+  } catch (err) {
+    console.error(`getAppDataDoc error [${key}]:`, err);
+    return null;
+  }
+};
+
+const setAppDataDoc = async (key: string, docData: any): Promise<boolean> => {
+  try {
+    const { error } = await supabaseServer
+      .from('app_data')
+      .upsert({
+        key,
+        data: docData,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'key' });
+    if (error) {
+      console.error(`setAppDataDoc error [${key}]:`, error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error(`setAppDataDoc exception [${key}]:`, err);
+    return false;
+  }
+};
+
 // Security & Secret Store
 const ADMIN_SECRET = process.env.ADMIN_JWT_SECRET || 'wikifizya_sec_token_' + crypto.randomBytes(16).toString('hex');
+const STUDENT_SECRET = process.env.ADMIN_JWT_SECRET || 'wikifizya_student_sec_key_2026';
 
 const ADMIN_CONFIG_DIR = path.join(process.cwd(), '.data');
 const ADMIN_CONFIG_FILE = path.join(ADMIN_CONFIG_DIR, 'admin-auth.json');
@@ -57,6 +105,7 @@ let currentAdminPinHash = loadAdminPinHash();
 
 // In-Memory Rate Limiting Stores
 const loginAttempts = new Map<string, { count: number; lockedUntil: number }>();
+const studentLoginAttempts = new Map<string, { count: number; lockedUntil: number }>();
 const uploadRateLimits = new Map<string, { count: number; resetTime: number }>();
 
 const checkRateLimit = (ip: string, maxAttempts = 5, lockDurationMs = 5 * 60 * 1000): { allowed: boolean; waitSeconds?: number } => {
@@ -74,6 +123,37 @@ const checkRateLimit = (ip: string, maxAttempts = 5, lockDurationMs = 5 * 60 * 1
   }
 
   return { allowed: true };
+};
+
+const checkStudentRateLimit = (ip: string, maxAttempts = 5, lockDurationMs = 5 * 60 * 1000): { allowed: boolean; waitSeconds?: number } => {
+  const now = Date.now();
+  const record = studentLoginAttempts.get(ip);
+  if (!record) return { allowed: true };
+
+  if (record.lockedUntil > now) {
+    return { allowed: false, waitSeconds: Math.ceil((record.lockedUntil - now) / 1000) };
+  }
+
+  if (record.lockedUntil <= now && record.count >= maxAttempts) {
+    studentLoginAttempts.delete(ip);
+    return { allowed: true };
+  }
+
+  return { allowed: true };
+};
+
+const recordStudentFailedAttempt = (ip: string, maxAttempts = 5, lockDurationMs = 5 * 60 * 1000) => {
+  const now = Date.now();
+  const record = studentLoginAttempts.get(ip) || { count: 0, lockedUntil: 0 };
+  record.count += 1;
+  if (record.count >= maxAttempts) {
+    record.lockedUntil = now + lockDurationMs;
+  }
+  studentLoginAttempts.set(ip, record);
+};
+
+const resetStudentLoginAttempts = (ip: string) => {
+  studentLoginAttempts.delete(ip);
 };
 
 const checkUploadRateLimit = (ip: string, maxUploads = 30, windowMs = 10 * 60 * 1000): { allowed: boolean; waitSeconds?: number } => {
@@ -145,11 +225,43 @@ const verifyAdminToken = (token: string): boolean => {
   }
 };
 
+// Student Token Generation & Verification
+const generateStudentToken = (studentId: string, phone: string): string => {
+  const payload = {
+    studentId,
+    phone,
+    role: 'student',
+    issuedAt: Date.now(),
+    expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 days
+  };
+  const str = JSON.stringify(payload);
+  const signature = crypto.createHmac('sha256', STUDENT_SECRET).update(str).digest('hex');
+  return Buffer.from(str).toString('base64url') + '.' + signature;
+};
+
+const verifyStudentToken = (token: string): { studentId: string; phone: string } | null => {
+  try {
+    if (!token) return null;
+    const parts = token.split('.');
+    if (parts.length !== 2) return null;
+    const [payloadB64, signature] = parts;
+    const expectedSig = crypto.createHmac('sha256', STUDENT_SECRET).update(Buffer.from(payloadB64, 'base64url').toString('utf-8')).digest('hex');
+    if (signature !== expectedSig) return null;
+    const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf-8'));
+    if (payload.expiresAt < Date.now()) return null;
+    if (payload.role !== 'student' || !payload.studentId) return null;
+    return { studentId: payload.studentId, phone: payload.phone };
+  } catch {
+    return null;
+  }
+};
+
 // Middleware to protect admin endpoints
 const requireAdminAuth = (req: express.Request, res: express.Response, next: express.NextFunction): any => {
+  const cookieToken = req.cookies?.admin_session;
   const authHeader = req.headers.authorization;
   const customHeader = req.headers['x-admin-token'] as string;
-  const token = (authHeader && authHeader.startsWith('Bearer ')) ? authHeader.substring(7) : customHeader;
+  const token = cookieToken || ((authHeader && authHeader.startsWith('Bearer ')) ? authHeader.substring(7) : customHeader);
 
   if (!token || !verifyAdminToken(token)) {
     return res.status(401).json({
@@ -158,6 +270,34 @@ const requireAdminAuth = (req: express.Request, res: express.Response, next: exp
     });
   }
   next();
+};
+
+// Middleware to protect student endpoints
+const requireStudentAuth = (req: any, res: express.Response, next: express.NextFunction): any => {
+  const cookieToken = req.cookies?.student_session;
+  const authHeader = req.headers.authorization;
+  const customHeader = req.headers['x-student-token'] as string;
+  const token = cookieToken || ((authHeader && authHeader.startsWith('Bearer ')) ? authHeader.substring(7) : customHeader);
+
+  const studentData = verifyStudentToken(token);
+  if (!studentData) {
+    return res.status(401).json({
+      success: false,
+      error: 'غير مصرح. يرجى تسجيل الدخول لحساب الطالب أولاً.'
+    });
+  }
+  req.student = studentData;
+  next();
+};
+
+// Helper to strip sensitive credentials from student objects
+const sanitizeStudent = (student: any) => {
+  if (!student) return student;
+  const copy = { ...student };
+  delete copy.password;
+  delete copy.password_hash;
+  delete copy.passwordHash;
+  return copy;
 };
 
 // File Magic Bytes / Header Validation
@@ -319,9 +459,25 @@ export const app = express();
 async function startServer() {
   const PORT = 3000;
 
-  // JSON and URL-encoded body parsers
+  // Parsers & Middlewares
+  app.use(cookieParser());
   app.use(express.json({ limit: '100mb' }));
   app.use(express.urlencoded({ extended: true, limit: '100mb' }));
+
+  // Security CORS middleware for credentials & tokens
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-token, x-student-token');
+    }
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(204);
+    }
+    next();
+  });
 
   // Static uploads serving
   app.use('/uploads', express.static(uploadsDir));
@@ -332,7 +488,7 @@ async function startServer() {
   });
 
   // ==========================================
-  // 1. Admin Authentication API
+  // 1. Admin Authentication & Data Sync API
   // ==========================================
   app.post('/api/admin/login', (req, res): any => {
     const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown-ip';
@@ -365,6 +521,12 @@ async function startServer() {
     if (submittedHash === currentAdminPinHash) {
       resetLoginAttempts(clientIp);
       const token = generateAdminToken();
+      res.cookie('admin_session', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000
+      });
       return res.json({
         success: true,
         message: 'تم التحقق من هوية المسؤول بنجاح',
@@ -378,6 +540,68 @@ async function startServer() {
       success: false,
       error: 'رمز الدخول غير صحيح'
     });
+  });
+
+  app.post('/api/admin/logout', (req, res): any => {
+    res.clearCookie('admin_session', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    });
+    return res.json({ success: true, message: 'تم تسجيل الخروج بنجاح' });
+  });
+
+  app.get('/api/admin/session', (req, res): any => {
+    const cookieToken = req.cookies?.admin_session;
+    const authHeader = req.headers.authorization;
+    const customHeader = req.headers['x-admin-token'] as string;
+    const token = cookieToken || ((authHeader && authHeader.startsWith('Bearer ')) ? authHeader.substring(7) : customHeader);
+
+    const isValid = verifyAdminToken(token);
+    return res.json({ success: true, authenticated: isValid, role: isValid ? 'admin' : null });
+  });
+
+  app.post('/api/admin/sync-data', requireAdminAuth, async (req, res): Promise<any> => {
+    try {
+      const { key, data } = req.body;
+      if (!key || data === undefined) {
+        return res.status(400).json({ success: false, error: 'المفتاح والبيانات مطلوبان' });
+      }
+      const success = await setAppDataDoc(key, data);
+      if (!success) {
+        return res.status(500).json({ success: false, error: 'حدث خطأ أثناء حفظ البيانات على الخادم' });
+      }
+      return res.json({ success: true, message: 'تم حفظ البيانات بنجاح' });
+    } catch (err) {
+      return res.status(500).json({ success: false, error: 'حدث خطأ في الخادم أثناء مزامنة البيانات' });
+    }
+  });
+
+  app.get('/api/proxy-image', async (req, res): Promise<any> => {
+    try {
+      const imageUrl = req.query.url as string;
+      if (!imageUrl || typeof imageUrl !== 'string') {
+        return res.status(400).send('Missing url parameter');
+      }
+      if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
+        return res.status(400).send('Invalid url protocol');
+      }
+      const response = await fetch(imageUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      });
+      if (!response.ok) {
+        return res.status(response.status).send('Failed to fetch image');
+      }
+      const contentType = response.headers.get('content-type') || 'image/jpeg';
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      const arrayBuffer = await response.arrayBuffer();
+      return res.send(Buffer.from(arrayBuffer));
+    } catch (err) {
+      return res.status(500).send('Error proxying image');
+    }
   });
 
   app.post('/api/admin/change-pin', requireAdminAuth, (req, res): any => {
@@ -401,7 +625,272 @@ async function startServer() {
     const hash = crypto.createHash('sha256').update(newPin.trim()).digest('hex');
     saveAdminPinHash(hash);
     const token = generateAdminToken();
+    res.cookie('admin_session', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000
+    });
     return res.json({ success: true, message: 'تم تعيين رمز الدخول بنجاح', token });
+  });
+
+  // ==========================================
+  // 1.5 Student Authentication & Activation API
+  // ==========================================
+  app.post('/api/student/login', async (req, res): Promise<any> => {
+    try {
+      const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown-ip';
+      const rate = checkStudentRateLimit(clientIp, 5, 5 * 60 * 1000);
+      if (!rate.allowed) {
+        return res.status(429).json({
+          success: false,
+          error: `تم حظر محاولات الدخول مؤقتاً بسبب تكرار المحاولات الخاطئة. يرجى الانتظار ${rate.waitSeconds} ثانية.`
+        });
+      }
+
+      const { phone, password } = req.body;
+      if (!phone || typeof phone !== 'string') {
+        recordStudentFailedAttempt(clientIp);
+        return res.status(400).json({ success: false, error: 'يرجى إدخال رقم الهاتف' });
+      }
+
+      const cleanPhone = phone.trim().replace(/[^0-9]/g, '');
+      const rawTrimmed = phone.trim();
+
+      const students: any[] = (await getAppDataDoc('students')) || [];
+      const foundIndex = students.findIndex((s: any) => {
+        const sNorm = (s.phone || '').trim().replace(/[^0-9]/g, '');
+        return (cleanPhone && sNorm === cleanPhone) || s.phone === rawTrimmed;
+      });
+
+      if (foundIndex === -1) {
+        recordStudentFailedAttempt(clientIp);
+        return res.status(404).json({ success: false, error: 'رقم الهاتف غير مسجل. يرجى إنشاء حساب جديد.' });
+      }
+
+      const found = students[foundIndex];
+      if (found.isBlocked) {
+        return res.status(403).json({ success: false, error: 'هذا الحساب محظور مؤقتًا. يرجى التواصل مع الدعم.' });
+      }
+
+      const cleanPass = (password || '').trim();
+      const storedPass = found.password || found.password_hash || '';
+
+      if (storedPass) {
+        if (!cleanPass) {
+          recordStudentFailedAttempt(clientIp);
+          return res.status(400).json({ success: false, error: 'يرجى إدخال كلمة المرور' });
+        }
+
+        let isMatch = false;
+        if (storedPass.startsWith('$2a$') || storedPass.startsWith('$2b$') || storedPass.startsWith('$2y$')) {
+          isMatch = await bcrypt.compare(cleanPass, storedPass);
+        } else if (storedPass.startsWith('sha256_')) {
+          const sha = crypto.createHash('sha256').update(cleanPass).digest('hex');
+          isMatch = storedPass === `sha256_${sha}`;
+        } else {
+          isMatch = storedPass === cleanPass;
+        }
+
+        if (!isMatch) {
+          recordStudentFailedAttempt(clientIp);
+          return res.status(401).json({ success: false, error: 'كلمة المرور غير صحيحة، يرجى التأكد وإعادة المحاولة' });
+        }
+
+        // Upgrade stored password to bcrypt hash if legacy
+        if (!storedPass.startsWith('$2b$')) {
+          found.password = await bcrypt.hash(cleanPass, 10);
+          delete found.password_hash;
+          students[foundIndex] = found;
+          await setAppDataDoc('students', students);
+        }
+      }
+
+      resetStudentLoginAttempts(clientIp);
+      found.lastActiveAt = new Date().toISOString();
+      students[foundIndex] = found;
+      await setAppDataDoc('students', students);
+
+      const token = generateStudentToken(found.id, found.phone);
+      res.cookie('student_session', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000
+      });
+
+      return res.json({
+        success: true,
+        message: 'تم تسجيل الدخول بنجاح',
+        student: sanitizeStudent(found),
+        token
+      });
+    } catch (err: any) {
+      console.error('Student login error:', err);
+      return res.status(500).json({ success: false, error: 'حدث خطأ أثناء تسجيل الدخول' });
+    }
+  });
+
+  app.post('/api/student/register', async (req, res): Promise<any> => {
+    try {
+      const { name, phone, parentPhone, password, grade, governorate, gender } = req.body;
+      if (!name || !phone || !grade) {
+        return res.status(400).json({ success: false, error: 'يرجى ملء جميع البيانات الأساسية المطلوبة' });
+      }
+
+      const cleanPhone = phone.trim().replace(/[^0-9]/g, '');
+      const cleanParent = (parentPhone || '').trim().replace(/[^0-9]/g, '');
+
+      const students: any[] = (await getAppDataDoc('students')) || [];
+      if (students.some((s: any) => (s.phone || '').trim().replace(/[^0-9]/g, '') === cleanPhone)) {
+        return res.status(400).json({ success: false, error: 'رقم الهاتف مسجل بالفعل مسبقاً، يمكنك تسجيل الدخول به' });
+      }
+
+      const hashedPassword = password ? await bcrypt.hash(password.trim(), 10) : undefined;
+      const newStudent = {
+        id: 'std-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
+        name: name.trim(),
+        phone: cleanPhone,
+        parentPhone: cleanParent,
+        password: hashedPassword,
+        grade,
+        governorate: governorate || '',
+        gender: gender || 'male',
+        walletBalance: 0,
+        registeredAt: new Date().toISOString(),
+        lastActiveAt: new Date().toISOString(),
+        isBlocked: false,
+        registeredDevices: [],
+        enrolledCourseIds: [],
+        unlockedPdfIds: [],
+        courseExpiryDates: {}
+      };
+
+      students.push(newStudent);
+      await setAppDataDoc('students', students);
+
+      const token = generateStudentToken(newStudent.id, newStudent.phone);
+      res.cookie('student_session', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000
+      });
+
+      return res.json({
+        success: true,
+        message: 'تم إنشاء الحساب بنجاح',
+        student: sanitizeStudent(newStudent),
+        token
+      });
+    } catch (err) {
+      return res.status(500).json({ success: false, error: 'حدث خطأ أثناء إنشاء الحساب' });
+    }
+  });
+
+  app.post('/api/student/logout', (req, res): any => {
+    res.clearCookie('student_session', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    });
+    return res.json({ success: true, message: 'تم تسجيل الخروج بنجاح' });
+  });
+
+  app.get('/api/student/me', requireStudentAuth, async (req: any, res: express.Response): Promise<any> => {
+    try {
+      const studentId = req.student.studentId;
+      const students: any[] = (await getAppDataDoc('students')) || [];
+      const found = students.find((s: any) => s.id === studentId);
+      if (!found) {
+        return res.status(404).json({ success: false, error: 'لم يتم العثور على بيانات الطالب' });
+      }
+      return res.json({
+        success: true,
+        student: sanitizeStudent(found)
+      });
+    } catch (err) {
+      return res.status(500).json({ success: false, error: 'حدث خطأ في جلب بيانات الطالب' });
+    }
+  });
+
+  app.post('/api/student/activate-code', requireStudentAuth, async (req: any, res: express.Response): Promise<any> => {
+    try {
+      const { code } = req.body;
+      if (!code || typeof code !== 'string') {
+        return res.status(400).json({ success: false, error: 'يرجى إدخال كود التفعيل' });
+      }
+
+      const rawCode = code.trim().toUpperCase();
+      const studentId = req.student.studentId;
+
+      const keys: any[] = (await getAppDataDoc('keys')) || [];
+      const keyIndex = keys.findIndex((k: any) => (k.code || '').trim().toUpperCase() === rawCode);
+
+      if (keyIndex === -1) {
+        return res.status(404).json({ success: false, error: 'كود التفعيل غير صحيح، يرجى التأكد وإعادة المحاولة' });
+      }
+
+      const foundKey = keys[keyIndex];
+      if (foundKey.isUsed) {
+        return res.status(400).json({ success: false, error: 'تم استخدام هذا الكود من قبل مسبقاً' });
+      }
+
+      if (foundKey.expiresAt && new Date(foundKey.expiresAt) < new Date()) {
+        return res.status(400).json({ success: false, error: 'انتهت صلاحية كود التفعيل هذا' });
+      }
+
+      const students: any[] = (await getAppDataDoc('students')) || [];
+      const studentIndex = students.findIndex((s: any) => s.id === studentId);
+      if (studentIndex === -1) {
+        return res.status(404).json({ success: false, error: 'حساب الطالب غير موجود' });
+      }
+
+      const student = students[studentIndex];
+
+      // Mark key as consumed atomically
+      foundKey.isUsed = true;
+      foundKey.usedByStudentId = student.id;
+      foundKey.usedByStudentName = student.name;
+      foundKey.usedAt = new Date().toISOString();
+      keys[keyIndex] = foundKey;
+
+      // Unlock content
+      let itemTitle = foundKey.targetTitle || foundKey.description || 'المحتوى التعليمي';
+      if (foundKey.targetType === 'course' && foundKey.targetId) {
+        if (!student.enrolledCourseIds) student.enrolledCourseIds = [];
+        if (!student.enrolledCourseIds.includes(foundKey.targetId)) {
+          student.enrolledCourseIds.push(foundKey.targetId);
+        }
+      } else if (foundKey.targetType === 'pdf' && foundKey.targetId) {
+        if (!student.unlockedPdfIds) student.unlockedPdfIds = [];
+        if (!student.unlockedPdfIds.includes(foundKey.targetId)) {
+          student.unlockedPdfIds.push(foundKey.targetId);
+        }
+      } else if (foundKey.targetType === 'wallet') {
+        const credit = foundKey.amount || 0;
+        student.walletBalance = (student.walletBalance || 0) + credit;
+        itemTitle = `شحن رصيد المحفظة بمبلغ ${credit} ج.م`;
+      }
+
+      students[studentIndex] = student;
+
+      // Save both updated documents to Supabase via server client
+      await setAppDataDoc('keys', keys);
+      await setAppDataDoc('students', students);
+
+      return res.json({
+        success: true,
+        message: 'تم تفعيل الكود بنجاح!',
+        targetType: foundKey.targetType,
+        targetId: foundKey.targetId,
+        itemTitle,
+        student: sanitizeStudent(student)
+      });
+    } catch (err) {
+      console.error('Activate code error:', err);
+      return res.status(500).json({ success: false, error: 'حدث خطأ أثناء تفعيل الكود' });
+    }
   });
 
   // ==========================================

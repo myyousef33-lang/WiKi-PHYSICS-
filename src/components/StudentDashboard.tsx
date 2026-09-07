@@ -77,95 +77,99 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     }
 
     const refreshData = () => {
-      const currentStudent = StorageService.getCurrentStudent();
-      setStudent(currentStudent);
+      try {
+        const currentStudent = StorageService.getCurrentStudent();
+        setStudent(currentStudent);
 
-      const allCourses = StorageService.getCourses();
-      setAllCoursesList(allCourses);
+        const allCourses = StorageService.getCourses() || [];
+        setAllCoursesList(allCourses);
 
-      // Resolve student courses (STRICT: only courses the student is ACTUALLY enrolled in)
-      const studentCourses = currentStudent 
-        ? allCourses.filter(c => StorageService.isStudentEnrolled(currentStudent.id, c.id))
-        : [];
-      setCourses(studentCourses);
+        // Resolve student courses (STRICT: only courses the student is ACTUALLY enrolled in)
+        const studentCourses = currentStudent 
+          ? allCourses.filter(c => StorageService.isStudentEnrolled(currentStudent.id, c.id))
+          : [];
+        setCourses(studentCourses);
 
-      const studentId = currentStudent?.id || 'demo-student';
-      const studentGrade = currentStudent?.grade || 'الصف الثالث الثانوي';
+        const studentId = currentStudent?.id || 'demo-student';
+        const studentGrade = currentStudent?.grade || 'الصف الثالث الثانوي';
 
-      const studentAttempts = StorageService.getStudentAttempts(studentId);
-      setAttempts(studentAttempts);
+        const studentAttempts = StorageService.getStudentAttempts(studentId) || [];
+        setAttempts(studentAttempts);
 
-      const allNotifs = StorageService.getNotificationsForStudent(studentId, studentGrade);
-      setNotifications(allNotifs.slice(0, 3));
+        const allNotifs = StorageService.getNotificationsForStudent(studentId, studentGrade) || [];
+        setNotifications(allNotifs.slice(0, 3));
 
-      // Dynamic Smart Recommendations
-      const smartRecs = StorageService.getStudentRecommendations(studentId);
-      setRecommendations(smartRecs);
+        // Dynamic Smart Recommendations
+        const smartRecs = StorageService.getStudentRecommendations(studentId) || [];
+        setRecommendations(smartRecs);
 
-      // Refresh Leaderboard
-      setLeaderboard(StorageService.getLeaderboard());
+        // Refresh Leaderboard
+        setLeaderboard(StorageService.getLeaderboard() || []);
 
-      // Resolve Next Step (الخطوة القادمة) - Strictly from enrolled courses
-      const coursesToSearch = studentCourses;
-      if (coursesToSearch.length > 0) {
-        let selectedCourse: Course | null = null;
-        let selectedLesson: Lesson | null = null;
+        // Resolve Next Step (الخطوة القادمة) - Strictly from enrolled courses
+        const coursesToSearch = studentCourses;
+        if (coursesToSearch.length > 0) {
+          let selectedCourse: Course | null = null;
+          let selectedLesson: Lesson | null = null;
 
-        // 1. Check last viewed lesson from storage
-        const lastViewed = StorageService.getLastViewedLesson(studentId);
-        if (lastViewed) {
-          const foundCourse = coursesToSearch.find(c => c.id === lastViewed.courseId);
-          if (foundCourse) {
-            foundCourse.units?.forEach(u => {
-              const l = u.lessons?.find(les => les.id === lastViewed.lessonId);
-              if (l && !selectedLesson) {
-                selectedCourse = foundCourse;
-                selectedLesson = l;
-              }
-            });
-          }
-        }
-
-        // 2. If no last viewed, find first uncompleted lesson across enrolled courses
-        if (!selectedCourse || !selectedLesson) {
-          const studentProg = StorageService.getStudentProgressList(studentId);
-          const completedIds = new Set(studentProg.filter(p => p.isCompleted).map(p => p.lessonId));
-
-          for (const course of coursesToSearch) {
-            for (const unit of (course.units || [])) {
-              for (const lesson of (unit.lessons || [])) {
-                if (!completedIds.has(lesson.id)) {
-                  selectedCourse = course;
-                  selectedLesson = lesson;
-                  break;
+          // 1. Check last viewed lesson from storage
+          const lastViewed = StorageService.getLastViewedLesson(studentId);
+          if (lastViewed) {
+            const foundCourse = coursesToSearch.find(c => c.id === lastViewed.courseId);
+            if (foundCourse) {
+              foundCourse.units?.forEach(u => {
+                const l = u.lessons?.find(les => les.id === lastViewed.lessonId);
+                if (l && !selectedLesson) {
+                  selectedCourse = foundCourse;
+                  selectedLesson = l;
                 }
+              });
+            }
+          }
+
+          // 2. If no last viewed, find first uncompleted lesson across enrolled courses
+          if (!selectedCourse || !selectedLesson) {
+            const studentProg = StorageService.getStudentProgressList(studentId) || [];
+            const completedIds = new Set(studentProg.filter(p => p.isCompleted).map(p => p.lessonId));
+
+            for (const course of coursesToSearch) {
+              for (const unit of (course.units || [])) {
+                for (const lesson of (unit.lessons || [])) {
+                  if (!completedIds.has(lesson.id)) {
+                    selectedCourse = course;
+                    selectedLesson = lesson;
+                    break;
+                  }
+                }
+                if (selectedCourse) break;
               }
               if (selectedCourse) break;
             }
-            if (selectedCourse) break;
           }
-        }
 
-        // 3. Fallback to very first lesson of first enrolled course
-        if (!selectedCourse || !selectedLesson) {
-          selectedCourse = coursesToSearch[0];
-          selectedLesson = selectedCourse.units?.[0]?.lessons?.[0] || null;
-        }
+          // 3. Fallback to very first lesson of first enrolled course
+          if (!selectedCourse || !selectedLesson) {
+            selectedCourse = coursesToSearch[0];
+            selectedLesson = selectedCourse.units?.[0]?.lessons?.[0] || null;
+          }
 
-        if (selectedCourse && selectedLesson) {
-          const { totalLessons, completedLessons, percentage } = StorageService.calculateCourseProgress(studentId, selectedCourse.id);
-          setNextStepInfo({
-            course: selectedCourse,
-            lesson: selectedLesson,
-            courseProgress: percentage,
-            totalLessonsInCourse: totalLessons,
-            completedLessonsInCourse: completedLessons
-          });
+          if (selectedCourse && selectedLesson) {
+            const { totalLessons, completedLessons, percentage } = StorageService.calculateCourseProgress(studentId, selectedCourse.id);
+            setNextStepInfo({
+              course: selectedCourse,
+              lesson: selectedLesson,
+              courseProgress: percentage,
+              totalLessonsInCourse: totalLessons,
+              completedLessonsInCourse: completedLessons
+            });
+          } else {
+            setNextStepInfo(null);
+          }
         } else {
           setNextStepInfo(null);
         }
-      } else {
-        setNextStepInfo(null);
+      } catch (err) {
+        console.error('Error in dashboard refreshData:', err);
       }
     };
 
@@ -190,18 +194,18 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   };
 
   // Metrics calculation
-  const progressList = StorageService.getStudentProgressList(activeStudent.id);
-  const completedLessonsCount = progressList.filter(p => p.isCompleted).length;
+  const progressList = StorageService.getStudentProgressList(activeStudent.id) || [];
+  const completedLessonsCount = (progressList || []).filter(p => p?.isCompleted).length;
 
   // Student Level and Leaderboard Rank Stats
-  const rankStats = calculateStudentRankStats(activeStudent, leaderboard);
+  const rankStats = calculateStudentRankStats(activeStudent, leaderboard || []);
 
   // Strict enrolled courses (do NOT bypass or fallback to all courses)
-  const relevantCourses = courses;
+  const relevantCourses = courses || [];
   let totalAvailableLessons = 0;
   relevantCourses.forEach(c => {
-    c.units?.forEach(u => {
-      totalAvailableLessons += u.lessons?.length || 0;
+    (c?.units || []).forEach(u => {
+      totalAvailableLessons += (u?.lessons || []).length;
     });
   });
 
@@ -209,9 +213,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     ? Math.min(100, Math.round((completedLessonsCount / totalAvailableLessons) * 100))
     : 0;
 
-  const passedExamsCount = attempts.filter(a => a.passed).length;
-  const averageScore = attempts.length > 0
-    ? Math.round(attempts.reduce((acc, a) => acc + a.percentage, 0) / attempts.length)
+  const passedExamsCount = (attempts || []).filter(a => a?.passed).length;
+  const averageScore = (attempts || []).length > 0
+    ? Math.round((attempts || []).reduce((acc, a) => acc + (a?.percentage || 0), 0) / attempts.length)
     : 0;
 
   // Quick Access 8 Tools (Exact requested list)

@@ -63,7 +63,7 @@ export const MascotWithAccessories: React.FC<MascotWithAccessoriesProps> = ({
             </div>
           ) : (
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0D1B3E]/90 text-amber-300 font-bold text-[10px] sm:text-[11px] shadow-md border border-amber-400/40 backdrop-blur-xs">
-              {level && <RankTierIcon tier={level.tier} size={14} />}
+              {level && <RankTierIcon tier={level.tier} className="h-3.5 w-3.5" />}
               <span>{level?.title || 'برونزي'} • #{rank}</span>
             </div>
           )}

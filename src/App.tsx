@@ -26,6 +26,7 @@ import { CertificateModal } from './components/CertificateModal';
 import { GlobalAntiScreenshotShield } from './components/GlobalAntiScreenshotShield';
 import { StudentWalletModal } from './components/StudentWalletModal';
 import { FloatingSupportButton } from './components/FloatingSupportButton';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { StorageService, subscribeToStorage } from './services/storage';
 import { PresenceService } from './services/presence';
 import { EarnedCertificate, Student } from './types';
@@ -164,12 +165,14 @@ export default function App() {
             )}
 
             {currentView === 'dashboard' && (
-              <StudentDashboard
-                onNavigate={handleNavigate}
-                onOpenActivationModal={() => setIsActivationModalOpen(true)}
-                onOpenEditProfileModal={() => setIsEditProfileModalOpen(true)}
-                onOpenWalletModal={() => setIsWalletModalOpen(true)}
-              />
+              <ErrorBoundary fallbackTitle="لوحة تحكم الطالب قيد المعالجة">
+                <StudentDashboard
+                  onNavigate={handleNavigate}
+                  onOpenActivationModal={() => setIsActivationModalOpen(true)}
+                  onOpenEditProfileModal={() => setIsEditProfileModalOpen(true)}
+                  onOpenWalletModal={() => setIsWalletModalOpen(true)}
+                />
+              </ErrorBoundary>
             )}
 
             {currentView === 'physics-lab' && (
@@ -353,7 +356,7 @@ export default function App() {
             student={student}
             isOpen={isEditProfileModalOpen}
             onClose={() => setIsEditProfileModalOpen(false)}
-            onUpdateSuccess={() => {
+            onProfileUpdated={() => {
               setStudent(StorageService.getCurrentStudent());
             }}
           />
