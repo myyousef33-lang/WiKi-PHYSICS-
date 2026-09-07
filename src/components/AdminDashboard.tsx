@@ -771,18 +771,36 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
   }, []);
 
   const [isSyncingCloud, setIsSyncingCloud] = useState(false);
+  const [isPullingCloud, setIsPullingCloud] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
   const handleForceSyncCloud = async () => {
     setIsSyncingCloud(true);
-    const success = await StorageService.forceSyncAllToFirestore();
+    const result = await StorageService.forceSyncAllToFirestore();
     setIsSyncingCloud(false);
-    if (success) {
-      setSyncFeedback('تمت مزامنة جميع الكورسات والبيانات سحابياً مع Firestore بنجاح');
+    if (result.success) {
+      setSyncFeedback(result.message || 'تمت مزامنة جميع التعديلات بنجاح وأصبحت ظاهرة للطلاب الآن');
     } else {
-      setSyncFeedback('حدث خطأ أثناء المزامنة السحابية. يرجى المحاولة لاحقاً');
+      setSyncFeedback(result.message || 'حدث خطأ أثناء المزامنة. يرجى المحاولة لاحقاً');
     }
-    setTimeout(() => setSyncFeedback(null), 4000);
+    setTimeout(() => setSyncFeedback(null), 5000);
+  };
+
+  const handleForcePullCloud = async () => {
+    if (!window.confirm('هل تريد استرجاع النسخة المحفوظة على الخادم وتجاهل أي تعديلات محلية لم يتم حفظها؟')) {
+      return;
+    }
+    setIsPullingCloud(true);
+    const success = await StorageService.forcePullFromFirestore();
+    setIsPullingCloud(false);
+    if (success) {
+      setCourses(StorageService.getCourses());
+      setSettings(StorageService.getSettings());
+      setSyncFeedback('تم استرجاع النسخة المعتمدة من الخادم بنجاح');
+    } else {
+      setSyncFeedback('تعذر استرجاع البيانات من الخادم، يرجى المحاولة مرة أخرى');
+    }
+    setTimeout(() => setSyncFeedback(null), 5000);
   };
 
   const handleLogout = () => {
@@ -1294,29 +1312,38 @@ ${weakConceptsText}
 
             {/* Left in RTL: Action Buttons (Firestore Sync, Theme Toggle, Student View, Logout) */}
             <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-              {/* Cloud Sync Pending / Saving Indicator */}
+              {/* Cloud Sync State Indicators & Controls */}
               {(hasPendingCloudSync || cloudSyncState === 'syncing') && (
                 <div 
-                  className="flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs font-bold text-amber-800 shadow-xs animate-pulse"
-                  title="توجد تعديلات جاري رفعها وحفظها على السحابة الآن"
+                  className="flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs font-bold text-amber-900 shadow-xs animate-pulse"
+                  title="توجد تعديلات جاري حفظها ومزامنتها على الخادم الآن"
                 >
                   <RefreshCw className="h-3.5 w-3.5 shrink-0 animate-spin text-amber-600" />
-                  <span className="hidden sm:inline">لسه بيتم الحفظ على السحابة...</span>
-                  <span className="sm:hidden">جاري الحفظ...</span>
+                  <span className="hidden md:inline">جاري الحفظ والمزامنة للطلاب...</span>
+                  <span className="md:hidden">جاري الحفظ...</span>
                 </div>
               )}
 
-              {/* Cloud Sync Transient Error / Retry Indicator */}
               {cloudSyncState === 'error' && !hasPendingCloudSync && (
-                <button
-                  onClick={handleForceSyncCloud}
-                  className="flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50 px-2.5 py-1.5 text-xs font-bold text-rose-800 shadow-xs hover:bg-rose-100 transition-colors"
-                  title="تعذر الحفظ على السحابة مؤقتاً. اضغط هنا لإعادة المحاولة"
-                >
+                <div className="flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50 px-2.5 py-1.5 text-xs font-bold text-rose-800 shadow-xs">
                   <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-rose-600" />
-                  <span className="hidden sm:inline">تعذر الحفظ (إعادة المحاولة)</span>
-                  <span className="sm:hidden">إعادة المحاولة</span>
-                </button>
+                  <span className="hidden md:inline">تعديلات غير محفوظة بالخادم</span>
+                  <button
+                    onClick={handleForceSyncCloud}
+                    disabled={isSyncingCloud}
+                    className="rounded-lg bg-rose-600 text-white px-2 py-0.5 text-[11px] font-bold hover:bg-rose-700 transition-colors"
+                  >
+                    {isSyncingCloud ? 'جاري النشر...' : 'نشر للطلاب الآن'}
+                  </button>
+                  <button
+                    onClick={handleForcePullCloud}
+                    disabled={isPullingCloud}
+                    className="rounded-lg bg-white border border-rose-200 text-rose-700 px-2 py-0.5 text-[11px] font-bold hover:bg-rose-100 transition-colors"
+                    title="إلغاء التعديلات غير المحفوظة والرجوع لما هو معتمد على الخادم"
+                  >
+                    استرجاع الأصلي
+                  </button>
+                </div>
               )}
 
               <ThemeToggle />
@@ -1325,10 +1352,10 @@ ${weakConceptsText}
                 onClick={handleForceSyncCloud}
                 disabled={isSyncingCloud}
                 className="flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition-all shadow-xs disabled:opacity-50"
-                title="مزامنة فورية لكل البيانات مع قاعدة بيانات Firebase Firestore"
+                title="مزامنة فورية وتحديث جميع الكورسات والبيانات للطلاب"
               >
                 <RefreshCw className={`h-3.5 w-3.5 shrink-0 ${isSyncingCloud ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">{isSyncingCloud ? 'جارٍ المزامنة...' : 'مزامنة السحابة'}</span>
+                <span className="hidden sm:inline">{isSyncingCloud ? 'جارٍ المزامنة...' : 'مزامنة مع الطلاب'}</span>
               </button>
 
               <button

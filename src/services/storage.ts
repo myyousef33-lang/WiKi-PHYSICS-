@@ -211,12 +211,16 @@ const pendingSyncTimers: Record<string, any> = {};
 const processSyncQueue = async () => {
   if (isProcessingSyncQueue) return;
   if (syncQueue.size === 0) {
-    cloudSyncStatus = 'synced';
+    if (cloudSyncStatus !== 'synced') {
+      cloudSyncStatus = 'synced';
+      notifyListeners();
+    }
     return;
   }
 
   isProcessingSyncQueue = true;
   const now = Date.now();
+  let statusChanged = false;
 
   for (const [key, task] of Array.from(syncQueue.entries())) {
     if (task.nextRetry > now) {
@@ -224,7 +228,10 @@ const processSyncQueue = async () => {
     }
 
     try {
-      cloudSyncStatus = 'syncing';
+      if (cloudSyncStatus !== 'syncing') {
+        cloudSyncStatus = 'syncing';
+        statusChanged = true;
+      }
 
       const docRef = doc(db, 'app_data', key);
       const cleanData = sanitizeForFirestore(task.data);
@@ -233,16 +240,21 @@ const processSyncQueue = async () => {
       // Successful sync
       syncQueue.delete(key);
       lastSyncTimestamp = task.timestamp;
+      statusChanged = true;
+
+      // Broadcast to snapshot listeners across tabs/windows
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('storage_sync_force'));
+      }
     } catch (err) {
       task.attempts += 1;
       console.warn(`[Sync Queue] Error syncing ${key} (attempt ${task.attempts}):`, err);
 
       if (task.attempts >= 4) {
-        // Stop aggressive backoff after 4 attempts, retry every 30s or on online/visibility event
         cloudSyncStatus = 'error';
+        statusChanged = true;
         task.nextRetry = Date.now() + 30000;
       } else {
-        // Exponential backoff: 1s, 2s, 4s
         const backoffMs = Math.pow(2, task.attempts - 1) * 1000;
         task.nextRetry = Date.now() + backoffMs;
         setTimeout(() => processSyncQueue(), backoffMs + 50);
@@ -254,10 +266,17 @@ const processSyncQueue = async () => {
 
   if (syncQueue.size === 0) {
     cloudSyncStatus = 'synced';
+    statusChanged = true;
   } else if (Array.from(syncQueue.values()).some(t => t.attempts >= 4)) {
     cloudSyncStatus = 'error';
+    statusChanged = true;
   } else {
     cloudSyncStatus = 'syncing';
+    statusChanged = true;
+  }
+
+  if (statusChanged) {
+    notifyListeners();
   }
 };
 
@@ -2630,28 +2649,79 @@ export const StorageService = {
   getLastSyncTimestamp(): string {
     return lastSyncTimestamp;
   },
-  async forceSyncAllToFirestore(): Promise<boolean> {
+  async forceSyncAllToFirestore(): Promise<{ success: boolean; message?: string }> {
     try {
       cloudSyncStatus = 'syncing';
       notifyListeners();
+
+      const adminToken = this.getAdminToken();
+      const batchPayload: Record<string, any> = {};
+      const nowIso = new Date().toISOString();
+
       for (const key of syncKeys) {
         const localStr = localStorage.getItem(key);
         if (localStr) {
-          const localData = JSON.parse(localStr);
-          const docRef = doc(db, 'app_data', key);
-          await setDoc(docRef, { data: sanitizeForFirestore(localData), updatedAt: new Date().toISOString() });
+          try {
+            batchPayload[key] = sanitizeForFirestore(JSON.parse(localStr));
+            localStorage.setItem(key + '_updated_at', nowIso);
+          } catch (_) {}
         }
       }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      };
+      if (adminToken) {
+        headers['Authorization'] = `Bearer ${adminToken}`;
+        headers['x-admin-token'] = adminToken;
+      }
+
+      // Try fast server batch sync
+      let serverSuccess = false;
+      try {
+        const res = await fetch('/api/admin/sync-data', {
+          method: 'POST',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify({ batch: batchPayload, updatedAt: nowIso })
+        });
+        if (res.ok) {
+          const json = await res.json().catch(() => null);
+          if (json && json.success) {
+            serverSuccess = true;
+          }
+        }
+      } catch (err) {
+        console.warn('Batch server sync failed, falling back to sequential sync:', err);
+      }
+
+      // If batch failed, fallback to sequential setDoc
+      if (!serverSuccess) {
+        for (const key of syncKeys) {
+          const localStr = localStorage.getItem(key);
+          if (localStr) {
+            const localData = JSON.parse(localStr);
+            const docRef = doc(db, 'app_data', key);
+            await setDoc(docRef, { data: sanitizeForFirestore(localData), updatedAt: nowIso });
+          }
+        }
+      }
+
       syncQueue.clear();
       cloudSyncStatus = 'synced';
-      lastSyncTimestamp = new Date().toISOString();
+      lastSyncTimestamp = nowIso;
       notifyListeners();
-      return true;
-    } catch (e) {
-      console.error('Failed to force sync to Firestore:', e);
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('storage_sync_force'));
+      }
+      return { success: true, message: 'تمت مزامنة جميع البيانات بنجاح وأصبحت متاحة للطلاب فوراً' };
+    } catch (e: any) {
+      console.error('Failed to force sync to server:', e);
       cloudSyncStatus = 'error';
       notifyListeners();
-      return false;
+      return { success: false, message: e?.message || 'فشل الاتصال بالخادم لمزامنة التعديلات' };
     }
   },
   async forcePullFromFirestore(): Promise<boolean> {
@@ -2659,29 +2729,79 @@ export const StorageService = {
       cloudSyncStatus = 'syncing';
       notifyListeners();
       let changed = false;
-      for (const key of syncKeys) {
-        const docRef = doc(db, 'app_data', key);
-        const snap = await getDoc(docRef);
-        if (snap.exists()) {
-          const remoteData = snap.data()?.data;
-          if (remoteData !== undefined && remoteData !== null) {
-            localStorage.setItem(key, JSON.stringify(remoteData));
-            changed = true;
+
+      // Try batch read from server first
+      let pulledFromServer = false;
+      try {
+        const res = await fetch('/api/app-data', { headers: { 'Accept': 'application/json' } });
+        if (res.ok) {
+          const json = await res.json().catch(() => null);
+          if (json && json.success && json.data) {
+            for (const [key, item] of Object.entries(json.data as Record<string, { data: any; updatedAt: string }>)) {
+              if (item && item.data !== undefined) {
+                memoryCache[key] = cloneData(item.data);
+                localStorage.setItem(key, JSON.stringify(item.data));
+                if (item.updatedAt) {
+                  localStorage.setItem(key + '_updated_at', item.updatedAt);
+                }
+                changed = true;
+              }
+            }
+            pulledFromServer = true;
+          }
+        }
+      } catch (_) {}
+
+      // Fallback: Individual keys
+      if (!pulledFromServer) {
+        for (const key of syncKeys) {
+          const docRef = doc(db, 'app_data', key);
+          const snap = await getDoc(docRef);
+          if (snap.exists()) {
+            const remoteData = snap.data()?.data;
+            const remoteUpdatedAt = snap.data()?.updatedAt;
+            if (remoteData !== undefined && remoteData !== null) {
+              memoryCache[key] = cloneData(remoteData);
+              localStorage.setItem(key, JSON.stringify(remoteData));
+              if (remoteUpdatedAt) {
+                localStorage.setItem(key + '_updated_at', remoteUpdatedAt);
+              }
+              changed = true;
+            }
           }
         }
       }
+
+      syncQueue.clear();
+      cloudSyncStatus = 'synced';
+      lastSyncTimestamp = new Date().toISOString();
       if (changed) {
         notifyListeners();
       }
-      cloudSyncStatus = 'synced';
-      lastSyncTimestamp = new Date().toISOString();
-      notifyListeners();
       return true;
     } catch (e) {
-      console.error('Failed to force pull from Firestore:', e);
+      console.error('Failed to force pull from server:', e);
       cloudSyncStatus = 'error';
       notifyListeners();
       return false;
+    }
+  },
+  async getServerSyncDiagnostics(): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const adminToken = this.getAdminToken();
+      const headers: Record<string, string> = { 'Accept': 'application/json' };
+      if (adminToken) {
+        headers['Authorization'] = `Bearer ${adminToken}`;
+        headers['x-admin-token'] = adminToken;
+      }
+      const res = await fetch('/api/admin/server-sync-status', { headers, credentials: 'include' });
+      if (!res.ok) {
+        return { success: false, error: `رمز الخطأ: ${res.status}` };
+      }
+      const json = await res.json();
+      return { success: true, data: json };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'تعذر الوصول إلى الخادم' };
     }
   }
 };

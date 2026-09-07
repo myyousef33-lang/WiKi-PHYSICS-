@@ -23,38 +23,164 @@ export const supabaseServer = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_K
   auth: { persistSession: false }
 });
 
+// AppData persistence directory (.data/app_data)
+const appDataDir = path.join(process.cwd(), '.data', 'app_data');
+if (!fs.existsSync(appDataDir)) {
+  fs.mkdirSync(appDataDir, { recursive: true });
+}
+
+const memoryAppData = new Map<string, { data: any; updatedAt: string }>();
+
+// Preload from disk into memory on startup
+try {
+  const files = fs.readdirSync(appDataDir);
+  for (const file of files) {
+    if (file.endsWith('.json')) {
+      const key = file.replace(/\.json$/, '');
+      const content = fs.readFileSync(path.join(appDataDir, file), 'utf-8');
+      const parsed = JSON.parse(content);
+      memoryAppData.set(key, {
+        data: parsed.data !== undefined ? parsed.data : parsed,
+        updatedAt: parsed.updatedAt || new Date().toISOString()
+      });
+    }
+  }
+} catch (err) {
+  console.error('Error preloading app_data from disk:', err);
+}
+
+export const normalizeAppKey = (k: string): string => {
+  if (!k || typeof k !== 'string') return '';
+  const map: Record<string, string> = {
+    'students': 'wikifizya_db_students_v4',
+    'wikifizya_db_students_v4': 'wikifizya_db_students_v4',
+    'courses': 'wikifizya_db_courses_v4',
+    'wikifizya_db_courses_v4': 'wikifizya_db_courses_v4',
+    'settings': 'wikifizya_db_settings_v4',
+    'wikifizya_db_settings_v4': 'wikifizya_db_settings_v4',
+    'exams': 'wikifizya_db_exams_v4',
+    'wikifizya_db_exams_v4': 'wikifizya_db_exams_v4',
+    'keys': 'wikifizya_db_activation_keys_v4',
+    'wikifizya_db_activation_keys_v4': 'wikifizya_db_activation_keys_v4',
+    'attempts': 'wikifizya_db_exam_attempts_v4',
+    'wikifizya_db_exam_attempts_v4': 'wikifizya_db_exam_attempts_v4',
+    'progress': 'wikifizya_db_lesson_progress_v4',
+    'wikifizya_db_lesson_progress_v4': 'wikifizya_db_lesson_progress_v4',
+    'pdfFiles': 'wikifizya_db_pdf_files_v4',
+    'wikifizya_db_pdf_files_v4': 'wikifizya_db_pdf_files_v4',
+    'pdfCategories': 'wikifizya_db_pdf_categories_v4',
+    'wikifizya_db_pdf_categories_v4': 'wikifizya_db_pdf_categories_v4',
+    'notifications': 'wikifizya_db_notifications_v4',
+    'wikifizya_db_notifications_v4': 'wikifizya_db_notifications_v4',
+    'weakness': 'wikifizya_db_weakness_v4',
+    'wikifizya_db_weakness_v4': 'wikifizya_db_weakness_v4',
+    'leaderboard': 'wikifizya_db_leaderboard_v4',
+    'wikifizya_db_leaderboard_v4': 'wikifizya_db_leaderboard_v4',
+    'weeklyChallenges': 'wikifizya_db_weekly_challenges_v4',
+    'wikifizya_db_weekly_challenges_v4': 'wikifizya_db_weekly_challenges_v4',
+    'paymentMethods': 'wikifizya_db_payment_methods_v4',
+    'wikifizya_db_payment_methods_v4': 'wikifizya_db_payment_methods_v4',
+    'walletTransactions': 'wikifizya_db_wallet_transactions_v4',
+    'wikifizya_db_wallet_transactions_v4': 'wikifizya_db_wallet_transactions_v4',
+    'assignments': 'wikifizya_db_assignments_v4',
+    'wikifizya_db_assignments_v4': 'wikifizya_db_assignments_v4',
+    'assignmentSubmissions': 'wikifizya_db_assignment_submissions_v4',
+    'wikifizya_db_assignment_submissions_v4': 'wikifizya_db_assignment_submissions_v4'
+  };
+  return map[k] || k;
+};
+
 // AppData persistence helpers
 const getAppDataDoc = async (key: string): Promise<any> => {
+  const normKey = normalizeAppKey(key);
+  if (!normKey) return null;
+
+  // 1. Check in-memory cache
+  const cached = memoryAppData.get(normKey);
+  if (cached && cached.data !== undefined) {
+    return cached.data;
+  }
+
+  // 2. Check disk file
+  const targetFile = path.join(appDataDir, `${normKey}.json`);
+  if (fs.existsSync(targetFile)) {
+    try {
+      const content = fs.readFileSync(targetFile, 'utf-8');
+      const parsed = JSON.parse(content);
+      const data = parsed.data !== undefined ? parsed.data : parsed;
+      const updatedAt = parsed.updatedAt || new Date().toISOString();
+      memoryAppData.set(normKey, { data, updatedAt });
+      return data;
+    } catch (err) {
+      console.error(`Error reading ${targetFile}:`, err);
+    }
+  }
+
+  // 3. Fallback: Check Supabase (e.g. for seed rows)
   try {
     const { data, error } = await supabaseServer
       .from('app_data')
       .select('key, data, updated_at')
-      .eq('key', key)
+      .eq('key', normKey)
       .maybeSingle();
-    if (error || !data) return null;
-    return data.data;
+    if (!error && data && data.data !== undefined) {
+      const updatedAt = data.updated_at || new Date().toISOString();
+      memoryAppData.set(normKey, { data: data.data, updatedAt });
+      try {
+        fs.writeFileSync(targetFile, JSON.stringify({ key: normKey, data: data.data, updatedAt }, null, 2), 'utf-8');
+      } catch (_) {}
+      return data.data;
+    }
   } catch (err) {
-    console.error(`getAppDataDoc error [${key}]:`, err);
-    return null;
+    console.warn(`Supabase read fallback for [${normKey}] failed:`, err);
   }
+
+  return null;
 };
 
-const setAppDataDoc = async (key: string, docData: any): Promise<boolean> => {
+const getAppDataDocWithMeta = async (key: string): Promise<{ data: any; updatedAt: string } | null> => {
+  const normKey = normalizeAppKey(key);
+  if (!normKey) return null;
+
+  const data = await getAppDataDoc(normKey);
+  if (data === null || data === undefined) return null;
+
+  const cached = memoryAppData.get(normKey);
+  return {
+    data,
+    updatedAt: cached?.updatedAt || new Date().toISOString()
+  };
+};
+
+const setAppDataDoc = async (key: string, docData: any, customUpdatedAt?: string): Promise<boolean> => {
+  const normKey = normalizeAppKey(key);
+  if (!normKey) return false;
+  const updatedAt = customUpdatedAt || new Date().toISOString();
+
   try {
-    const { error } = await supabaseServer
-      .from('app_data')
-      .upsert({
-        key,
-        data: docData,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'key' });
-    if (error) {
-      console.error(`setAppDataDoc error [${key}]:`, error);
-      return false;
-    }
+    // 1. Update in-memory cache
+    memoryAppData.set(normKey, { data: docData, updatedAt });
+
+    // 2. Persist to atomic file on disk
+    const targetFile = path.join(appDataDir, `${normKey}.json`);
+    const tempFile = path.join(appDataDir, `${normKey}.tmp.${Date.now()}`);
+    fs.writeFileSync(tempFile, JSON.stringify({ key: normKey, data: docData, updatedAt }, null, 2), 'utf-8');
+    fs.renameSync(tempFile, targetFile);
+
+    // 3. Background best-effort Supabase sync (does not block local persistence)
+    Promise.resolve(
+      supabaseServer
+        .from('app_data')
+        .upsert({
+          key: normKey,
+          data: docData,
+          updated_at: updatedAt
+        }, { onConflict: 'key' })
+    ).catch(() => {});
+
     return true;
   } catch (err) {
-    console.error(`setAppDataDoc exception [${key}]:`, err);
+    console.error(`setAppDataDoc exception [${normKey}]:`, err);
     return false;
   }
 };
@@ -561,19 +687,123 @@ async function startServer() {
     return res.json({ success: true, authenticated: isValid, role: isValid ? 'admin' : null });
   });
 
+  // Public endpoint for reading synchronized collections (used by students and app on load)
+  app.get('/api/app-data/:key', async (req, res): Promise<any> => {
+    try {
+      const rawKey = req.params.key;
+      const result = await getAppDataDocWithMeta(rawKey);
+      if (!result) {
+        return res.status(404).json({ success: false, error: 'البيانات غير موجودة' });
+      }
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      return res.json({
+        success: true,
+        key: normalizeAppKey(rawKey),
+        data: result.data,
+        updatedAt: result.updatedAt
+      });
+    } catch (err) {
+      return res.status(500).json({ success: false, error: 'فشل في استرجاع البيانات' });
+    }
+  });
+
+  // Batch read endpoint for instant app startup hydration
+  app.get('/api/app-data', async (_req, res): Promise<any> => {
+    try {
+      const all: Record<string, { data: any; updatedAt: string }> = {};
+      const keysToLoad = [
+        'wikifizya_db_courses_v4',
+        'wikifizya_db_settings_v4',
+        'wikifizya_db_exams_v4',
+        'wikifizya_db_pdf_files_v4',
+        'wikifizya_db_pdf_categories_v4',
+        'wikifizya_db_notifications_v4',
+        'wikifizya_db_weekly_challenges_v4',
+        'wikifizya_db_leaderboard_v4'
+      ];
+      for (const k of keysToLoad) {
+        const item = await getAppDataDocWithMeta(k);
+        if (item) {
+          all[k] = item;
+        }
+      }
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      return res.json({ success: true, data: all });
+    } catch (err) {
+      return res.status(500).json({ success: false, error: 'فشل في استرجاع البيانات المجمعة' });
+    }
+  });
+
+  // Admin sync data endpoint (single key or batch)
   app.post('/api/admin/sync-data', requireAdminAuth, async (req, res): Promise<any> => {
     try {
-      const { key, data } = req.body;
+      const { key, data, updatedAt, batch } = req.body;
+
+      // Batch synchronization
+      if (batch && typeof batch === 'object') {
+        const results: Record<string, boolean> = {};
+        for (const [k, v] of Object.entries(batch)) {
+          results[k] = await setAppDataDoc(k, v);
+        }
+        return res.json({
+          success: true,
+          message: 'تمت مزامنة جميع البيانات المجمعة بنجاح على الخادم وأصبحت متاحة للطلاب',
+          results
+        });
+      }
+
       if (!key || data === undefined) {
         return res.status(400).json({ success: false, error: 'المفتاح والبيانات مطلوبان' });
       }
-      const success = await setAppDataDoc(key, data);
+      const success = await setAppDataDoc(key, data, updatedAt);
       if (!success) {
         return res.status(500).json({ success: false, error: 'حدث خطأ أثناء حفظ البيانات على الخادم' });
       }
-      return res.json({ success: true, message: 'تم حفظ البيانات بنجاح' });
+      return res.json({
+        success: true,
+        message: 'تم حفظ البيانات بنجاح وأصبحت متاحة للطلاب فوراً',
+        key: normalizeAppKey(key)
+      });
     } catch (err) {
       return res.status(500).json({ success: false, error: 'حدث خطأ في الخادم أثناء مزامنة البيانات' });
+    }
+  });
+
+  // Server sync status diagnostics for Admin
+  app.get('/api/admin/server-sync-status', requireAdminAuth, async (_req, res): Promise<any> => {
+    try {
+      const syncStatus: Record<string, { updatedAt: string; count?: number; type: string }> = {};
+      const standardKeys = [
+        'wikifizya_db_courses_v4',
+        'wikifizya_db_settings_v4',
+        'wikifizya_db_exams_v4',
+        'wikifizya_db_students_v4',
+        'wikifizya_db_activation_keys_v4',
+        'wikifizya_db_pdf_files_v4',
+        'wikifizya_db_pdf_categories_v4',
+        'wikifizya_db_notifications_v4',
+        'wikifizya_db_weekly_challenges_v4',
+        'wikifizya_db_exam_attempts_v4',
+        'wikifizya_db_lesson_progress_v4'
+      ];
+      for (const k of standardKeys) {
+        const item = await getAppDataDocWithMeta(k);
+        if (item) {
+          const isArr = Array.isArray(item.data);
+          syncStatus[k] = {
+            updatedAt: item.updatedAt,
+            count: isArr ? item.data.length : undefined,
+            type: isArr ? 'array' : typeof item.data
+          };
+        }
+      }
+      return res.json({
+        success: true,
+        serverTime: new Date().toISOString(),
+        keys: syncStatus
+      });
+    } catch (err) {
+      return res.status(500).json({ success: false, error: 'فشل في استرجاع تقرير المزامنة' });
     }
   });
 

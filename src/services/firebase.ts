@@ -38,6 +38,27 @@ const safeFetch = async (url: string, options: RequestInit = {}, timeoutMs = 800
 export const doc = (_db: typeof db, collection: string, id: string): DocRef => ({ collection, id });
 
 export const getDoc = async (ref: DocRef): Promise<Snapshot> => {
+  // 1. Prefer fast, reliable backend server endpoint
+  try {
+    const serverRes = await safeFetch(`/api/app-data/${encodeURIComponent(ref.id)}`, {
+      headers: { 'Accept': 'application/json' }
+    }, 5000);
+
+    if (serverRes && serverRes.ok) {
+      const json = await serverRes.json().catch(() => null);
+      if (json && json.success && json.data !== undefined) {
+        return {
+          exists: () => true,
+          data: () => ({ data: json.data, updatedAt: json.updatedAt }),
+          metadata: { hasPendingWrites: false }
+        };
+      }
+    }
+  } catch {
+    // Continue to Supabase fallback
+  }
+
+  // 2. Fallback to Supabase direct REST if server proxy is unavailable
   try {
     const response = await safeFetch(`${REST_URL}?key=eq.${encodeURIComponent(ref.id)}&select=key,data,updated_at`, {
       headers: getHeaders()
@@ -68,42 +89,64 @@ export const getDoc = async (ref: DocRef): Promise<Snapshot> => {
 };
 
 export const setDoc = async (ref: DocRef, value: { data: any; updatedAt?: string }): Promise<void> => {
-  // Try secure server sync API first (protected by Admin session & service role)
-  const adminToken = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('wikifizya_admin_token') : null;
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const adminToken = typeof sessionStorage !== 'undefined'
+    ? (sessionStorage.getItem('wikifizya_admin_jwt_token_v4') || localStorage.getItem('wikifizya_admin_jwt_token_v4') || sessionStorage.getItem('wikifizya_admin_token'))
+    : null;
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  };
   if (adminToken) {
     headers['Authorization'] = `Bearer ${adminToken}`;
     headers['x-admin-token'] = adminToken;
   }
 
-  const serverSyncRes = await safeFetch('/api/admin/sync-data', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      key: ref.id,
-      data: value.data,
-      updatedAt: value.updatedAt || new Date().toISOString()
-    })
-  });
+  let serverErrorDetail = '';
+  try {
+    const serverSyncRes = await safeFetch('/api/admin/sync-data', {
+      method: 'POST',
+      headers,
+      credentials: 'include',
+      body: JSON.stringify({
+        key: ref.id,
+        data: value.data,
+        updatedAt: value.updatedAt || new Date().toISOString()
+      })
+    });
 
-  if (serverSyncRes && serverSyncRes.ok) {
-    return;
+    if (serverSyncRes && serverSyncRes.ok) {
+      return;
+    }
+    if (serverSyncRes) {
+      const errJson = await serverSyncRes.json().catch(() => null);
+      serverErrorDetail = errJson?.error || `رمز الحالة: ${serverSyncRes.status}`;
+    }
+  } catch (err: any) {
+    serverErrorDetail = err?.message || 'تعذر الوصول إلى الخادم';
   }
 
   // Fallback to direct REST attempt if server proxy is unavailable
-  const response = await safeFetch(REST_URL, {
-    method: 'POST',
-    headers: { ...getHeaders(), Prefer: 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify({
-      key: ref.id,
-      data: value.data,
-      updated_at: value.updatedAt || new Date().toISOString()
-    })
-  });
+  try {
+    const response = await safeFetch(REST_URL, {
+      method: 'POST',
+      headers: { ...getHeaders(), Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({
+        key: ref.id,
+        data: value.data,
+        updated_at: value.updatedAt || new Date().toISOString()
+      })
+    });
 
-  if (!response || !response.ok) {
-    console.warn(`Direct write for ${ref.id} skipped (RLS enforcement or network offline).`);
+    if (response && response.ok) {
+      return;
+    }
+  } catch {
+    // Ignore direct REST error
   }
+
+  // Throw error so caller knows sync failed and marks sync status correctly
+  throw new Error(`فشل حفظ البيانات على الخادم والسحابة (${serverErrorDetail || 'غير مصرح أو الخادم غير متاح'})`);
 };
 
 // Supabase polling synchronization with staggered intervals & visibility awareness
@@ -139,18 +182,25 @@ export const onSnapshot = (
     void check();
   }, initialDelay);
 
-  // Poll every 12 seconds to keep data fresh without overloading
-  const timer = window.setInterval(check, 12000);
+  // Poll every 6 seconds to keep data fresh across all devices without overloading
+  const timer = window.setInterval(check, 6000);
 
-  // When user switches back to this tab, immediately check for changes
+  // When user switches back to this tab or when local write forces a refresh, immediately check
   const onVisibilityChange = () => {
     if (typeof document !== 'undefined' && document.visibilityState === 'visible' && !stopped) {
       void check();
     }
   };
 
+  const onForceCheck = () => {
+    if (!stopped) {
+      void check();
+    }
+  };
+
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('storage_sync_force', onForceCheck);
   }
 
   return () => {
@@ -159,6 +209,7 @@ export const onSnapshot = (
     window.clearInterval(timer);
     if (typeof document !== 'undefined') {
       document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('storage_sync_force', onForceCheck);
     }
   };
 };
