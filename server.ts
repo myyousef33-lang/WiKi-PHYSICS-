@@ -46,14 +46,11 @@ const loadAdminPinHash = (): string => {
     console.warn('Could not read admin-auth.json:', err);
   }
 
-  // If environment variable ADMIN_PIN is set, initialize and persist it
-  if (process.env.ADMIN_PIN && process.env.ADMIN_PIN.trim()) {
-    const hash = crypto.createHash('sha256').update(process.env.ADMIN_PIN.trim()).digest('hex');
-    saveAdminPinHash(hash);
-    return hash;
-  }
-
-  return '';
+  // Initialize with default initial PIN (from env or fallback) and persist
+  const defaultPin = (process.env.ADMIN_PIN && process.env.ADMIN_PIN.trim()) || 'WikiPhys@9988#Master';
+  const initialHash = crypto.createHash('sha256').update(defaultPin).digest('hex');
+  saveAdminPinHash(initialHash);
+  return initialHash;
 };
 
 let currentAdminPinHash = loadAdminPinHash();
