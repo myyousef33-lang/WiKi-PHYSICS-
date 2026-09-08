@@ -5173,8 +5173,9 @@ ${weakConceptsText}
                 {/* Upload Controls */}
                 <div className="space-y-3.5 flex-1 w-full">
                   <div>
-                    <label className="text-xs text-[#0D1B3E] block mb-1.5 font-bold">
-                      اختيار صورة جديدة من جهازك (يتم تحويلها لـ Base64 سحابي لتظهر لجميع الطلاب فوراً):
+                    <label className="text-xs text-[#0D1B3E] block mb-1.5 font-bold flex items-center gap-1.5">
+                      <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                      <span>اختيار صورة جديدة للمعلم من جهازك (مباشر وسحابي يظهر لجميع الطلاب فوراً):</span>
                     </label>
                     <input
                       type="file"
@@ -5183,24 +5184,22 @@ ${weakConceptsText}
                         const file = e.target.files?.[0];
                         if (file) {
                           setIsUploadingFile(true);
-                          setUploadProgressText('جارٍ رفع ومزامنة صورة المعلم على الخادم...');
+                          setUploadProgressText('جارٍ معالجة وضغط صورة المعلم وتثبيتها سحابياً لجميع الطلاب...');
                           try {
-                            const res = await StorageService.uploadInstructorPhoto({ file });
-                            if (res.success && res.photoUrl) {
-                              const updated = { ...settings, instructorPhotoUrl: res.photoUrl };
-                              setSettings(updated);
-                              StorageService.saveSettings(updated);
-                              await StorageService.forceSyncAllToFirestore();
-                              setPhotoUpdateFeedback('تم حفظ الصورة على الخادم ومزامنتها بنجاح لتظهر لجميع الطلاب فوراً!');
-                            } else {
-                              const compressedDataUrl = await compressImageFile(file, 800, 0.85);
-                              const updated = { ...settings, instructorPhotoUrl: compressedDataUrl };
-                              setSettings(updated);
-                              StorageService.saveSettings(updated);
-                              await StorageService.forceSyncAllToFirestore();
-                              setPhotoUpdateFeedback('تم حفظ الصورة محلياً وسحابياً بنجاح!');
-                            }
-                            setTimeout(() => setPhotoUpdateFeedback(null), 5000);
+                            // 1. Always create high-quality, lightweight Base64 data URL for instant universal cross-domain sync (Vercel, Mobile, etc.)
+                            const compressedDataUrl = await compressImageFile(file, 900, 0.88);
+                            const updated = { ...settings, instructorPhotoUrl: compressedDataUrl };
+                            setSettings(updated);
+                            StorageService.saveSettings(updated);
+                            await StorageService.forceSyncAllToFirestore();
+
+                            // 2. Also try uploading to server backend if reachable
+                            try {
+                              await StorageService.uploadInstructorPhoto({ file });
+                            } catch (_) {}
+
+                            setPhotoUpdateFeedback('✅ تم حفظ وتثبيت صورة المعلم ومزامنتها بنجاح! ستظهر لجميع الطلاب فوراً.');
+                            setTimeout(() => setPhotoUpdateFeedback(null), 6000);
                           } catch (err) {
                             console.error('Photo upload error:', err);
                             alert('حدث خطأ أثناء معالجة الصورة، يرجى المحاولة مرة أخرى.');
@@ -5210,8 +5209,11 @@ ${weakConceptsText}
                           }
                         }
                       }}
-                      className="w-full text-xs text-[#6B7280] file:mr-0 file:ml-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#F5B301] file:text-[#0D1B3E] hover:file:bg-[#e0a401] cursor-pointer bg-white p-1.5 rounded-xl border border-slate-200 shadow-xs"
+                      className="w-full text-xs text-[#6B7280] file:mr-0 file:ml-3 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-[#F5B301] file:text-[#0D1B3E] hover:file:bg-[#e0a401] cursor-pointer bg-white p-2 rounded-xl border border-blue-200 shadow-xs"
                     />
+                    <p className="text-[11px] text-[#6B7280] mt-1">
+                      💡 يمكنك اختيار أي صورة من هاتفك أو جهازك (JPG أو PNG أو WebP) وسيتم تثبيتها ومزامنتها فوراً لكل الطلاب في الصفحة الرئيسية.
+                    </p>
                   </div>
 
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-0.5">
@@ -5231,12 +5233,12 @@ ${weakConceptsText}
                       type="button"
                       onClick={async () => {
                         const raw = (settings.instructorPhotoUrl || '').trim();
+                        if (!raw) return;
                         setIsUploadingFile(true);
                         setUploadProgressText('جارٍ معالجة وتثبيت رابط الصورة...');
                         try {
-                          const uploadRes = await StorageService.uploadInstructorPhoto({ url: raw });
-                          const finalUrl = (uploadRes.success && uploadRes.photoUrl) ? uploadRes.photoUrl : (normalizeImageUrl(raw) || '/teacher-cutout.webp');
-                          const updated = { ...settings, instructorPhotoUrl: finalUrl };
+                          const normalized = normalizeImageUrl(raw) || '/teacher-cutout.webp';
+                          const updated = { ...settings, instructorPhotoUrl: normalized };
                           setSettings(updated);
                           StorageService.saveSettings(updated);
                           await StorageService.forceSyncAllToFirestore();
@@ -5244,12 +5246,7 @@ ${weakConceptsText}
                           setTimeout(() => setPhotoUpdateFeedback(null), 4000);
                         } catch (err) {
                           console.error('Sync URL error:', err);
-                          const normalized = normalizeImageUrl(raw) || '/teacher-cutout.webp';
-                          const updated = { ...settings, instructorPhotoUrl: normalized };
-                          setSettings(updated);
-                          StorageService.saveSettings(updated);
-                          await StorageService.forceSyncAllToFirestore();
-                          setPhotoUpdateFeedback('تم حفظ الرابط بنجاح!');
+                          setPhotoUpdateFeedback('تم حفظ الرابط!');
                           setTimeout(() => setPhotoUpdateFeedback(null), 4000);
                         } finally {
                           setIsUploadingFile(false);
