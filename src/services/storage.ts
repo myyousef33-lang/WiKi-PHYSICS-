@@ -378,7 +378,22 @@ const initFirestoreSync = () => {
           // Case: SETTINGS reconciliation
           if (key === STORAGE_KEYS.SETTINGS && typeof localVal === 'object' && localVal !== null && typeof remoteData === 'object' && remoteData !== null) {
             const cleanRemote = { ...remoteData };
-            const merged = { ...SEED_SETTINGS, ...localVal, ...cleanRemote };
+            // If remote has a broken or inaccessible drive link, remove it
+            if (isBrokenOrInaccessibleImageUrl(cleanRemote.instructorPhotoUrl)) {
+              delete cleanRemote.instructorPhotoUrl;
+            }
+
+            // Always preserve local valid custom photo if available
+            const customSaved = typeof localStorage !== 'undefined' ? localStorage.getItem('wikifizya_custom_teacher_photo') : null;
+            const validLocalPhoto = (localVal.instructorPhotoUrl && !isBrokenOrInaccessibleImageUrl(localVal.instructorPhotoUrl))
+              ? localVal.instructorPhotoUrl
+              : (customSaved && !isBrokenOrInaccessibleImageUrl(customSaved) ? customSaved : null);
+
+            const merged = { ...SEED_SETTINGS, ...cleanRemote, ...localVal };
+            if (validLocalPhoto) {
+              merged.instructorPhotoUrl = validLocalPhoto;
+            }
+
             const mergedStr = JSON.stringify(merged);
             if (localStr !== mergedStr) {
               memoryCache[key] = cloneData(merged);
@@ -446,6 +461,16 @@ export const isBrokenOrInaccessibleImageUrl = (url?: string): boolean => {
   if (!url || typeof url !== 'string') return true;
   const trimmed = url.trim();
   if (!trimmed) return true;
+  // Detect Google Drive hotlinks that cannot be loaded by browser <img> tags without auth
+  if (
+    trimmed.includes('lh3.googleusercontent.com/d/') ||
+    trimmed.includes('drive.google.com/file/d/') ||
+    trimmed.includes('drive.google.com/uc?') ||
+    trimmed.includes('drive.usercontent.google.com') ||
+    trimmed.includes('drive.google.com')
+  ) {
+    return true;
+  }
   return false;
 };
 
@@ -592,18 +617,32 @@ export const StorageService = {
   getSettings(): PlatformSettings {
     const stored = getStored(STORAGE_KEYS.SETTINGS, SEED_SETTINGS);
     const result = { ...SEED_SETTINGS, ...stored };
-    if (!result.instructorPhotoUrl || typeof result.instructorPhotoUrl !== 'string' || !result.instructorPhotoUrl.trim()) {
+    const customPhoto = typeof localStorage !== 'undefined' ? localStorage.getItem('wikifizya_custom_teacher_photo') : null;
+
+    if (customPhoto && !isBrokenOrInaccessibleImageUrl(customPhoto) && (!result.instructorPhotoUrl || isBrokenOrInaccessibleImageUrl(result.instructorPhotoUrl) || result.instructorPhotoUrl === '/teacher-cutout.webp')) {
+      result.instructorPhotoUrl = customPhoto;
+    } else if (!result.instructorPhotoUrl || isBrokenOrInaccessibleImageUrl(result.instructorPhotoUrl)) {
       result.instructorPhotoUrl = '/teacher-cutout.webp';
     }
     return result;
   },
   updateSettings(settings: Partial<PlatformSettings>): PlatformSettings {
+    if (settings.instructorPhotoUrl && !isBrokenOrInaccessibleImageUrl(settings.instructorPhotoUrl)) {
+      try {
+        localStorage.setItem('wikifizya_custom_teacher_photo', settings.instructorPhotoUrl);
+      } catch (_) {}
+    }
     const current = this.getSettings();
     const updated = { ...current, ...settings };
     setStored(STORAGE_KEYS.SETTINGS, updated);
     return updated;
   },
   saveSettings(settings: PlatformSettings): void {
+    if (settings.instructorPhotoUrl && !isBrokenOrInaccessibleImageUrl(settings.instructorPhotoUrl)) {
+      try {
+        localStorage.setItem('wikifizya_custom_teacher_photo', settings.instructorPhotoUrl);
+      } catch (_) {}
+    }
     setStored(STORAGE_KEYS.SETTINGS, settings);
     if (settings.adminPin && settings.adminPin.trim().length >= 4) {
       fetch('/api/admin/change-pin', {

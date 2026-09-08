@@ -155,10 +155,21 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
   const [settings, setSettings] = useState(StorageService.getSettings());
 
   const getSafeTeacherPhoto = (url?: string): string => {
-    if (!url || typeof url !== 'string') return teacherCutout;
+    if (!url || typeof url !== 'string') {
+      const customPhoto = typeof localStorage !== 'undefined' ? localStorage.getItem('wikifizya_custom_teacher_photo') : null;
+      if (customPhoto && !isBrokenOrInaccessibleImageUrl(customPhoto)) return customPhoto;
+      return teacherCutout;
+    }
     const trimmed = url.trim();
     if (!trimmed) return teacherCutout;
+    if (trimmed.startsWith('data:image/') || trimmed.startsWith('/uploads/') || trimmed.startsWith('/teacher')) {
+      return trimmed;
+    }
     if (trimmed.includes('drive.google.com') || trimmed.includes('lh3.googleusercontent.com')) {
+      const customPhoto = typeof localStorage !== 'undefined' ? localStorage.getItem('wikifizya_custom_teacher_photo') : null;
+      if (customPhoto && !isBrokenOrInaccessibleImageUrl(customPhoto)) {
+        return customPhoto;
+      }
       return `/api/proxy-image?url=${encodeURIComponent(trimmed)}`;
     }
     return trimmed;
