@@ -22,7 +22,7 @@ import {
   LayoutGrid,
   SlidersHorizontal
 } from 'lucide-react';
-import { StorageService, subscribeToStorage } from '../services/storage';
+import { StorageService, subscribeToStorage, isBrokenOrInaccessibleImageUrl } from '../services/storage';
 import { PresenceService } from '../services/presence';
 import { Course, PdfMaterial, Student } from '../types';
 import { CourseRatingBadge } from './CourseRatingBadge';
