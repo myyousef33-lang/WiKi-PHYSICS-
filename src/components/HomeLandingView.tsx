@@ -157,8 +157,9 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
   const getSafeTeacherPhoto = (url?: string): string => {
     if (!url || typeof url !== 'string') return teacherCutout;
     const trimmed = url.trim();
-    if (!trimmed || trimmed.includes('lh3.googleusercontent.com/d/') || trimmed.includes('drive.google.com')) {
-      return teacherCutout;
+    if (!trimmed) return teacherCutout;
+    if (trimmed.includes('drive.google.com') || trimmed.includes('lh3.googleusercontent.com')) {
+      return `/api/proxy-image?url=${encodeURIComponent(trimmed)}`;
     }
     return trimmed;
   };

@@ -1201,6 +1201,87 @@ async function startServer() {
     }
   });
 
+  // Admin Instructor Photo Upload / Set endpoint
+  app.post('/api/admin/instructor-photo', requireAdminAuth, upload.single('file'), async (req, res): Promise<any> => {
+    try {
+      let finalPhotoUrl = '';
+
+      // 1. Direct file upload
+      if (req.file) {
+        const file = req.file;
+        const validation = validateFileContent(file.path, file.originalname, file.mimetype);
+        if (!validation.isValid) {
+          try { fs.unlinkSync(file.path); } catch (_) {}
+          return res.status(400).json({ success: false, error: validation.error || 'الملف غير صالح أمنياً' });
+        }
+        finalPhotoUrl = `/uploads/${file.filename}`;
+      }
+      // 2. Base64 payload or URL in body
+      else if (req.body) {
+        const { base64Data, url, fileName, mimeType } = req.body;
+        if (base64Data) {
+          const ext = path.extname(fileName || '').toLowerCase() || (mimeType?.includes('png') ? '.png' : mimeType?.includes('webp') ? '.webp' : '.jpg');
+          const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+          const dataBuffer = matches && matches.length === 3 ? Buffer.from(matches[2], 'base64') : Buffer.from(base64Data, 'base64');
+          const uniqueName = `instructor_${Date.now()}_${Math.round(Math.random() * 1e5)}${ext}`;
+          const targetPath = path.join(uploadsDir, uniqueName);
+          fs.writeFileSync(targetPath, dataBuffer);
+          finalPhotoUrl = `/uploads/${uniqueName}`;
+        } else if (url) {
+          const cleanUrl = (url || '').trim();
+          if (cleanUrl.includes('drive.google.com') || cleanUrl.includes('lh3.googleusercontent.com')) {
+            const fileIdMatch = cleanUrl.match(/\/d\/([a-zA-Z0-9_-]+)/) || cleanUrl.match(/id=([a-zA-Z0-9_-]+)/);
+            if (fileIdMatch && fileIdMatch[1]) {
+              const directDriveUrl = `https://lh3.googleusercontent.com/d/${fileIdMatch[1]}`;
+              try {
+                const fetched = await fetch(directDriveUrl, {
+                  headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                  }
+                });
+                const contentType = fetched.headers.get('content-type') || '';
+                if (fetched.ok && contentType.startsWith('image/')) {
+                  const buf = await fetched.arrayBuffer();
+                  const ext = contentType.includes('png') ? '.png' : contentType.includes('webp') ? '.webp' : '.jpg';
+                  const uniqueName = `instructor_drive_${Date.now()}${ext}`;
+                  fs.writeFileSync(path.join(uploadsDir, uniqueName), Buffer.from(buf));
+                  finalPhotoUrl = `/uploads/${uniqueName}`;
+                } else {
+                  finalPhotoUrl = cleanUrl;
+                }
+              } catch (_) {
+                finalPhotoUrl = cleanUrl;
+              }
+            } else {
+              finalPhotoUrl = cleanUrl;
+            }
+          } else {
+            finalPhotoUrl = cleanUrl;
+          }
+        }
+      }
+
+      if (!finalPhotoUrl) {
+        return res.status(400).json({ success: false, error: 'لم يتم استلام صورة أو رابط صالح' });
+      }
+
+      // Update in settings
+      const settings = (await getAppDataDoc('wikifizya_db_settings_v4')) || {};
+      const updatedSettings = { ...settings, instructorPhotoUrl: finalPhotoUrl };
+      await setAppDataDoc('wikifizya_db_settings_v4', updatedSettings);
+
+      return res.json({
+        success: true,
+        photoUrl: finalPhotoUrl,
+        settings: updatedSettings,
+        message: 'تم تحديث وحفظ صورة المعلم بنجاح على الخادم وأصبحت متاحة لجميع الطلاب فوراً'
+      });
+    } catch (err: any) {
+      console.error('Set instructor photo error:', err);
+      return res.status(500).json({ success: false, error: err?.message || 'حدث خطأ أثناء حفظ صورة المعلم' });
+    }
+  });
+
   // Student Avatar Upload endpoint (Image only, max 15MB, validated)
   app.post('/api/student/upload-avatar', requireUploadRateLimit, upload.single('file'), (req, res): any => {
     try {

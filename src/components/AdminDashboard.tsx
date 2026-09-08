@@ -5183,14 +5183,23 @@ ${weakConceptsText}
                         const file = e.target.files?.[0];
                         if (file) {
                           setIsUploadingFile(true);
-                          setUploadProgressText('جارٍ ضغط وتجهيز الصورة للمزامنة السحابية العامة...');
+                          setUploadProgressText('جارٍ رفع ومزامنة صورة المعلم على الخادم...');
                           try {
-                            const compressedDataUrl = await compressImageFile(file, 800, 0.85);
-                            const updated = { ...settings, instructorPhotoUrl: compressedDataUrl };
-                            setSettings(updated);
-                            StorageService.saveSettings(updated);
-                            await StorageService.forceSyncAllToFirestore();
-                            setPhotoUpdateFeedback('تم حفظ الصورة ومزامنتها سحابياً لتظهر لجميع الطلاب فوراً!');
+                            const res = await StorageService.uploadInstructorPhoto({ file });
+                            if (res.success && res.photoUrl) {
+                              const updated = { ...settings, instructorPhotoUrl: res.photoUrl };
+                              setSettings(updated);
+                              StorageService.saveSettings(updated);
+                              await StorageService.forceSyncAllToFirestore();
+                              setPhotoUpdateFeedback('تم حفظ الصورة على الخادم ومزامنتها بنجاح لتظهر لجميع الطلاب فوراً!');
+                            } else {
+                              const compressedDataUrl = await compressImageFile(file, 800, 0.85);
+                              const updated = { ...settings, instructorPhotoUrl: compressedDataUrl };
+                              setSettings(updated);
+                              StorageService.saveSettings(updated);
+                              await StorageService.forceSyncAllToFirestore();
+                              setPhotoUpdateFeedback('تم حفظ الصورة محلياً وسحابياً بنجاح!');
+                            }
                             setTimeout(() => setPhotoUpdateFeedback(null), 5000);
                           } catch (err) {
                             console.error('Photo upload error:', err);
@@ -5222,15 +5231,32 @@ ${weakConceptsText}
                       type="button"
                       onClick={async () => {
                         const raw = (settings.instructorPhotoUrl || '').trim();
-                        const normalized = normalizeImageUrl(raw) || '/teacher-cutout.webp';
-                        const updated = { ...settings, instructorPhotoUrl: normalized };
-                        setSettings(updated);
-                        StorageService.saveSettings(updated);
-                        await StorageService.forceSyncAllToFirestore();
-                        setPhotoUpdateFeedback('تم حفظ الرابط ومزامنته سحابياً بنجاح!');
-                        setTimeout(() => setPhotoUpdateFeedback(null), 4000);
+                        setIsUploadingFile(true);
+                        setUploadProgressText('جارٍ معالجة وتثبيت رابط الصورة...');
+                        try {
+                          const uploadRes = await StorageService.uploadInstructorPhoto({ url: raw });
+                          const finalUrl = (uploadRes.success && uploadRes.photoUrl) ? uploadRes.photoUrl : (normalizeImageUrl(raw) || '/teacher-cutout.webp');
+                          const updated = { ...settings, instructorPhotoUrl: finalUrl };
+                          setSettings(updated);
+                          StorageService.saveSettings(updated);
+                          await StorageService.forceSyncAllToFirestore();
+                          setPhotoUpdateFeedback('تم تثبيت الرابط ومزامنته للجميع بنجاح!');
+                          setTimeout(() => setPhotoUpdateFeedback(null), 4000);
+                        } catch (err) {
+                          console.error('Sync URL error:', err);
+                          const normalized = normalizeImageUrl(raw) || '/teacher-cutout.webp';
+                          const updated = { ...settings, instructorPhotoUrl: normalized };
+                          setSettings(updated);
+                          StorageService.saveSettings(updated);
+                          await StorageService.forceSyncAllToFirestore();
+                          setPhotoUpdateFeedback('تم حفظ الرابط بنجاح!');
+                          setTimeout(() => setPhotoUpdateFeedback(null), 4000);
+                        } finally {
+                          setIsUploadingFile(false);
+                          setUploadProgressText('');
+                        }
                       }}
-                      className="rounded-xl bg-[#F5B301] hover:bg-[#e0a401] px-3.5 py-2 text-xs font-bold text-[#0D1B3E] transition-all whitespace-nowrap shadow-xs"
+                      className="rounded-xl bg-[#F5B301] hover:bg-[#e0a401] px-3.5 py-2 text-xs font-bold text-[#0D1B3E] transition-all whitespace-nowrap shadow-xs cursor-pointer"
                     >
                       تطبيق ومزامنة الرابط
                     </button>

@@ -378,33 +378,6 @@ const initFirestoreSync = () => {
           // Case: SETTINGS reconciliation
           if (key === STORAGE_KEYS.SETTINGS && typeof localVal === 'object' && localVal !== null && typeof remoteData === 'object' && remoteData !== null) {
             const cleanRemote = { ...remoteData };
-            // If remote has a broken or inaccessible drive link, clean it
-            if (isBrokenOrInaccessibleImageUrl(cleanRemote.instructorPhotoUrl)) {
-              cleanRemote.instructorPhotoUrl = localVal.instructorPhotoUrl && !isBrokenOrInaccessibleImageUrl(localVal.instructorPhotoUrl)
-                ? localVal.instructorPhotoUrl
-                : '/teacher-cutout.webp';
-            }
-
-            const isLocalCustomPhoto = localVal.instructorPhotoUrl && !isBrokenOrInaccessibleImageUrl(localVal.instructorPhotoUrl);
-            const isRemoteDefaultPhoto = isBrokenOrInaccessibleImageUrl(remoteData.instructorPhotoUrl);
-
-            // If local has a custom photo and remote has the default, preserve local photo
-            if (isLocalCustomPhoto && isRemoteDefaultPhoto) {
-              const merged = { ...SEED_SETTINGS, ...cleanRemote, ...localVal };
-              const mergedStr = JSON.stringify(merged);
-              if (localStr !== mergedStr) {
-                memoryCache[key] = cloneData(merged);
-                try {
-                  localStorage.setItem(key, mergedStr);
-                  localStorage.setItem(key + '_updated_at', new Date().toISOString());
-                } catch (_) {}
-                notifyListeners();
-              }
-              syncToFirestore(key, merged);
-              return;
-            }
-
-            // Otherwise merge remote over local gracefully
             const merged = { ...SEED_SETTINGS, ...localVal, ...cleanRemote };
             const mergedStr = JSON.stringify(merged);
             if (localStr !== mergedStr) {
@@ -468,21 +441,11 @@ const initFirestoreSync = () => {
   });
 };
 
-// Helper to detect broken or inaccessible image links (such as Google Drive/Usercontent private links)
+// Helper to detect broken or empty image links
 export const isBrokenOrInaccessibleImageUrl = (url?: string): boolean => {
   if (!url || typeof url !== 'string') return true;
   const trimmed = url.trim();
   if (!trimmed) return true;
-  if (trimmed === '/teacher.jpg' || trimmed === '/teacher-cutout.webp' || trimmed === '/teacher.webp') return false;
-  // Google Drive and Google Usercontent direct links require authorization and break when hotlinked
-  if (
-    trimmed.includes('lh3.googleusercontent.com/d/') ||
-    trimmed.includes('drive.google.com/file/d/') ||
-    trimmed.includes('drive.google.com/uc?') ||
-    trimmed.includes('drive.usercontent.google.com')
-  ) {
-    return true;
-  }
   return false;
 };
 
@@ -629,7 +592,7 @@ export const StorageService = {
   getSettings(): PlatformSettings {
     const stored = getStored(STORAGE_KEYS.SETTINGS, SEED_SETTINGS);
     const result = { ...SEED_SETTINGS, ...stored };
-    if (isBrokenOrInaccessibleImageUrl(result.instructorPhotoUrl)) {
+    if (!result.instructorPhotoUrl || typeof result.instructorPhotoUrl !== 'string' || !result.instructorPhotoUrl.trim()) {
       result.instructorPhotoUrl = '/teacher-cutout.webp';
     }
     return result;
@@ -648,6 +611,53 @@ export const StorageService = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ newPin: settings.adminPin.trim() })
       }).catch(() => {});
+    }
+  },
+  async uploadInstructorPhoto(payload: { file?: File; base64Data?: string; url?: string }): Promise<{ success: boolean; photoUrl?: string; error?: string }> {
+    try {
+      const adminToken = this.getAdminToken();
+      const headers: Record<string, string> = {};
+      if (adminToken) {
+        headers['Authorization'] = `Bearer ${adminToken}`;
+        headers['x-admin-token'] = adminToken;
+      }
+
+      let res: Response;
+      if (payload.file) {
+        const formData = new FormData();
+        formData.append('file', payload.file);
+        res = await fetch('/api/admin/instructor-photo', {
+          method: 'POST',
+          headers,
+          credentials: 'include',
+          body: formData
+        });
+      } else {
+        headers['Content-Type'] = 'application/json';
+        res = await fetch('/api/admin/instructor-photo', {
+          method: 'POST',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify({ base64Data: payload.base64Data, url: payload.url })
+        });
+      }
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        return { success: false, error: errJson?.error || 'فشل حفظ الصورة على الخادم' };
+      }
+
+      const json = await res.json();
+      if (json && json.success && json.photoUrl) {
+        const current = this.getSettings();
+        const updated = { ...current, instructorPhotoUrl: json.photoUrl };
+        setStored(STORAGE_KEYS.SETTINGS, updated);
+        notifyListeners();
+        return { success: true, photoUrl: json.photoUrl };
+      }
+      return { success: false, error: json?.error || 'استجابة غير متوقعة' };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'خطأ في الاتصال بالخادم' };
     }
   },
 
