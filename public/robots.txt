@@ -1,10 +1,20 @@
 User-agent: *
 Allow: /
+Allow: /courses
+Allow: /courses/*
+Allow: /pdf-library
+Allow: /physics-lab
 
 # Disallow private and administrative areas
 Disallow: /api/
 Disallow: /admin
 Disallow: /auth
+Disallow: /dashboard
+Disallow: /my-courses
+Disallow: /my-results
+Disallow: /weakness-profile
+Disallow: /exam-runner/
+Disallow: /exam-result/
 
 # Sitemap reference
 Sitemap: https://wikiphysics0.vercel.app/sitemap.xml

@@ -73,7 +73,7 @@ export const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({
           <span>منهج الفيزياء للعام الدراسي 2024 / 2025</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-black text-[#0D1B3E] leading-tight">
-          كورسات مادة الفيزياء للثانوية العامة
+          كورسات مادة الفيزياء للثانوية العامة مع أستاذ أحمد صلاح
         </h1>
         <p className="text-sm text-[#6B7280] leading-relaxed">
           شرح تفصيلي مع أقوى بنك أسئلة وتطبيقات ومراجعات دورية. اختر كورس مرحلتك وابدأ المذاكرة فوراً عبر كود التفعيل.

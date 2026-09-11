@@ -180,7 +180,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   // Graceful fallback display student to guarantee the dashboard always loads cleanly
   const activeStudent: Student = student || {
     id: 'demo-student',
-    name: 'يوسف عماد',
+    name: 'طالب متفوق',
     phone: '01012345678',
     parentPhone: '01087654321',
     grade: 'الصف الثالث الثانوي',

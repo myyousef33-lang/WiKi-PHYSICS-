@@ -30,6 +30,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { StorageService, subscribeToStorage } from './services/storage';
 import { PresenceService } from './services/presence';
 import { EarnedCertificate, Student } from './types';
+import { parsePathToRoute, getRoutePath, updatePageSEO, BASE_URL } from './utils/seo';
 
 // Code Splitting: Lazy load only the AdminDashboard component
 const AdminDashboard = React.lazy(() =>
@@ -37,8 +38,9 @@ const AdminDashboard = React.lazy(() =>
 );
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<string>('home');
-  const [viewParams, setViewParams] = useState<Record<string, any>>({});
+  const initialRoute = parsePathToRoute(typeof window !== 'undefined' ? window.location.pathname : '/');
+  const [currentView, setCurrentView] = useState<string>(initialRoute.view);
+  const [viewParams, setViewParams] = useState<Record<string, any>>(initialRoute.params);
   const [student, setStudent] = useState<Student | null>(StorageService.getCurrentStudent());
   
   // Modals
@@ -91,7 +93,88 @@ export default function App() {
     };
   }, []);
 
-  const handleNavigate = (view: string, params: Record<string, any> = {}) => {
+  // Listen for browser Back/Forward navigation (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      const route = parsePathToRoute(window.location.pathname);
+      setCurrentView(route.view);
+      setViewParams(route.params);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Dynamic SEO Synchronization
+  useEffect(() => {
+    if (currentView === 'home') {
+      updatePageSEO({
+        title: 'منصة ويكيفزياء - أستاذ أحمد صلاح | مدرس الفيزياء للثانوية العامة',
+        description: 'منصة ويكيفزياء التعليمية مع الأستاذ أحمد صلاح، مدرس مادة الفيزياء للثانوية العامة. شروحات بسيطة، أسئلة بنكية متدرجة، امتحانات تفاعلية فورية ومذكرات شاملة للمتفوقين.',
+        canonical: `${BASE_URL}/`
+      });
+    } else if (currentView === 'courses-catalog') {
+      updatePageSEO({
+        title: 'دليل المناهج والكورسات | منصة ويكيفزياء - أستاذ أحمد صلاح',
+        description: 'استعرض كورسات ومناهج مادة الفيزياء لطلاب المرحلة الثانوية العامة مع أستاذ أحمد صلاح على منصة ويكيفزياء التعليمية.',
+        canonical: `${BASE_URL}/courses`
+      });
+    } else if (currentView === 'course-details' && viewParams.courseId) {
+      const course = StorageService.getCourseById(viewParams.courseId);
+      if (course) {
+        updatePageSEO({
+          title: `${course.title} - فيزياء الثانوية العامة | أستاذ أحمد صلاح`,
+          description: course.description || `كورس ${course.title} لمادة الفيزياء مع أستاذ أحمد صلاح على منصة ويكيفزياء التعليمية للثانوية العامة.`,
+          canonical: `${BASE_URL}/courses/${course.id}`,
+          schema: {
+            '@context': 'https://schema.org',
+            '@type': 'Course',
+            '@id': `${BASE_URL}/courses/${course.id}#course`,
+            'name': `${course.title} - أستاذ أحمد صلاح`,
+            'description': course.description || `كورس ${course.title} في مادة الفيزياء للثانوية العامة مع أستاذ أحمد صلاح`,
+            'provider': {
+              '@type': 'EducationalOrganization',
+              'name': 'ويكيفزياء - WiKi-PHYSICS',
+              'url': `${BASE_URL}/`
+            },
+            'instructor': {
+              '@type': 'Person',
+              'name': 'أحمد صلاح',
+              'honorificPrefix': 'أستاذ',
+              'jobTitle': 'مدرس مادة الفيزياء للثانوية العامة'
+            },
+            'educationalLevel': course.grade || 'الثانوية العامة',
+            'about': 'الفيزياء',
+            'inLanguage': 'ar'
+          }
+        });
+      } else {
+        updatePageSEO({
+          title: 'كورس فيزياء | منصة ويكيفزياء - أستاذ أحمد صلاح',
+          canonical: `${BASE_URL}/courses`
+        });
+      }
+    } else if (currentView === 'pdf-library') {
+      updatePageSEO({
+        title: 'المذكرات والملازم | منصة ويكيفزياء - أستاذ أحمد صلاح',
+        description: 'مكتبة مذكرات وملازم وملخصات مادة الفيزياء للثانوية العامة مع أستاذ أحمد صلاح على منصة ويكيفزياء.',
+        canonical: `${BASE_URL}/pdf-library`
+      });
+    } else if (currentView === 'physics-lab') {
+      updatePageSEO({
+        title: 'المعمل التفاعلي للفيزياء | منصة ويكيفزياء - أستاذ أحمد صلاح',
+        description: 'معمل الفيزياء التفاعلي لتجارب الميكانيكا والكهربية ومحاكاة قوانين الفيزياء عملياً مع منصة ويكيفزياء.',
+        canonical: `${BASE_URL}/physics-lab`
+      });
+    } else {
+      // Private student / administrative views: apply noindex to protect student privacy
+      updatePageSEO({
+        noindex: true
+      });
+    }
+  }, [currentView, viewParams]);
+
+  const handleNavigate = (view: string, params: Record<string, any> = {}, replace = false) => {
     let targetView = view === 'courses' ? 'courses-catalog' : view;
 
     // If navigating to admin but not logged in as admin, trigger secret modal instead
@@ -106,6 +189,18 @@ export default function App() {
         window.history.replaceState(null, '', window.location.pathname);
       }
     }
+
+    const newPath = getRoutePath(targetView, params);
+    if (typeof window !== 'undefined' && targetView !== 'admin') {
+      if (window.location.pathname !== newPath) {
+        if (replace) {
+          window.history.replaceState({ view: targetView, params }, '', newPath);
+        } else {
+          window.history.pushState({ view: targetView, params }, '', newPath);
+        }
+      }
+    }
+
     setCurrentView(targetView);
     setViewParams(params);
     window.scrollTo({ top: 0, behavior: 'smooth' });

@@ -369,7 +369,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
           {/* 2. Main Heading directly under the teacher photo */}
           <div className="space-y-3 max-w-2xl mx-auto pt-2">
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-[#0D1B3E] leading-[1.2] tracking-tight">
-              طريقك إلى <span className="text-[#1E4FD8]">الدرجة النهائية</span> في الفيزياء
+              طريقك إلى <span className="text-[#1E4FD8]">الدرجة النهائية</span> في الفيزياء مع أستاذ أحمد صلاح
             </h1>
 
             {/* 3. Short 1-2 line description */}
