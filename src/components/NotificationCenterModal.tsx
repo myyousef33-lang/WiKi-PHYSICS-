@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Bell, CheckCircle2, AlertCircle, X, Info, Sparkles, Trash2 } from 'lucide-react';
+import { AnimatedList } from './ui/animated-list';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { NotificationItem, Student } from '../types';
 
@@ -72,44 +73,46 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
         </div>
 
         {/* Notifications List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <div className="flex-1 overflow-y-auto p-4">
           {notifications.length === 0 ? (
             <div className="py-12 text-center text-slate-400 space-y-2">
               <Bell className="mx-auto h-8 w-8 opacity-40" />
               <p className="text-xs">لا توجد إشعارات جديدة حالياً.</p>
             </div>
           ) : (
-            notifications.map((n) => {
-              const isRead = student && n.readBy?.includes(student.id);
+            <AnimatedList className="space-y-3" delay={90} immediate={true}>
+              {notifications.map((n) => {
+                const isRead = student && n.readBy?.includes(student.id);
 
-              return (
-                <div
-                  key={n.id}
-                  className={`rounded-2xl border p-4 space-y-2 transition-all ${
-                    isRead 
-                      ? 'border-slate-800/60 bg-slate-950/40 opacity-75' 
-                      : 'border-amber-500/30 bg-slate-950/80 shadow-sm'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className={`h-2 w-2 rounded-full ${isRead ? 'bg-slate-600' : 'bg-amber-400 animate-pulse'}`} />
-                      <h4 className="font-bold text-sm text-white">{n.title}</h4>
+                return (
+                  <div
+                    key={n.id}
+                    className={`rounded-2xl border p-4 space-y-2 transition-all ${
+                      isRead 
+                        ? 'border-slate-800/60 bg-slate-950/40 opacity-75' 
+                        : 'border-amber-500/30 bg-slate-950/80 shadow-sm'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className={`h-2 w-2 rounded-full ${isRead ? 'bg-slate-600' : 'bg-amber-400 animate-pulse'}`} />
+                        <h4 className="font-bold text-sm text-white">{n.title}</h4>
+                      </div>
+                      <span className="text-[10px] text-slate-400">
+                        {new Date(n.createdAt).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' })}
+                      </span>
                     </div>
-                    <span className="text-[10px] text-slate-400">
-                      {new Date(n.createdAt).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' })}
-                    </span>
-                  </div>
 
-                  <p className="text-xs text-slate-300 leading-relaxed pr-4">{n.message}</p>
+                    <p className="text-xs text-slate-300 leading-relaxed pr-4">{n.message}</p>
 
-                  <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 pr-4">
-                    <span>المرسل: إدارة المنصة</span>
-                    {n.targetGrade && <span className="text-amber-400">{n.targetGrade}</span>}
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 pr-4">
+                      <span>المرسل: إدارة المنصة</span>
+                      {n.targetGrade && <span className="text-amber-400">{n.targetGrade}</span>}
+                    </div>
                   </div>
-                </div>
-              );
-            })
+                );
+              })}
+            </AnimatedList>
           )}
         </div>
 

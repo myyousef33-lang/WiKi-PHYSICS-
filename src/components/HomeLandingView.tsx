@@ -28,6 +28,7 @@ import { Course, PdfMaterial, Student } from '../types';
 import { CourseRatingBadge } from './CourseRatingBadge';
 import { ExamCountdownBanner } from './ExamCountdownBanner';
 import { ScrollReveal } from './ScrollReveal';
+import { AnimatedList } from './ui/animated-list';
 import teacherCutout from '../assets/images/teacher-cutout.webp';
 
 interface HomeLandingViewProps {
@@ -347,10 +348,11 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               <img
                 key={teacherPhotoSrc}
                 src={teacherPhotoSrc}
-                alt={settings.instructorTitle || "أ / إبراهيم خليل"}
+                alt={settings.instructorName ? `${settings.instructorName} - مدرس الفيزياء للثانوية العامة على منصة ويكيفزياء` : "أستاذ أحمد صلاح - مدرس الفيزياء للثانوية العامة على منصة ويكيفزياء"}
                 className="relative z-10 h-full w-auto object-contain object-bottom drop-shadow-2xl transition-transform duration-500 hover:scale-[1.02]"
                 referrerPolicy="no-referrer"
                 loading="eager"
+                fetchPriority="high"
                 decoding="async"
                 onError={handleTeacherPhotoError}
               />
@@ -358,7 +360,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               {/* Instructor Title Badge at Bottom */}
               <div className="absolute -bottom-3 z-30 inline-flex items-center gap-2 rounded-full bg-white border-2 border-[#1E4FD8] px-4 py-1.5 text-xs sm:text-sm font-bold text-[#1E4FD8] shadow-lg">
                 <Award className="h-4 w-4 text-[#F5B301]" />
-                <span>{settings.instructorTitle || "كبير معلمي الفيزياء • أ / إبراهيم خليل"}</span>
+                <span>{settings.instructorTitle || "أستاذ أحمد صلاح • كبير معلمي ومعد مادة الفيزياء"}</span>
               </div>
             </div>
 
@@ -372,7 +374,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
 
             {/* 3. Short 1-2 line description */}
             <p className="text-sm sm:text-base lg:text-lg text-[#6B7280] leading-relaxed max-w-xl mx-auto font-normal">
-              تجربة تعليمية متكاملة تجمع بين الشرح التفصيلي المبسط، حل آلاف الأسئلة والأفكار العالية، وامتحانات إلكترونية مصححة فورياً.
+              منصة أستاذ أحمد صلاح التعليمية (ويكي فيزياء) — تجربة متكاملة تجمع بين الشرح التفصيلي المبسط لمادة الفيزياء، حل آلاف الأسئلة والأفكار، وامتحانات إلكترونية مصححة فورياً للثانوية العامة.
             </p>
           </div>
 
@@ -475,55 +477,47 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
           <p className="text-sm sm:text-base lg:text-lg text-[#6B7280] dark:text-slate-300">صُممت المنصة خصيصاً لتلبية متطلبات وتحديات نظام الثانوية العامة الحديث</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
-          <ScrollReveal index={0} className="h-full">
-            <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#1E4FD8] hover:scale-[1.02] transition-all h-full">
-              <div className="rounded-2xl bg-white border border-[#B4CFFE] p-4 w-fit text-[#1E4FD8] shadow-xs">
-                <PlayCircle className="h-7 w-7" />
-              </div>
-              <h3 className="font-bold text-[#0D1B3E] text-lg lg:text-xl">شرح وافي ومبسط</h3>
-              <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
-                فيديوهات بجودة عالية وتطبيقات عملية ورسوم متحركة لتجسيد الظواهر الفيزيائية المعقدة خطوة بخطوة.
-              </p>
+        <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8" delay={110}>
+          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#1E4FD8] hover:scale-[1.02] transition-all h-full">
+            <div className="rounded-2xl bg-white border border-[#B4CFFE] p-4 w-fit text-[#1E4FD8] shadow-xs">
+              <PlayCircle className="h-7 w-7" />
             </div>
-          </ScrollReveal>
+            <h3 className="font-bold text-[#0D1B3E] text-lg lg:text-xl">شرح وافي ومبسط</h3>
+            <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
+              فيديوهات بجودة عالية وتطبيقات عملية ورسوم متحركة لتجسيد الظواهر الفيزيائية المعقدة خطوة بخطوة.
+            </p>
+          </div>
 
-          <ScrollReveal index={1} className="h-full">
-            <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#1E4FD8] hover:scale-[1.02] transition-all h-full">
-              <div className="rounded-2xl bg-[#F5B301]/25 border border-[#F5B301]/50 p-4 w-fit text-[#0D1B3E] shadow-xs">
-                <Award className="h-7 w-7 text-[#1E4FD8]" />
-              </div>
-              <h3 className="font-bold text-[#0D1B3E] text-lg lg:text-xl">امتحانات وتصحيح فوري</h3>
-              <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
-                بنك أسئلة متدرج الصعوبة مع مؤقت زمني ونموذج إجابة مفصل لكل سؤال لتشخيص نقاط الضعف وعلاجها فوراً.
-              </p>
+          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#1E4FD8] hover:scale-[1.02] transition-all h-full">
+            <div className="rounded-2xl bg-[#F5B301]/25 border border-[#F5B301]/50 p-4 w-fit text-[#0D1B3E] shadow-xs">
+              <Award className="h-7 w-7 text-[#1E4FD8]" />
             </div>
-          </ScrollReveal>
+            <h3 className="font-bold text-[#0D1B3E] text-lg lg:text-xl">امتحانات وتصحيح فوري</h3>
+            <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
+              بنك أسئلة متدرج الصعوبة مع مؤقت زمني ونموذج إجابة مفصل لكل سؤال لتشخيص نقاط الضعف وعلاجها فوراً.
+            </p>
+          </div>
 
-          <ScrollReveal index={2} className="h-full">
-            <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#1E4FD8] hover:scale-[1.02] transition-all h-full">
-              <div className="rounded-2xl bg-white border border-[#B4CFFE] p-4 w-fit text-[#1E4FD8] shadow-xs">
-                <FileText className="h-7 w-7" />
-              </div>
-              <h3 className="font-bold text-[#0D1B3E] text-lg lg:text-xl">مذكرات وملازم PDF</h3>
-              <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
-                ملازم مطبوعة ورقمية عالية الجودة، تشمل ملخصات القوانين، الخرائط الذهنية، وأسئلة امتحانات سابقة.
-              </p>
+          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#1E4FD8] hover:scale-[1.02] transition-all h-full">
+            <div className="rounded-2xl bg-white border border-[#B4CFFE] p-4 w-fit text-[#1E4FD8] shadow-xs">
+              <FileText className="h-7 w-7" />
             </div>
-          </ScrollReveal>
+            <h3 className="font-bold text-[#0D1B3E] text-lg lg:text-xl">مذكرات وملازم PDF</h3>
+            <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
+              ملازم مطبوعة ورقمية عالية الجودة، تشمل ملخصات القوانين، الخرائط الذهنية، وأسئلة امتحانات سابقة.
+            </p>
+          </div>
 
-          <ScrollReveal index={3} className="h-full">
-            <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#1E4FD8] hover:scale-[1.02] transition-all h-full">
-              <div className="rounded-2xl bg-[#F5B301]/25 border border-[#F5B301]/50 p-4 w-fit text-[#0D1B3E] shadow-xs">
-                <ShieldCheck className="h-7 w-7 text-[#1E4FD8]" />
-              </div>
-              <h3 className="font-bold text-[#0D1B3E] text-lg lg:text-xl">تفعيل فوري بالأكواد</h3>
-              <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
-                اشترك بسهولة عبر كود التفعيل السري دون تعقيدات، مع حماية أجهزتك ومتابعة مستواك بصفة دورية.
-              </p>
+          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 hover:border-[#1E4FD8] hover:scale-[1.02] transition-all h-full">
+            <div className="rounded-2xl bg-[#F5B301]/25 border border-[#F5B301]/50 p-4 w-fit text-[#0D1B3E] shadow-xs">
+              <ShieldCheck className="h-7 w-7 text-[#1E4FD8]" />
             </div>
-          </ScrollReveal>
-        </div>
+            <h3 className="font-bold text-[#0D1B3E] text-lg lg:text-xl">تفعيل فوري بالأكواد</h3>
+            <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
+              اشترك بسهولة عبر كود التفعيل السري دون تعقيدات، مع حماية أجهزتك ومتابعة مستواك بصفة دورية.
+            </p>
+          </div>
+        </AnimatedList>
       </section>
 
       {/* FEATURED COURSES TEASER (YOUTUBE DESKTOP HORIZONTAL CAROUSEL & GRID TOGGLE) */}
@@ -605,7 +599,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             <div className="space-y-1.5">
               <h3 className="text-lg font-bold text-[#0D1B3E]">الكورسات والمناهج قيد التجهيز</h3>
               <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
-                يقوم أ / إبراهيم خليل حالياً برفع المحاضرات وحصص الشرح الجديدة. تابع قناة التليجرام لمعرفة مواعيد النشر.
+                يقوم أستاذ أحمد صلاح حالياً برفع المحاضرات وحصص الشرح الجديدة. تابع قناة التليجرام لمعرفة مواعيد النشر.
               </p>
             </div>
           </div>
@@ -639,18 +633,17 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
           </div>
         ) : (
           /* Full Grid Mode for Desktop */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-            {courses.map((course, idx) => (
-              <ScrollReveal key={course.id} index={idx} className="h-full">
-                <HomeCourseCard
-                  course={course}
-                  instructorFallback={settings.instructorName}
-                  onNavigate={onNavigate}
-                  isCarouselItem={false}
-                />
-              </ScrollReveal>
+          <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8" delay={90}>
+            {courses.map((course) => (
+              <HomeCourseCard
+                key={course.id}
+                course={course}
+                instructorFallback={settings.instructorName}
+                onNavigate={onNavigate}
+                isCarouselItem={false}
+              />
             ))}
-          </div>
+          </AnimatedList>
         )}
       </section>
 
@@ -690,49 +683,43 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
           <p className="text-xs sm:text-base text-[#6B7280]">فخورون برحلة نجاح طلابنا في مختلف محافظات مصر</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-          <ScrollReveal index={0} className="h-full">
-            <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs h-full">
-              <div className="flex items-center gap-1 text-[#F5B301]">
-                {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 fill-[#F5B301]" />)}
-              </div>
-              <p className="text-xs sm:text-sm text-[#0D1B3E] leading-relaxed">
-                "الفيزياء كانت أصعب مادة عندي، لكن بفضل أسلوب الشرح المنظم وبنك الأسئلة قدرت أقفل الامتحان التجريبي بدرجة 59 من 60!"
-              </p>
-              <div className="pt-3 border-t border-[#C7D9FE]/80 text-xs sm:text-sm font-bold text-[#1E4FD8]">
-                أحمد محمد — أوائل الدقهلية
-              </div>
+        <AnimatedList className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8" delay={130}>
+          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs h-full">
+            <div className="flex items-center gap-1 text-[#F5B301]">
+              {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 fill-[#F5B301]" />)}
             </div>
-          </ScrollReveal>
+            <p className="text-xs sm:text-sm text-[#0D1B3E] leading-relaxed">
+              "الفيزياء كانت أصعب مادة عندي، لكن بفضل أسلوب الشرح المنظم وبنك الأسئلة قدرت أقفل الامتحان التجريبي بدرجة 59 من 60!"
+            </p>
+            <div className="pt-3 border-t border-[#C7D9FE]/80 text-xs sm:text-sm font-bold text-[#1E4FD8]">
+              أحمد محمد — أوائل الدقهلية
+            </div>
+          </div>
 
-          <ScrollReveal index={1} className="h-full">
-            <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs h-full">
-              <div className="flex items-center gap-1 text-[#F5B301]">
-                {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 fill-[#F5B301]" />)}
-              </div>
-              <p className="text-xs sm:text-sm text-[#0D1B3E] leading-relaxed">
-                "ميزة تصحيح الامتحانات الفورية ومعرفة سبب الخطأ بالشرح الفيزيائي وفرت عليا وقت كبير جداً وخلتني أثق في نفسي."
-              </p>
-              <div className="pt-3 border-t border-[#C7D9FE]/80 text-xs sm:text-sm font-bold text-[#1E4FD8]">
-                مريم خالد — الجيزة
-              </div>
+          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs h-full">
+            <div className="flex items-center gap-1 text-[#F5B301]">
+              {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 fill-[#F5B301]" />)}
             </div>
-          </ScrollReveal>
+            <p className="text-xs sm:text-sm text-[#0D1B3E] leading-relaxed">
+              "ميزة تصحيح الامتحانات الفورية ومعرفة سبب الخطأ بالشرح الفيزيائي وفرت عليا وقت كبير جداً وخلتني أثق في نفسي."
+            </p>
+            <div className="pt-3 border-t border-[#C7D9FE]/80 text-xs sm:text-sm font-bold text-[#1E4FD8]">
+              مريم خالد — الجيزة
+            </div>
+          </div>
 
-          <ScrollReveal index={2} className="h-full">
-            <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs h-full">
-              <div className="flex items-center gap-1 text-[#F5B301]">
-                {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 fill-[#F5B301]" />)}
-              </div>
-              <p className="text-xs sm:text-sm text-[#0D1B3E] leading-relaxed">
-                "المذكرات والـ PDF منظمة جداً وكل قانون معاه رسم توضيحي وأمثلة الوزارة السابقة. منصة متكاملة بمعنى الكلمة."
-              </p>
-              <div className="pt-3 border-t border-[#C7D9FE]/80 text-xs sm:text-sm font-bold text-[#1E4FD8]">
-                يوسف طارق — الإسكندرية
-              </div>
+          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs h-full">
+            <div className="flex items-center gap-1 text-[#F5B301]">
+              {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 fill-[#F5B301]" />)}
             </div>
-          </ScrollReveal>
-        </div>
+            <p className="text-xs sm:text-sm text-[#0D1B3E] leading-relaxed">
+              "المذكرات والـ PDF منظمة جداً وكل قانون معاه رسم توضيحي وأمثلة الوزارة السابقة. منصة متكاملة بمعنى الكلمة."
+            </p>
+            <div className="pt-3 border-t border-[#C7D9FE]/80 text-xs sm:text-sm font-bold text-[#1E4FD8]">
+              يوسف طارق — الإسكندرية
+            </div>
+          </div>
+        </AnimatedList>
       </section>
 
     </div>

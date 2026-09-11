@@ -1675,6 +1675,27 @@ ${linkUrl ? `للدخول مباشرة: ${linkUrl}` : ''}
     }
   });
 
+  // Explicit SEO Endpoints for Search Engine Crawlers
+  app.get('/robots.txt', (_req, res) => {
+    res.type('text/plain');
+    const robotsPath = path.join(process.cwd(), 'public', 'robots.txt');
+    if (fs.existsSync(robotsPath)) {
+      res.sendFile(robotsPath);
+    } else {
+      res.send("User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /admin\nSitemap: https://wikiphysics0.vercel.app/sitemap.xml\n");
+    }
+  });
+
+  app.get('/sitemap.xml', (_req, res) => {
+    res.type('application/xml');
+    const sitemapPath = path.join(process.cwd(), 'public', 'sitemap.xml');
+    if (fs.existsSync(sitemapPath)) {
+      res.sendFile(sitemapPath);
+    } else {
+      res.send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://wikiphysics0.vercel.app/</loc><priority>1.0</priority></url></urlset>');
+    }
+  });
+
   // Vite Middleware for development
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({

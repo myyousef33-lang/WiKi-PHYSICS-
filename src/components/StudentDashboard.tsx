@@ -972,7 +972,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                       </div>
 
                       <div className="flex items-center justify-between text-[10px] text-[#6B7280]">
-                        <span className="truncate max-w-[140px]">المحاضر: {course.instructorName || 'أ / إبراهيم خليل'}</span>
+                        <span className="truncate max-w-[140px]">المحاضر: {course.instructorName || 'أستاذ أحمد صلاح'}</span>
                         {expiry && (
                           <span className="flex items-center gap-1 text-[9px] text-[#1E4FD8] font-bold shrink-0">
                             <Calendar className="h-3 w-3" />
