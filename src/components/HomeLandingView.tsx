@@ -360,7 +360,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               {/* Instructor Title Badge at Bottom */}
               <div className="absolute -bottom-3 z-30 inline-flex items-center gap-2 rounded-full bg-white border-2 border-[#1E4FD8] px-4 py-1.5 text-xs sm:text-sm font-bold text-[#1E4FD8] shadow-lg">
                 <Award className="h-4 w-4 text-[#F5B301]" />
-                <span>{settings.instructorTitle || "أستاذ أحمد صلاح • كبير معلمي ومعد مادة الفيزياء"}</span>
+                <span>{settings.instructorTitle || "كبير معلمي مادة الفيزياء للثانوية العامة • أستاذ أحمد صلاح"}</span>
               </div>
             </div>
 

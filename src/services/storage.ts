@@ -477,8 +477,8 @@ export const isBrokenOrInaccessibleImageUrl = (url?: string): boolean => {
 // Platform Default Settings
 const SEED_SETTINGS: PlatformSettings = {
   platformName: 'ويكيفزياء | منصة الفيزياء للثانوية العامة',
-  instructorName: 'أستاذ أحمد صلاح (مستر الفيزياء)',
-  instructorTitle: 'كبير معلمي ومعد مادة الفيزياء للثانوية العامة • أستاذ أحمد صلاح',
+  instructorName: 'أستاذ أحمد صلاح',
+  instructorTitle: 'كبير معلمي مادة الفيزياء للثانوية العامة • أستاذ أحمد صلاح',
   instructorPhone: '01012345678',
   instructorPhotoUrl: '/teacher-cutout.webp',
   telegramChannel: 'https://t.me/wikifizya_physics',
