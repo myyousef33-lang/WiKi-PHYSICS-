@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   BookOpen, 
   PlayCircle, 
@@ -20,7 +20,8 @@ import {
   Phone,
   Play,
   LayoutGrid,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Layers
 } from 'lucide-react';
 import { StorageService, subscribeToStorage, isBrokenOrInaccessibleImageUrl } from '../services/storage';
 import { PresenceService } from '../services/presence';
@@ -30,6 +31,7 @@ import { ExamCountdownBanner } from './ExamCountdownBanner';
 import { ScrollReveal } from './ScrollReveal';
 import { AnimatedList } from './ui/animated-list';
 import teacherCutout from '../assets/images/teacher-cutout.webp';
+import { doGradesMatch, normalizeGrade, getGradeDisplayLabel } from '../utils/gradeHelper';
 
 interface HomeLandingViewProps {
   onNavigate: (view: string, params?: any) => void;
@@ -42,50 +44,78 @@ interface HomeCourseCardProps {
   instructorFallback: string;
   onNavigate: (view: string, params?: any) => void;
   isCarouselItem?: boolean;
+  isDragging?: boolean;
 }
+
+const DEFAULT_COURSE_THUMBNAIL = 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?auto=format&fit=crop&w=800&q=80';
 
 const HomeCourseCard: React.FC<HomeCourseCardProps> = React.memo(({
   course,
   instructorFallback,
   onNavigate,
-  isCarouselItem = false
+  isCarouselItem = false,
+  isDragging = false
 }) => {
+  const [imgSrc, setImgSrc] = useState<string>(course.thumbnail || DEFAULT_COURSE_THUMBNAIL);
   const totalLessons = course.units?.reduce((acc, u) => acc + (u.lessons?.length || 0), 0) || 0;
   const unitCount = course.units?.length || 0;
 
+  useEffect(() => {
+    setImgSrc(course.thumbnail || DEFAULT_COURSE_THUMBNAIL);
+  }, [course.thumbnail]);
+
+  const handleNavigate = (e: React.MouseEvent) => {
+    if (isDragging) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    onNavigate('course-details', { courseId: course.id });
+  };
+
   return (
     <div
-      className={`glass-card glass-card-hover rounded-3xl overflow-hidden flex flex-col justify-between group border border-[#C7D9FE] hover:border-[#1E4FD8] transition-all shadow-xs h-full ${
-        isCarouselItem ? 'w-[290px] sm:w-[340px] lg:w-[380px] shrink-0 snap-start' : ''
+      className={`group rounded-[28px] bg-white border border-slate-200/90 hover:border-[#1E4FD8]/60 transition-all duration-500 shadow-[0_4px_24px_-4px_rgba(13,27,62,0.06)] hover:shadow-[0_16px_36px_-6px_rgba(30,79,216,0.18)] overflow-hidden flex flex-col justify-between h-full ${
+        isCarouselItem 
+          ? 'w-[78vw] max-w-[315px] sm:w-[330px] md:w-[350px] lg:w-[365px] xl:w-[380px] shrink-0 snap-start' 
+          : 'w-full'
       }`}
     >
-      <div>
-        {/* Video/Course Thumbnail Container */}
+      <div className="flex flex-col">
+        {/* 16:9 Image Container - Dominant Visual Element */}
         <div 
-          className="relative aspect-video w-full overflow-hidden bg-slate-100"
+          onClick={handleNavigate}
+          className="relative aspect-video w-full overflow-hidden bg-slate-900 select-none cursor-pointer"
           style={{ aspectRatio: '16 / 9' }}
         >
           <img
-            src={course.thumbnail}
+            src={imgSrc}
             alt={course.title}
+            onError={() => {
+              if (imgSrc !== DEFAULT_COURSE_THUMBNAIL) {
+                setImgSrc(DEFAULT_COURSE_THUMBNAIL);
+              }
+            }}
+            loading="lazy"
             decoding="async"
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
           />
           
-          {/* Dark Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none" />
+          {/* Subtle Dark Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0D1B3E]/90 via-[#0D1B3E]/30 to-transparent pointer-events-none transition-opacity duration-300" />
 
-          {/* Hover Play Button Overlay */}
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 backdrop-blur-[2px] pointer-events-none">
-            <div className="h-13 w-13 rounded-full bg-[#F5B301] text-[#0D1B3E] flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
-              <Play className="h-6 w-6 fill-[#0D1B3E] mr-0.5" />
+          {/* Hover Play Button: circular, elegant, not oversized, smooth zoom */}
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 bg-[#0D1B3E]/25 backdrop-blur-[1px] pointer-events-none">
+            <div className="h-12 w-12 rounded-full bg-[#F5B301] text-[#0D1B3E] flex items-center justify-center shadow-[0_6px_20px_rgba(245,179,1,0.45)] transform scale-85 group-hover:scale-100 transition-transform duration-300">
+              <Play className="h-5 w-5 fill-[#0D1B3E] translate-x-[-1px]" />
             </div>
           </div>
 
-          {/* Corner Grade Badge */}
-          <div className="absolute top-3 right-3 z-10">
-            <span className="rounded-xl bg-white/95 backdrop-blur-md px-3 py-1 text-xs font-bold text-[#1E4FD8] border border-blue-200 shadow-sm">
-              {course.grade}
+          {/* Grade Badge at top of image */}
+          <div className="absolute top-3.5 right-3.5 z-10">
+            <span className="inline-flex items-center gap-1.5 rounded-xl bg-white/95 backdrop-blur-md px-3 py-1.5 text-xs font-black text-[#1E4FD8] border border-blue-200/80 shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+              <GraduationCap className="h-3.5 w-3.5 text-[#1E4FD8]" />
+              <span>{getGradeDisplayLabel(course.grade)}</span>
             </span>
           </div>
 
@@ -95,47 +125,58 @@ const HomeCourseCard: React.FC<HomeCourseCardProps> = React.memo(({
             ratingCount={course.ratingCount} 
             position="top-left" 
           />
+        </div>
 
-          {/* Price Badge */}
-          <div className="absolute bottom-3 left-3 rounded-xl bg-[#F5B301] px-3 py-1 text-xs font-bold text-[#0D1B3E] shadow-sm z-10">
-            {course.price > 0 ? `${course.price} ج.م` : 'مجاني'}
+        {/* Clean Meta Strip below image: Lessons/Units count and Price clearly displayed */}
+        <div className="flex items-center justify-between px-5 py-3 text-xs border-b border-slate-100 bg-[#F8FAFC]">
+          <div className="flex items-center gap-1.5 text-slate-600 font-bold">
+            <Layers className="h-3.5 w-3.5 text-[#1E4FD8]" />
+            <span>{unitCount} فصول • {totalLessons} درس</span>
           </div>
 
-          {/* Bottom Badge: Lesson Count */}
-          <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-lg bg-black/75 backdrop-blur-md px-2.5 py-1 text-xs font-bold text-white z-10">
-            <PlayCircle className="h-3.5 w-3.5 text-[#F5B301]" />
-            <span>{totalLessons} درس • {unitCount} فصول</span>
+          <div className="inline-flex items-center gap-1 font-black text-sm text-[#0D1B3E]">
+            {course.price > 0 ? (
+              <div className="flex items-baseline gap-1">
+                <span className="text-base font-black text-[#1E4FD8]">{course.price}</span>
+                <span className="text-[11px] font-bold text-slate-500">ج.م</span>
+              </div>
+            ) : (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">
+                مجاني
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Course Title & Description */}
-        <div className="p-5 lg:p-6 space-y-2.5">
+        {/* Course Details: Instructor, Title, Description */}
+        <div className="p-5 space-y-2.5">
           <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-full bg-blue-50 flex items-center justify-center text-[#1E4FD8] text-[10px] font-black border border-blue-200 shrink-0">
-              أكـ
+            <div className="h-5 w-5 rounded-full bg-blue-50 flex items-center justify-center text-[#1E4FD8] text-[10px] font-black border border-blue-200 shrink-0">
+              أ
             </div>
             <span className="text-xs font-bold text-[#6B7280] truncate">
               {course.instructorName || instructorFallback}
             </span>
           </div>
 
-          <h3 className="font-bold text-[#0D1B3E] text-base leading-snug line-clamp-2 min-h-[2.75rem] group-hover:text-[#1E4FD8] transition-colors">
+          <h3 className="font-black text-[#0D1B3E] text-base leading-snug line-clamp-2 min-h-[2.75rem] group-hover:text-[#1E4FD8] transition-colors">
             {course.title}
           </h3>
           
-          <p className="text-xs text-[#6B7280] line-clamp-2 leading-relaxed">
-            {course.description}
+          <p className="text-xs text-[#6B7280] line-clamp-2 leading-relaxed min-h-[2.25rem]">
+            {course.description || 'كورس متكامل في مادة الفيزياء يشمل الشروحات التفاعلية والتطبيقات العملية ونماذج الامتحانات.'}
           </p>
         </div>
       </div>
 
-      <div className="p-5 lg:p-6 pt-0">
+      {/* Action Button: Consistent across all cards */}
+      <div className="p-5 pt-0">
         <button
-          onClick={() => onNavigate('course-details', { courseId: course.id })}
-          className="w-full rounded-2xl bg-[#1E4FD8] hover:bg-blue-700 py-3 text-xs sm:text-sm font-bold text-white transition-all shadow-sm shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer"
+          onClick={handleNavigate}
+          className="w-full rounded-2xl bg-[#1E4FD8] hover:bg-blue-700 py-3 text-xs sm:text-sm font-bold text-white transition-all duration-300 shadow-sm shadow-blue-500/15 hover:shadow-md hover:shadow-blue-600/25 flex items-center justify-center gap-2 group/btn cursor-pointer"
         >
           <span>استعراض المنهج والدروس</span>
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-4 w-4 transform group-hover/btn:-translate-x-1 transition-transform duration-200" />
         </button>
       </div>
     </div>
@@ -195,8 +236,24 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
   };
 
   const [isDragging, setIsDragging] = useState(false);
+  const [hasMoved, setHasMoved] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeftPos, setScrollLeftPos] = useState(0);
+
+  const isAdmin = StorageService.isAdminLoggedIn();
+  const studentGrade = student?.grade ? normalizeGrade(student.grade) : null;
+  const isStudentLocked = Boolean(student && !isAdmin);
+
+  const displayedCourses = useMemo(() => {
+    const published = courses.filter(c => c.isPublished !== false);
+    if (isStudentLocked) {
+      if (!studentGrade) {
+        return [];
+      }
+      return published.filter(c => doGradesMatch(c.grade, studentGrade));
+    }
+    return published;
+  }, [courses, isStudentLocked, studentGrade]);
 
   useEffect(() => {
     const update = () => {
@@ -220,26 +277,39 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!coursesScrollRef.current) return;
     setIsDragging(true);
+    setHasMoved(false);
     setStartX(e.pageX - coursesScrollRef.current.offsetLeft);
     setScrollLeftPos(coursesScrollRef.current.scrollLeft);
   };
 
   const handleMouseLeaveOrUp = () => {
     setIsDragging(false);
+    setTimeout(() => {
+      setHasMoved(false);
+    }, 100);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging || !coursesScrollRef.current) return;
-    e.preventDefault();
     const x = e.pageX - coursesScrollRef.current.offsetLeft;
-    const walk = (x - startX) * 1.5;
-    coursesScrollRef.current.scrollLeft = scrollLeftPos - walk;
+    const walk = x - startX;
+    if (Math.abs(walk) > 6) {
+      setHasMoved(true);
+      e.preventDefault();
+    }
+    coursesScrollRef.current.scrollLeft = scrollLeftPos - (walk * 1.25);
   };
 
   const scrollCourses = (direction: 'left' | 'right') => {
     if (coursesScrollRef.current) {
-      const scrollAmount = direction === 'left' ? -380 : 380;
-      coursesScrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      const firstCard = coursesScrollRef.current.querySelector<HTMLElement>('.snap-start');
+      const cardWidth = firstCard?.offsetWidth || 340;
+      const gap = typeof window !== 'undefined' 
+        ? (window.innerWidth < 640 ? 16 : window.innerWidth < 1024 ? 20 : 24)
+        : 24;
+      const scrollAmount = cardWidth + gap;
+      const delta = direction === 'left' ? -scrollAmount : scrollAmount;
+      coursesScrollRef.current.scrollBy({ left: delta, behavior: 'smooth' });
     }
   };
 
@@ -521,19 +591,25 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
       </section>
 
       {/* FEATURED COURSES TEASER (YOUTUBE DESKTOP HORIZONTAL CAROUSEL & GRID TOGGLE) */}
-      <section className="mx-auto max-w-7xl 2xl:max-w-screen-2xl px-4 sm:px-6 lg:px-10 xl:px-12 space-y-8">
+      <section className="mx-auto max-w-7xl 2xl:max-w-screen-2xl px-4 sm:px-6 lg:px-10 xl:px-12 space-y-8 w-full max-w-full overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-6">
           <div>
             <div className="flex items-center gap-3">
               <span className="h-3 w-3 rounded-full bg-[#F5B301] animate-pulse"></span>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#0D1B3E]">الكورسات والمناهج المتاحة</h2>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#0D1B3E]">
+                {isStudentLocked && studentGrade ? `كورسات ومناهج ${getGradeDisplayLabel(studentGrade)}` : 'الكورسات والمناهج المتاحة'}
+              </h2>
             </div>
-            <p className="text-xs sm:text-sm lg:text-base text-[#6B7280] mt-1">تصفح المحاضرات والمناهج الدراسية المصممة لجميع المراحل</p>
+            <p className="text-xs sm:text-sm lg:text-base text-[#6B7280] mt-1">
+              {isStudentLocked && studentGrade 
+                ? 'المحاضرات والشروحات التفاعلية المخصصة لمرحلتك الدراسية المسجلة بحسابك'
+                : 'تصفح المحاضرات والمناهج الدراسية المصممة لجميع المراحل'}
+            </p>
           </div>
 
           <div className="flex items-center gap-3 self-end sm:self-auto">
             {/* View Mode Toggle (Desktop) */}
-            {courses.length > 0 && (
+            {displayedCourses.length > 0 && (
               <div className="hidden md:flex items-center gap-1 bg-white p-1 rounded-2xl border border-slate-200 shadow-xs">
                 <button
                   onClick={() => setCourseDisplayMode('carousel')}
@@ -562,7 +638,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               </div>
             )}
 
-            {courses.length > 0 && courseDisplayMode === 'carousel' && (
+            {displayedCourses.length > 0 && courseDisplayMode === 'carousel' && (
               <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-xs">
                 <button
                   onClick={() => scrollCourses('right')}
@@ -585,56 +661,73 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               onClick={() => onNavigate('courses-catalog')}
               className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#1E4FD8] hover:underline bg-blue-50 px-4 py-2.5 rounded-2xl border border-blue-200"
             >
-              <span>عرض جميع الكورسات</span>
+              <span>{isStudentLocked && studentGrade ? 'عرض كورسات صفك' : 'عرض جميع الكورسات'}</span>
               <ChevronLeft className="h-4 w-4" />
             </button>
           </div>
         </div>
 
-        {courses.length === 0 ? (
+        {displayedCourses.length === 0 ? (
           <div className="rounded-3xl border border-[#C7D9FE] bg-[#EBF1FE] p-12 text-center max-w-xl mx-auto space-y-4 shadow-sm">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white border border-[#B4CFFE] text-[#1E4FD8] shadow-xs">
-              <BookOpen className="h-8 w-8" />
+              {isStudentLocked && !studentGrade ? (
+                <GraduationCap className="h-8 w-8" />
+              ) : (
+                <BookOpen className="h-8 w-8" />
+              )}
             </div>
             <div className="space-y-1.5">
-              <h3 className="text-lg font-bold text-[#0D1B3E]">الكورسات والمناهج قيد التجهيز</h3>
+              <h3 className="text-lg font-bold text-[#0D1B3E]">
+                {isStudentLocked && !studentGrade 
+                  ? 'يرجى تحديد صفك الدراسي في بيانات الحساب'
+                  : isStudentLocked && studentGrade
+                    ? `لا توجد كورسات متاحة حالياً لـ ${getGradeDisplayLabel(studentGrade)}`
+                    : 'الكورسات والمناهج قيد التجهيز'}
+              </h3>
               <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
-                يقوم أستاذ أحمد صلاح حالياً برفع المحاضرات وحصص الشرح الجديدة. تابع قناة التليجرام لمعرفة مواعيد النشر.
+                {isStudentLocked && !studentGrade
+                  ? 'لتتمكن من استعراض الكورسات المناسبة لصفك، يرجى تحديث بيانات صفك الدراسي في ملفك الشخصي.'
+                  : isStudentLocked && studentGrade
+                    ? 'يقوم أستاذ أحمد صلاح حالياً بإعداد المحاضرات ورفعها لصفك الدراسي. ترقبوا النشر قريباً!'
+                    : 'يقوم أستاذ أحمد صلاح حالياً برفع المحاضرات وحصص الشرح الجديدة. تابع قناة التليجرام لمعرفة مواعيد النشر.'}
               </p>
             </div>
           </div>
         ) : courseDisplayMode === 'carousel' ? (
-          /* YouTube Desktop Horizontal Scroll Row with Smooth Touch & Mouse Drag */
-          <div 
-            ref={coursesScrollRef}
-            onMouseDown={handleMouseDown}
-            onMouseLeave={handleMouseLeaveOrUp}
-            onMouseUp={handleMouseLeaveOrUp}
-            onMouseMove={handleMouseMove}
-            className={`flex gap-6 overflow-x-auto pb-6 pt-1 snap-x scroll-smooth transition-all ${
-              isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'
-            }`}
-            style={{ 
-              scrollbarWidth: 'none', 
-              msOverflowStyle: 'none',
-              WebkitOverflowScrolling: 'touch',
-              touchAction: 'pan-x pan-y pinch-zoom'
-            }}
-          >
-            {courses.map(course => (
-              <HomeCourseCard
-                key={course.id}
-                course={course}
-                instructorFallback={settings.instructorName}
-                onNavigate={onNavigate}
-                isCarouselItem={true}
-              />
-            ))}
+          /* Smooth Touch & Momentum Carousel Track with Overflow Isolation */
+          <div className="relative w-full max-w-full overflow-hidden">
+            <div 
+              ref={coursesScrollRef}
+              onMouseDown={handleMouseDown}
+              onMouseLeave={handleMouseLeaveOrUp}
+              onMouseUp={handleMouseLeaveOrUp}
+              onMouseMove={handleMouseMove}
+              className={`flex gap-4 sm:gap-5 lg:gap-6 overflow-x-auto py-4 px-1 snap-x snap-mandatory overscroll-x-contain transition-all ${
+                isDragging ? 'cursor-grabbing select-none scroll-auto' : 'cursor-grab scroll-smooth'
+              }`}
+              style={{ 
+                scrollbarWidth: 'none', 
+                msOverflowStyle: 'none',
+                WebkitOverflowScrolling: 'touch',
+                touchAction: 'pan-x pan-y pinch-zoom'
+              }}
+            >
+              {displayedCourses.map(course => (
+                <HomeCourseCard
+                  key={course.id}
+                  course={course}
+                  instructorFallback={settings.instructorName}
+                  onNavigate={onNavigate}
+                  isCarouselItem={true}
+                  isDragging={hasMoved}
+                />
+              ))}
+            </div>
           </div>
         ) : (
           /* Full Grid Mode for Desktop */
           <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8" delay={90}>
-            {courses.map((course) => (
+            {displayedCourses.map((course) => (
               <HomeCourseCard
                 key={course.id}
                 course={course}

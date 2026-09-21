@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, CheckCircle2, Key, Sparkles, Filter, PlayCircle, ShieldCheck, Wallet } from 'lucide-react';
+import { BookOpen, CheckCircle2, Key, Sparkles, Filter, PlayCircle, ShieldCheck, Wallet, GraduationCap } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { Course, Student, GradeLevel } from '../types';
 import { CourseRatingBadge } from './CourseRatingBadge';
 import { ScrollReveal } from './ScrollReveal';
+import { doGradesMatch, normalizeGrade, getGradeDisplayLabel } from '../utils/gradeHelper';
 
 interface CourseCatalogViewProps {
   onNavigate: (view: string, params?: any) => void;
@@ -21,6 +22,10 @@ export const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({
   const [student, setStudent] = useState<Student | null>(StorageService.getCurrentStudent());
   const [selectedGrade, setSelectedGrade] = useState<string>('all');
   const [msg, setMsg] = useState<string | null>(null);
+
+  const isAdmin = StorageService.isAdminLoggedIn();
+  const studentGrade = student?.grade ? normalizeGrade(student.grade) : null;
+  const isStudentLocked = Boolean(student && !isAdmin);
 
   const handleQuickWalletPurchase = (course: Course) => {
     if (!student) {
@@ -48,13 +53,24 @@ export const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({
 
   const grades = [
     { id: 'all', label: 'جميع المراحل' },
-    { id: 'الصف الثالث الثانوي (ثانوية عامة)', label: '3 ثانوي (ثانوية عامة)' },
-    { id: 'الصف الثاني الثانوي', label: '2 ثانوي' },
-    { id: 'الصف الأول الثانوي', label: '1 ثانوي' }
+    { id: GradeLevel.GRADE_12, label: '3 ثانوي (ثانوية عامة)' },
+    { id: GradeLevel.GRADE_11, label: '2 ثانوي' },
+    { id: GradeLevel.GRADE_10, label: '1 ثانوي' }
   ];
 
   const filteredCourses = courses.filter(c => {
-    if (selectedGrade !== 'all' && c.grade !== selectedGrade) return false;
+    if (c.isPublished === false) return false;
+
+    // If logged in as student (non-admin), lock strictly to student's registered grade
+    if (isStudentLocked) {
+      if (!studentGrade) return false;
+      return doGradesMatch(c.grade, studentGrade);
+    }
+
+    // Visitors or Admin can use the grade selector
+    if (selectedGrade !== 'all') {
+      return doGradesMatch(c.grade, selectedGrade);
+    }
     return true;
   });
 
@@ -73,40 +89,88 @@ export const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({
           <span>منهج الفيزياء للعام الدراسي 2024 / 2025</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-black text-[#0D1B3E] leading-tight">
-          كورسات مادة الفيزياء للثانوية العامة مع أستاذ أحمد صلاح
+          {isStudentLocked && studentGrade
+            ? `كورسات ${getGradeDisplayLabel(studentGrade)} - أستاذ أحمد صلاح`
+            : 'كورسات مادة الفيزياء للثانوية العامة مع أستاذ أحمد صلاح'}
         </h1>
         <p className="text-sm text-[#6B7280] leading-relaxed">
-          شرح تفصيلي مع أقوى بنك أسئلة وتطبيقات ومراجعات دورية. اختر كورس مرحلتك وابدأ المذاكرة فوراً عبر كود التفعيل.
+          {isStudentLocked && studentGrade
+            ? 'شرح تفصيلي مع أقوى بنك أسئلة وتطبيقات ومراجعات دورية مخصصة لصفك الدراسي المسجل.'
+            : 'شرح تفصيلي مع أقوى بنك أسئلة وتطبيقات ومراجعات دورية. اختر كورس مرحلتك وابدأ المذاكرة فوراً عبر كود التفعيل.'}
         </p>
       </div>
 
-      {/* Grade Filters */}
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        {grades.map(g => (
-          <button
-            key={g.id}
-            onClick={() => setSelectedGrade(g.id)}
-            className={`rounded-xl px-5 py-2.5 text-xs font-bold transition-all ${
-              selectedGrade === g.id
-                ? 'bg-[#1E4FD8] text-white shadow-md shadow-blue-500/20 scale-105'
-                : 'border border-slate-200 bg-white text-[#0D1B3E] hover:border-blue-300 hover:text-[#1E4FD8]'
-            }`}
-          >
-            {g.label}
-          </button>
-        ))}
-      </div>
+      {/* Grade Filters / Student Grade Lock Indicator */}
+      {isStudentLocked ? (
+        <div className="flex flex-col items-center justify-center gap-2">
+          {studentGrade ? (
+            <div className="inline-flex items-center gap-2.5 rounded-2xl bg-blue-50 border border-blue-200 px-5 py-2.5 text-xs sm:text-sm font-bold text-[#1E4FD8] shadow-xs">
+              <GraduationCap className="h-4 w-4 text-[#1E4FD8]" />
+              <span>المرحلة الدراسية المسجلة بحسابك: {getGradeDisplayLabel(studentGrade)}</span>
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 text-center max-w-md mx-auto space-y-1.5">
+              <p className="text-xs font-bold text-amber-800">
+                لم يتم تحديد صفك الدراسي في بيانات الحساب
+              </p>
+              <p className="text-[11px] text-amber-700">
+                يرجى تحديث بيانات حسابك لتحديد المرحلة الدراسية لعرض الكورسات المخصصة لك.
+              </p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {isAdmin && (
+            <div className="flex justify-center">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 border border-purple-200 px-3.5 py-1 text-xs font-bold text-purple-700">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                <span>وضع الإدارة: عرض جميع المراحل والكورسات متاح بدون تقييد</span>
+              </div>
+            </div>
+          )}
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {grades.map(g => (
+              <button
+                key={g.id}
+                onClick={() => setSelectedGrade(g.id)}
+                className={`rounded-xl px-5 py-2.5 text-xs font-bold transition-all ${
+                  selectedGrade === g.id
+                    ? 'bg-[#1E4FD8] text-white shadow-md shadow-blue-500/20 scale-105'
+                    : 'border border-slate-200 bg-white text-[#0D1B3E] hover:border-blue-300 hover:text-[#1E4FD8]'
+                }`}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Courses Cards */}
       {filteredCourses.length === 0 ? (
         <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center max-w-lg mx-auto space-y-4 shadow-xs">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 border border-blue-200 text-[#1E4FD8]">
-            <BookOpen className="h-8 w-8" />
+            {isStudentLocked && !studentGrade ? (
+              <GraduationCap className="h-8 w-8" />
+            ) : (
+              <BookOpen className="h-8 w-8" />
+            )}
           </div>
           <div className="space-y-1">
-            <h3 className="text-lg font-bold text-[#0D1B3E]">لا توجد كورسات مضافة حالياً</h3>
+            <h3 className="text-lg font-bold text-[#0D1B3E]">
+              {isStudentLocked && !studentGrade
+                ? 'يرجى تحديد صفك الدراسي في الحساب'
+                : isStudentLocked && studentGrade
+                  ? `لا توجد كورسات متاحة حالياً لـ ${getGradeDisplayLabel(studentGrade)}`
+                  : 'لا توجد كورسات مضافة حالياً'}
+            </h3>
             <p className="text-xs text-[#6B7280] leading-relaxed">
-              يقوم المعلم حالياً بإعداد وتجهيز محاضرات المنهج. ترقبوا رفع المحتوى الجديد قريباً!
+              {isStudentLocked && !studentGrade
+                ? 'لتتمكن من استعراض الكورسات المناسبة لصفك، يرجى تحديث بيانات صفك الدراسي في ملفك الشخصي.'
+                : isStudentLocked && studentGrade
+                  ? 'يقوم المعلم حالياً بإعداد وتجهيز محاضرات المنهج لصفك الدراسي. ترقبوا رفع المحتوى قريباً!'
+                  : 'يقوم المعلم حالياً بإعداد وتجهيز محاضرات المنهج. ترقبوا رفع المحتوى الجديد قريباً!'}
             </p>
           </div>
         </div>

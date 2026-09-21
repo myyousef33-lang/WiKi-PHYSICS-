@@ -16,7 +16,8 @@ import {
   HelpCircle,
   Wallet,
   Check,
-  Star
+  Star,
+  GraduationCap
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { StorageService, subscribeToStorage } from '../services/storage';
@@ -25,6 +26,7 @@ import { downloadPdfFile } from '../utils/pdfHelper';
 import { AssignmentSolverModal } from './AssignmentSolverModal';
 import { CourseRatingBadge } from './CourseRatingBadge';
 import { CourseReviewModal } from './CourseReviewModal';
+import { doGradesMatch, normalizeGrade, getGradeDisplayLabel } from '../utils/gradeHelper';
 
 interface CourseDetailsViewProps {
   courseId: string;
@@ -106,6 +108,59 @@ export const CourseDetailsView: React.FC<CourseDetailsViewProps> = ({
         >
           العودة للكورسات
         </button>
+      </div>
+    );
+  }
+
+  const isAdmin = StorageService.isAdminLoggedIn();
+  const studentGrade = student?.grade ? normalizeGrade(student.grade) : null;
+  const isStudentLocked = Boolean(student && !isAdmin);
+  const isGradeMatch = !isStudentLocked || doGradesMatch(course.grade, studentGrade);
+
+  if (!isGradeMatch) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-16 text-center animate-in fade-in duration-300">
+        <div className="rounded-3xl border border-amber-200 bg-white p-8 sm:p-12 shadow-sm space-y-6">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-amber-50 border border-amber-200 text-amber-600 shadow-xs">
+            <GraduationCap className="h-10 w-10" />
+          </div>
+
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-100/80 px-3 py-1 text-xs font-bold text-amber-800">
+              <span>تنبيه المرحلة الدراسية</span>
+            </div>
+            <h2 className="text-2xl font-black text-[#0D1B3E]">هذا الكورس غير متاح لمرحلتك الدراسية</h2>
+            <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed max-w-lg mx-auto">
+              محتوى هذا الكورس مخصص لطلاب مرحلة تعليمية مختلفة عن المرحلة المسجلة بحسابك.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-right space-y-3">
+            <div className="flex items-center justify-between text-xs border-b border-slate-200/80 pb-2.5">
+              <span className="text-[#6B7280]">المرحلة المخصصة لهذا الكورس:</span>
+              <span className="font-bold text-[#1E4FD8]">{getGradeDisplayLabel(course.grade)}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-[#6B7280]">مرحلتك الدراسية المسجلة:</span>
+              <span className="font-bold text-[#0D1B3E]">{studentGrade ? getGradeDisplayLabel(studentGrade) : 'غير محددة'}</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => onNavigate('courses-catalog')}
+              className="w-full sm:w-auto rounded-2xl bg-[#1E4FD8] hover:bg-blue-700 px-6 py-3 text-xs sm:text-sm font-bold text-white transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>استعراض كورسات مرحلتك</span>
+            </button>
+            <button
+              onClick={() => onNavigate('home')}
+              className="w-full sm:w-auto rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 px-6 py-3 text-xs sm:text-sm font-bold text-[#0D1B3E] transition-all cursor-pointer"
+            >
+              <span>العودة للرئيسية</span>
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

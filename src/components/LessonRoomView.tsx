@@ -23,7 +23,8 @@ import {
   ShieldAlert,
   Lock,
   Bot,
-  Brain
+  Brain,
+  GraduationCap
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { MediaStore } from '../services/mediaStore';
@@ -31,6 +32,7 @@ import { Course, Lesson, Student, QuizExam, Assignment, AssignmentSubmission } f
 import { AIPhysicsAssistant } from './AIPhysicsAssistant';
 import { PdfViewerModal } from './PdfViewerModal';
 import { AssignmentSolverModal } from './AssignmentSolverModal';
+import { doGradesMatch, normalizeGrade, getGradeDisplayLabel } from '../utils/gradeHelper';
 
 interface LessonRoomViewProps {
   courseId: string;
@@ -76,9 +78,13 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
   const videoContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Access Control verification
+  const isAdmin = StorageService.isAdminLoggedIn();
+  const studentGrade = student?.grade ? normalizeGrade(student.grade) : null;
+  const isStudentLocked = Boolean(student && !isAdmin);
+  const isGradeMatch = !isStudentLocked || doGradesMatch(course?.grade, studentGrade);
   const isEnrolled = student ? StorageService.isStudentEnrolled(student.id, courseId) : false;
   const isFreePreview = Boolean(currentLesson?.isFreePreview);
-  const hasAccess = isEnrolled || isFreePreview;
+  const hasAccess = isGradeMatch && (isEnrolled || isFreePreview);
 
   // Keyboard Shortcuts Interceptor & Anti-Screenshot Detection
   useEffect(() => {
@@ -370,36 +376,71 @@ export const LessonRoomView: React.FC<LessonRoomViewProps> = ({
                 />
               )}
               <div className="relative z-10 max-w-md space-y-3.5">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/20 border border-amber-500/40 text-[#F5B301] shadow-md">
-                  <Lock className="h-7 w-7" />
-                </div>
-                <div>
-                  <span className="inline-block rounded-full bg-amber-500/20 border border-amber-500/40 px-3 py-1 text-xs font-bold text-[#F5B301]">
-                    محتوى محمي - للمشتركين فقط
-                  </span>
-                  <h3 className="mt-2.5 text-base sm:text-lg font-black text-white">
-                    {currentLesson.title}
-                  </h3>
-                  <p className="mt-1 text-xs text-slate-300 leading-relaxed">
-                    عفواً، يتطلب مشاهدة هذا الدرس الاشتراك في كورس «{course.title}» أو تفعيل كود الحصة.
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
-                  {onOpenActivationModal && (
-                    <button
-                      onClick={onOpenActivationModal}
-                      className="rounded-xl bg-[#F5B301] px-4 py-2.5 text-xs font-bold text-[#0D1B3E] hover:bg-[#e0a401] transition-all shadow-sm cursor-pointer"
-                    >
-                      تفعيل كود الحصة / الكورس
-                    </button>
-                  )}
-                  <button
-                    onClick={() => onNavigate('course-details', { courseId: course.id })}
-                    className="rounded-xl bg-[#1E4FD8] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#163cb5] transition-all shadow-sm cursor-pointer"
-                  >
-                    شراء والاشتراك في الكورس ({course.price} ج.م)
-                  </button>
-                </div>
+                {!isGradeMatch ? (
+                  <>
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/20 border border-amber-500/40 text-[#F5B301] shadow-md">
+                      <GraduationCap className="h-7 w-7" />
+                    </div>
+                    <div>
+                      <span className="inline-block rounded-full bg-amber-500/20 border border-amber-500/40 px-3 py-1 text-xs font-bold text-[#F5B301]">
+                        تنبيه المرحلة الدراسية
+                      </span>
+                      <h3 className="mt-2.5 text-base sm:text-lg font-black text-white">
+                        هذا الدرس غير متاح لصفك الدراسي
+                      </h3>
+                      <p className="mt-1 text-xs text-slate-300 leading-relaxed">
+                        هذا الكورس مخصص لـ ({getGradeDisplayLabel(course.grade)}) بينما حسابك مسجل في ({studentGrade ? getGradeDisplayLabel(studentGrade) : 'غير محدد'}).
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
+                      <button
+                        onClick={() => onNavigate('courses-catalog')}
+                        className="rounded-xl bg-[#1E4FD8] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#163cb5] transition-all shadow-sm cursor-pointer"
+                      >
+                        العودة لكورسات مرحلتك
+                      </button>
+                      <button
+                        onClick={() => onNavigate('home')}
+                        className="rounded-xl bg-white/10 text-white hover:bg-white/20 px-4 py-2.5 text-xs font-bold transition-all shadow-sm cursor-pointer"
+                      >
+                        الصفحة الرئيسية
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/20 border border-amber-500/40 text-[#F5B301] shadow-md">
+                      <Lock className="h-7 w-7" />
+                    </div>
+                    <div>
+                      <span className="inline-block rounded-full bg-amber-500/20 border border-amber-500/40 px-3 py-1 text-xs font-bold text-[#F5B301]">
+                        محتوى محمي - للمشتركين فقط
+                      </span>
+                      <h3 className="mt-2.5 text-base sm:text-lg font-black text-white">
+                        {currentLesson.title}
+                      </h3>
+                      <p className="mt-1 text-xs text-slate-300 leading-relaxed">
+                        عفواً، يتطلب مشاهدة هذا الدرس الاشتراك في كورس «{course.title}» أو تفعيل كود الحصة.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
+                      {onOpenActivationModal && (
+                        <button
+                          onClick={onOpenActivationModal}
+                          className="rounded-xl bg-[#F5B301] px-4 py-2.5 text-xs font-bold text-[#0D1B3E] hover:bg-[#e0a401] transition-all shadow-sm cursor-pointer"
+                        >
+                          تفعيل كود الحصة / الكورس
+                        </button>
+                      )}
+                      <button
+                        onClick={() => onNavigate('course-details', { courseId: course.id })}
+                        className="rounded-xl bg-[#1E4FD8] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#163cb5] transition-all shadow-sm cursor-pointer"
+                      >
+                        شراء والاشتراك في الكورس ({course.price} ج.م)
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           ) : (
