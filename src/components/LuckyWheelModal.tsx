@@ -135,9 +135,16 @@ export const LuckyWheelModal: React.FC<LuckyWheelModalProps> = ({
   const [wonPrize, setWonPrize] = useState<WheelPointPrize | null>(null);
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
   const [pointerBounce, setPointerBounce] = useState(false);
+  const [previousPointsWon, setPreviousPointsWon] = useState<number>(0);
   const currentRotationRef = useRef(0);
 
   const availableSpins = student.wheelSpins || 0;
+  
+  // Real current points calculation without artificial bonuses
+  const studentEntry = StorageService.getLeaderboard().find(e => e.studentId === student.id);
+  const currentPoints = studentEntry 
+    ? (studentEntry.points || 0) 
+    : StorageService.getAttempts().filter(a => a.studentId === student.id).reduce((acc, a) => acc + (a.score || 0), 0);
   const numSectors = WHEEL_POINT_SECTORS.length;
   const arcSize = 360 / numSectors;
 
@@ -215,28 +222,54 @@ export const LuckyWheelModal: React.FC<LuckyWheelModalProps> = ({
       // Update student points in Leaderboard and Student model
       const newSpins = Math.max(0, availableSpins - 1);
       
-      // Update leaderboard entry points directly
+      // Update leaderboard entry points transparently
       const currentLeaderboard = StorageService.getLeaderboard();
       const existingEntryIndex = currentLeaderboard.findIndex(e => e.studentId === student.id);
       
+      let prevPoints = 0;
+      let existingWeekly = 0;
+      let examsCount = 0;
+
       if (existingEntryIndex !== -1) {
-        currentLeaderboard[existingEntryIndex].points = (currentLeaderboard[existingEntryIndex].points || 0) + prize.points;
-        currentLeaderboard[existingEntryIndex].weeklyScore = (currentLeaderboard[existingEntryIndex].weeklyScore || 0) + prize.points;
+        prevPoints = currentLeaderboard[existingEntryIndex].points || 0;
+        existingWeekly = currentLeaderboard[existingEntryIndex].weeklyScore || 0;
+        examsCount = currentLeaderboard[existingEntryIndex].completedExamsCount || 0;
+
+        currentLeaderboard[existingEntryIndex].points = prevPoints + prize.points;
+        currentLeaderboard[existingEntryIndex].weeklyScore = existingWeekly + prize.points;
         currentLeaderboard[existingEntryIndex].lastActive = new Date().toISOString();
       } else {
+        const studentAttempts = StorageService.getAttempts().filter(a => a.studentId === student.id);
+        examsCount = studentAttempts.length;
+        prevPoints = studentAttempts.reduce((acc, a) => acc + (a.score || 0), 0);
+
         currentLeaderboard.push({
           studentId: student.id,
           studentName: student.name,
           grade: student.grade || 'الصف الثالث الثانوي',
           governorate: student.governorate || 'القاهرة',
-          points: 50 + prize.points,
-          weeklyScore: 20 + prize.points,
-          completedExamsCount: 1,
+          points: prevPoints + prize.points,
+          weeklyScore: prize.points,
+          completedExamsCount: examsCount,
           badges: [],
           lastActive: new Date().toISOString()
         });
       }
+
+      setPreviousPointsWon(prevPoints);
       StorageService.saveLeaderboard(currentLeaderboard);
+
+      // Record in point history
+      try {
+        StorageService.addPointTransaction({
+          studentId: student.id,
+          amount: prize.points,
+          type: 'lucky_wheel',
+          title: 'عجلة الحظ اليومية',
+          description: `مكافأة اللف: ${prize.label} (${prize.sublabel})`,
+          referenceId: prize.id
+        });
+      } catch (_) {}
 
       const updatedStudent: Student = {
         ...student,
@@ -296,14 +329,22 @@ export const LuckyWheelModal: React.FC<LuckyWheelModalProps> = ({
           </button>
         </div>
 
-        {/* Spins Counter Bar */}
+        {/* Spins & Real Points Counter Bar */}
         <div className="relative z-10 my-4 flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-950/50 via-slate-900 to-amber-950/50 border border-amber-500/30 shadow-inner">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-amber-400 animate-pulse" />
-            <span className="text-xs sm:text-sm font-bold text-amber-200">اللفات المتاحة لك:</span>
-            <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 text-[#0D1B3E] font-black text-sm shadow-md font-mono">
-              {availableSpins} {availableSpins === 1 ? 'لفة مجانية' : 'لفات متاحة'}
-            </span>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-amber-400 animate-pulse" />
+              <span className="text-xs sm:text-sm font-bold text-amber-200">اللفات المتاحة:</span>
+              <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 text-[#0D1B3E] font-black text-sm shadow-md font-mono">
+                {availableSpins} {availableSpins === 1 ? 'لفة مجانية' : 'لفات متاحة'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-amber-400/20 text-xs font-bold text-slate-200">
+              <Flame className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
+              <span>رصيدك الحالي:</span>
+              <span className="font-mono font-black text-amber-300">{currentPoints} نقطة</span>
+            </div>
           </div>
 
           {onOpenLeaderboard && (
@@ -561,8 +602,25 @@ export const LuckyWheelModal: React.FC<LuckyWheelModalProps> = ({
               <p className="text-xs text-amber-300 mt-1 font-bold">
                 {wonPrize.sublabel}
               </p>
+              
+              {/* Transparent Points Calculation Breakdown */}
+              <div className="my-3 p-3.5 rounded-2xl bg-slate-800/90 border border-amber-400/30 text-xs space-y-1.5 text-right">
+                <div className="flex items-center justify-between text-slate-300">
+                  <span>رصيدك قبل اللف:</span>
+                  <span className="font-mono font-bold text-slate-200">{previousPointsWon} نقطة</span>
+                </div>
+                <div className="flex items-center justify-between text-amber-300 font-bold">
+                  <span>مكافأة العجلة المكتسبة:</span>
+                  <span className="font-mono">+{wonPrize.points} نقطة</span>
+                </div>
+                <div className="border-t border-slate-700/80 pt-1.5 flex items-center justify-between text-sm font-black text-white">
+                  <span className="text-amber-200">إجمالي رصيدك الحقيقي الجديد:</span>
+                  <span className="font-mono text-amber-400 text-base">{previousPointsWon + wonPrize.points} نقطة</span>
+                </div>
+              </div>
+
               <p className="text-xs text-slate-300 mt-1 max-w-xs mx-auto leading-relaxed">
-                تمت إضافة النقاط بنجاح إلى رصيدك وترتيبك في لوحة الشرف لتكون الأول على المنصة!
+                تمت إضافة النقاط بنجاح إلى رصيدك وترتيبك في لوحة الشرف لتنافس أوائل الجمهورية!
               </p>
             </div>
 

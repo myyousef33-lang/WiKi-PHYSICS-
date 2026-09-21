@@ -22,6 +22,7 @@ import { NotificationCenterModal } from './components/NotificationCenterModal';
 import { EditProfileModal } from './components/EditProfileModal';
 import { PhysicsSimulationsLab } from './components/PhysicsSimulationsLab';
 import { FlashcardsView } from './components/FlashcardsView';
+import { PointHistoryView } from './components/PointHistoryView';
 import { CertificateModal } from './components/CertificateModal';
 import { GlobalAntiScreenshotShield } from './components/GlobalAntiScreenshotShield';
 import { StudentWalletModal } from './components/StudentWalletModal';
@@ -365,6 +366,13 @@ export default function App() {
             {currentView === 'weakness-profile' && (
               <WeaknessAnalysisView
                 onNavigate={handleNavigate}
+              />
+            )}
+
+            {currentView === 'point-history' && (
+              <PointHistoryView
+                onNavigate={handleNavigate}
+                onOpenActivationModal={() => setIsActivationModalOpen(true)}
               />
             )}
 

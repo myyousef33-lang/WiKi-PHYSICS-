@@ -27,11 +27,11 @@ export const STUDENT_LEVELS: StudentRankLevel[] = [
     iconName: 'Shield',
     minPoints: 0,
     maxPoints: 249,
-    color: '#CD7F32',
-    bgGradient: 'from-amber-700 via-amber-800 to-amber-950',
-    borderClass: 'border-amber-600/50 dark:border-amber-700/60',
-    textClass: 'text-amber-800 dark:text-amber-300',
-    badgeClass: 'bg-amber-100 dark:bg-amber-950/70 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700',
+    color: '#C2410C',
+    bgGradient: 'from-[#7C2D12] via-[#9A3412] to-[#C2410C]',
+    borderClass: 'border-[#EA580C]/40 dark:border-[#C2410C]/50',
+    textClass: 'text-[#C2410C] dark:text-[#FB923C]',
+    badgeClass: 'bg-gradient-to-r from-amber-950/10 via-[#9A3412]/15 to-[#C2410C]/20 text-[#9A3412] dark:text-[#FDBA74] border-[#EA580C]/40 font-black shadow-xs',
     description: 'رتبة الانطلاق في استيعاب ومراجعة أساسيات وقوانين الفيزياء'
   },
   {
@@ -42,11 +42,11 @@ export const STUDENT_LEVELS: StudentRankLevel[] = [
     iconName: 'Award',
     minPoints: 250,
     maxPoints: 499,
-    color: '#94A3B8',
-    bgGradient: 'from-slate-400 via-slate-500 to-slate-700',
+    color: '#64748B',
+    bgGradient: 'from-slate-500 via-slate-400 to-zinc-500',
     borderClass: 'border-slate-300 dark:border-slate-600',
     textClass: 'text-slate-700 dark:text-slate-200',
-    badgeClass: 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600',
+    badgeClass: 'bg-gradient-to-r from-slate-100 to-zinc-200 dark:from-slate-800 dark:to-zinc-700 text-slate-800 dark:text-slate-100 border-slate-300 dark:border-slate-600 font-black shadow-xs',
     description: 'إتقان حل مسائل الدوائر الكهربية، كيرشوف، وتطبيقات المقاومات'
   },
   {
@@ -57,11 +57,11 @@ export const STUDENT_LEVELS: StudentRankLevel[] = [
     iconName: 'Medal',
     minPoints: 500,
     maxPoints: 999,
-    color: '#F59E0B',
-    bgGradient: 'from-amber-400 via-amber-500 to-yellow-600',
+    color: '#D97706',
+    bgGradient: 'from-amber-400 via-yellow-400 to-amber-500',
     borderClass: 'border-amber-400 dark:border-amber-500',
-    textClass: 'text-amber-600 dark:text-amber-400',
-    badgeClass: 'bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-600',
+    textClass: 'text-amber-700 dark:text-amber-300',
+    badgeClass: 'bg-gradient-to-r from-amber-100 via-yellow-100 to-amber-200 dark:from-amber-950/70 dark:to-yellow-900/50 text-amber-950 dark:text-amber-200 border-amber-400 dark:border-amber-500 font-black shadow-xs',
     description: 'تفوق ملحوظ في الحث الكهرومغناطيسي، التيارات المترددة، والدينامو'
   },
   {
@@ -73,10 +73,10 @@ export const STUDENT_LEVELS: StudentRankLevel[] = [
     minPoints: 1000,
     maxPoints: 1999,
     color: '#0891B2',
-    bgGradient: 'from-cyan-500 via-teal-600 to-cyan-800',
+    bgGradient: 'from-cyan-500 via-teal-400 to-cyan-700',
     borderClass: 'border-cyan-400 dark:border-cyan-500',
-    textClass: 'text-cyan-600 dark:text-cyan-400',
-    badgeClass: 'bg-cyan-50 dark:bg-cyan-950/60 text-cyan-900 dark:text-cyan-200 border-cyan-300 dark:border-cyan-600',
+    textClass: 'text-cyan-700 dark:text-cyan-300',
+    badgeClass: 'bg-gradient-to-r from-cyan-100 via-teal-50 to-cyan-200 dark:from-cyan-950/70 dark:to-teal-900/50 text-cyan-950 dark:text-cyan-200 border-cyan-400 font-black shadow-xs',
     description: 'مستوى احترافي عالي في الفيزياء الحديثة، الكوانتم، وأجهزة القياس'
   },
   {
@@ -88,10 +88,10 @@ export const STUDENT_LEVELS: StudentRankLevel[] = [
     minPoints: 2000,
     maxPoints: 3499,
     color: '#6366F1',
-    bgGradient: 'from-indigo-500 via-purple-600 to-indigo-800',
+    bgGradient: 'from-indigo-500 via-purple-400 to-indigo-700',
     borderClass: 'border-indigo-400 dark:border-indigo-500',
-    textClass: 'text-indigo-600 dark:text-indigo-400',
-    badgeClass: 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-200 border-indigo-300 dark:border-indigo-600',
+    textClass: 'text-indigo-700 dark:text-indigo-300',
+    badgeClass: 'bg-gradient-to-r from-indigo-100 via-purple-50 to-indigo-200 dark:from-indigo-950/70 dark:to-purple-900/50 text-indigo-950 dark:text-indigo-200 border-indigo-400 font-black shadow-xs',
     description: 'نخبة متميزة تتجاوز أصعب أفكار امتحانات الثانوية العامة بدقة متناهية'
   },
   {
@@ -103,10 +103,10 @@ export const STUDENT_LEVELS: StudentRankLevel[] = [
     minPoints: 3500,
     maxPoints: 999999,
     color: '#E11D48',
-    bgGradient: 'from-rose-600 via-amber-500 to-purple-800',
+    bgGradient: 'from-rose-600 via-amber-400 to-purple-800',
     borderClass: 'border-rose-400 dark:border-rose-500',
     textClass: 'text-rose-600 dark:text-rose-400',
-    badgeClass: 'bg-gradient-to-r from-amber-200 to-yellow-300 text-slate-950 border-amber-400 font-black',
+    badgeClass: 'bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 text-slate-950 border-amber-400 font-black shadow-sm ring-1 ring-amber-400/50',
     description: 'المرشح الأبرز للمركز الأول على مستوى الجمهورية والدرجة النهائية 60 من 60'
   }
 ];
@@ -152,8 +152,8 @@ export function calculateStudentRankStats(
 
   // Find in leaderboard
   const studentEntry = leaderboard.find(e => e.studentId === student.id);
-  const points = studentEntry?.points ?? 50;
-  const weeklyPoints = studentEntry?.weeklyScore ?? 20;
+  const points = studentEntry?.points ?? 0;
+  const weeklyPoints = studentEntry?.weeklyScore ?? 0;
   const completedExamsCount = studentEntry?.completedExamsCount ?? 0;
 
   // Rank position (1-based)
@@ -224,4 +224,15 @@ export function calculateStudentRankStats(
     rankTitleArabic
   };
 }
+
+export function getStudentLevel(points: number): StudentRankLevel {
+  const safePoints = Math.max(0, points || 0);
+  for (let i = STUDENT_LEVELS.length - 1; i >= 0; i--) {
+    if (safePoints >= STUDENT_LEVELS[i].minPoints) {
+      return STUDENT_LEVELS[i];
+    }
+  }
+  return STUDENT_LEVELS[0];
+}
+
 

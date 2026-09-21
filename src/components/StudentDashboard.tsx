@@ -27,7 +27,8 @@ import {
   Target,
   Lock,
   Gift,
-  Crown
+  Crown,
+  History
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { Student, Course, Lesson, ExamAttempt, NotificationItem, SmartStudyRecommendation, LeaderboardEntry } from '../types';
@@ -355,11 +356,21 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
               {/* Level Badge */}
               <button
                 onClick={() => onNavigate('leaderboard')}
-                className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 sm:px-3 py-0.5 sm:py-1 text-[11px] sm:text-xs font-bold text-indigo-800 hover:bg-indigo-100 transition-colors cursor-pointer"
-                title="رتبتك الحالية في منصة نيوتن"
+                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 sm:px-3 py-0.5 sm:py-1 text-[11px] sm:text-xs font-bold transition-all hover:scale-105 cursor-pointer shadow-xs ${rankStats.level.badgeClass}`}
+                title="رتبتك الحالية في منصة ويكيفزياء مع أستاذ أحمد صلاح"
               >
-                <RankTierIcon tier={rankStats.level.tier} className="h-3.5 w-3.5 text-indigo-700" />
+                <RankTierIcon tier={rankStats.level.tier} className="h-3.5 w-3.5 shrink-0" />
                 <span>رتبة {rankStats.level.badge} (مستوى {rankStats.level.level})</span>
+              </button>
+
+              {/* Point History Badge */}
+              <button
+                onClick={() => onNavigate('point-history')}
+                className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50/90 px-2.5 sm:px-3 py-0.5 sm:py-1 text-[11px] sm:text-xs font-bold text-[#1E4FD8] hover:bg-blue-100 transition-colors cursor-pointer shadow-xs group"
+                title="عرض سجل تاريخ ومصادر النقاط"
+              >
+                <History className="h-3.5 w-3.5 text-[#1E4FD8] group-hover:rotate-[-20deg] transition-transform" />
+                <span>سجل النقاط ({rankStats.points.toLocaleString('ar-EG')})</span>
               </button>
 
               {activeStudent.walletBalance !== undefined && (
@@ -445,6 +456,16 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
               >
                 <Gift className="h-4 w-4 text-amber-600" />
                 <span>عجلة الحظ ({activeStudent.wheelSpins || 0})</span>
+              </button>
+
+              {/* Point History Button */}
+              <button
+                onClick={() => onNavigate('point-history')}
+                className="flex h-9 sm:h-11 items-center gap-1.5 sm:gap-2 px-3 sm:px-4 rounded-xl border border-blue-200 bg-blue-50/90 text-xs sm:text-sm font-bold text-[#1E4FD8] hover:bg-blue-100 transition-all cursor-pointer shadow-xs"
+                title="سجل تاريخ النقاط والمكافآت وتفاصيل كل نقطة حصلت عليها"
+              >
+                <History className="h-4 w-4 text-[#1E4FD8]" />
+                <span>سجل النقاط</span>
               </button>
 
               {onOpenEditProfileModal && (
@@ -739,6 +760,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         <StudentLevelRankCard
           stats={rankStats}
           onOpenLeaderboard={() => onNavigate('leaderboard')}
+          onOpenPointHistory={() => onNavigate('point-history')}
         />
 
       </section>

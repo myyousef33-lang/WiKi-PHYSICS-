@@ -117,6 +117,7 @@ export function parsePathToRoute(pathname: string): { view: string; params: Reco
   if (segments[0] === 'ai-assistant') return { view: 'ai-assistant', params: {} };
   if (segments[0] === 'my-results') return { view: 'my-results', params: {} };
   if (segments[0] === 'weakness-profile') return { view: 'weakness-profile', params: {} };
+  if (segments[0] === 'point-history' || segments[0] === 'points-history' || segments[0] === 'points') return { view: 'point-history', params: {} };
 
   return { view: 'home', params: {} };
 }
@@ -154,6 +155,8 @@ export function getRoutePath(view: string, params: Record<string, any> = {}): st
       return '/my-results';
     case 'weakness-profile':
       return '/weakness-profile';
+    case 'point-history':
+      return '/point-history';
     default:
       return '/';
   }

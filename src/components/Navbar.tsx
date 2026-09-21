@@ -20,7 +20,8 @@ import {
   Edit3,
   Wallet,
   ChevronDown,
-  Gift
+  Gift,
+  History
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { Student } from '../types';
@@ -112,7 +113,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'leaderboard', label: 'لوحة الشرف والأوائل', desc: 'ترتيب الطلاب المتفوقين ونقاط التميز', icon: Trophy, color: 'text-yellow-400', bg: 'bg-yellow-500/15' },
     ...(student ? [
       { id: 'weakness-profile', label: 'تشخيص نقاط الضعف', desc: 'تحليل أخطائك في الامتحانات والتوصيات المخصصة', icon: Brain, color: 'text-purple-400', bg: 'bg-purple-500/15' },
-      { id: 'my-results', label: 'سجل نتائجي ودرجاتي', desc: 'عرض درجات الامتحانات والشهادات المكتسبة', icon: Award, color: 'text-blue-400', bg: 'bg-blue-500/15' }
+      { id: 'my-results', label: 'سجل نتائجي ودرجاتي', desc: 'عرض درجات الامتحانات والشهادات المكتسبة', icon: Award, color: 'text-blue-400', bg: 'bg-blue-500/15' },
+      { id: 'point-history', label: 'سجل تاريخ النقاط', desc: 'عرض تفاصيل ومصادر كل نقطة مع التاريخ والوقت', icon: History, color: 'text-amber-500', bg: 'bg-amber-500/15' }
     ] : [])
   ];
 
@@ -127,7 +129,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'ai-assistant', label: 'المساعد الذكي', icon: Bot },
     { id: 'leaderboard', label: 'لوحة الشرف', icon: Trophy },
     { id: 'weakness-profile', label: 'تشخيص ضعفي', icon: Brain, authRequired: true },
-    { id: 'my-results', label: 'نتائجي والشهادات', icon: Award, authRequired: true }
+    { id: 'my-results', label: 'نتائجي والشهادات', icon: Award, authRequired: true },
+    { id: 'point-history', label: 'سجل تاريخ النقاط', icon: History, authRequired: true }
   ];
 
   const presetAvatar = getPresetAvatar(student?.avatarUrl);
@@ -362,6 +365,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                     >
                       <GraduationCap className="h-4 w-4 text-[#1E4FD8] dark:text-[#60A5FA]" />
                       <span>لوحة دراستي ومتابعة الدروس</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        onNavigate('point-history');
+                        setUserDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 p-2.5 rounded-xl text-xs font-bold text-[#0D1B3E] dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-amber-950/60 hover:text-amber-800 transition-all text-right"
+                    >
+                      <History className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                      <span>سجل تاريخ ومصادر النقاط</span>
                     </button>
 
                     {onOpenEditProfileModal && (

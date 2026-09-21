@@ -25,7 +25,8 @@ import {
   LessonComment,
   SmartStudyRecommendation,
   Assignment,
-  AssignmentSubmission
+  AssignmentSubmission,
+  PointTransaction
 } from '../types';
 import { db, doc, getDoc, setDoc, onSnapshot } from './firebase';
 
@@ -54,7 +55,8 @@ const STORAGE_KEYS = {
   LESSON_COMMENTS: 'wikifizya_db_lesson_comments_v4',
   STUDY_RECOMMENDATIONS: 'wikifizya_db_study_recommendations_v4',
   ASSIGNMENTS: 'wikifizya_db_assignments_v4',
-  ASSIGNMENT_SUBMISSIONS: 'wikifizya_db_assignment_submissions_v4'
+  ASSIGNMENT_SUBMISSIONS: 'wikifizya_db_assignment_submissions_v4',
+  POINT_TRANSACTIONS: 'wikifizya_db_point_transactions_v4'
 };
 
 // Phone Number Normalization (Handles Arabic-Indic numerals, spaces, dashes, country codes)
@@ -1369,6 +1371,22 @@ export const StorageService = {
     attempts.unshift(newAttempt);
     setStored(STORAGE_KEYS.ATTEMPTS, attempts);
 
+    // Record point transaction if student earned points
+    if (attemptData.score > 0) {
+      try {
+        const percentageStr = Math.round(((attemptData.score || 0) / (attemptData.maxScore || 1)) * 100);
+        this.addPointTransaction({
+          studentId: attemptData.studentId,
+          amount: attemptData.score,
+          type: 'quiz_exam',
+          title: `حل اختبار: ${attemptData.examTitle || 'اختبار فيزياء'}`,
+          description: `الدرجة المحققة: ${attemptData.score} من ${attemptData.maxScore} (${percentageStr}%)`,
+          referenceId: attemptData.examId,
+          createdAt: newAttempt.submittedAt
+        });
+      } catch (_) {}
+    }
+
     // If passed exam with > 50%, award 1 spin
     const maxScore = attemptData.maxScore || 1;
     const percentage = (attemptData.score / maxScore) * 100;
@@ -1556,9 +1574,23 @@ export const StorageService = {
         }
       }
 
+      const bonusPoints = 50;
+      try {
+        this.grantBonusPointsToStudent(student.id, bonusPoints, `مكافأة كود تفعيل: ${key.targetTitle || key.targetName || 'كود دراسي'}`);
+        this.addPointTransaction({
+          studentId: student.id,
+          amount: bonusPoints,
+          type: 'activation_code',
+          title: `كود تفعيل: ${key.targetTitle || key.targetName || 'كورس الفيزياء'}`,
+          description: `مكافأة تفعيل الكود (${key.code}) والاشتراك بنجاح`,
+          referenceId: key.code,
+          createdAt: new Date().toISOString()
+        });
+      } catch (_) {}
+
       return {
         success: true,
-        message: `تهانينا! تم تفعيل الاشتراك بنجاح في: ${key.targetTitle || key.targetName || 'كورس الفيزياء'}!`,
+        message: `تهانينا! تم تفعيل الاشتراك بنجاح في: ${key.targetTitle || key.targetName || 'كورس الفيزياء'}! (+${bonusPoints} نقطة)`,
         type: 'course',
         itemTitle: key.targetTitle || key.targetName || 'كورس الفيزياء'
       };
@@ -1568,9 +1600,23 @@ export const StorageService = {
         student.unlockedPdfIds.push(key.targetId);
         this.saveStudent(student);
       }
+      const bonusPoints = 50;
+      try {
+        this.grantBonusPointsToStudent(student.id, bonusPoints, `مكافأة كود تفعيل: ${key.targetTitle || key.targetName || 'مذكرة دراسية'}`);
+        this.addPointTransaction({
+          studentId: student.id,
+          amount: bonusPoints,
+          type: 'activation_code',
+          title: `كود تفعيل: ${key.targetTitle || key.targetName || 'المذكرة الدراسية'}`,
+          description: `مكافأة تفعيل الكود (${key.code}) وتحميل المذكرة بنجاح`,
+          referenceId: key.code,
+          createdAt: new Date().toISOString()
+        });
+      } catch (_) {}
+
       return {
         success: true,
-        message: `تم فتح وتحميل المذكرة بنجاح: ${key.targetTitle || key.targetName || 'المذكرة'}!`,
+        message: `تم فتح وتحميل المذكرة بنجاح: ${key.targetTitle || key.targetName || 'المذكرة'}! (+${bonusPoints} نقطة)`,
         type: 'pdf',
         itemTitle: key.targetTitle || key.targetName
       };
@@ -2083,6 +2129,16 @@ export const StorageService = {
 
     const sorted = leaderboard.sort((a, b) => b.points - a.points).map((entry, idx) => ({ ...entry, rank: idx + 1 }));
     setStored(STORAGE_KEYS.LEADERBOARD, sorted);
+
+    try {
+      this.addPointTransaction({
+        studentId: student.id,
+        amount: points,
+        type: badgeTitle.includes('تحدي') ? 'weekly_challenge' : badgeTitle.includes('كود') ? 'activation_code' : 'teacher_bonus',
+        title: badgeTitle || 'مكافأة المعلم',
+        description: `تمت إضافتها بواسطة أستاذ أحمد صلاح تشجيعاً للمثابرة والتميز (+${points} نقطة)`
+      });
+    } catch (_) {}
   },
   getAllPlatformWeaknesses(): { conceptName: string; chapterOrUnit: string; frequency: number; studentCount: number; suggestedAction: string }[] {
     const profiles = this.getWeaknessProfiles();
@@ -2852,5 +2908,84 @@ export const StorageService = {
     } catch (err: any) {
       return { success: false, error: err?.message || 'تعذر الوصول إلى الخادم' };
     }
+  },
+
+  // === Point History & Transactions (سجل تاريخ النقاط) ===
+  getPointTransactions(studentId?: string): PointTransaction[] {
+    let list = getStored<PointTransaction[]>(STORAGE_KEYS.POINT_TRANSACTIONS, []);
+
+    // Smart backfill/reconciliation if student has attempts/points but no recorded transactions yet
+    if (studentId) {
+      const studentTx = list.filter(t => t.studentId === studentId);
+      if (studentTx.length === 0) {
+        // Synthesize transactions from existing real exam attempts
+        const attempts = this.getStudentAttempts(studentId);
+        const newTxList: PointTransaction[] = [];
+
+        attempts.forEach(att => {
+          if (att.score > 0) {
+            const percentageStr = Math.round(((att.score || 0) / (att.maxScore || 1)) * 100);
+            newTxList.push({
+              id: `pt-att-${att.id}`,
+              studentId,
+              amount: att.score,
+              type: 'quiz_exam',
+              title: `حل اختبار: ${att.examTitle || 'اختبار فيزياء'}`,
+              description: `الدرجة المحققة: ${att.score} من ${att.maxScore} (${percentageStr}%)`,
+              referenceId: att.examId,
+              createdAt: att.submittedAt || new Date().toISOString()
+            });
+          }
+        });
+
+        // Check if leaderboard has points beyond exam attempts (e.g. from lucky wheel or teacher rewards)
+        const leaderboard = this.getLeaderboard();
+        const entry = leaderboard.find(l => l.studentId === studentId);
+        const currentTotal = entry ? entry.points : 0;
+        const examTotal = newTxList.reduce((acc, t) => acc + t.amount, 0);
+
+        if (currentTotal > examTotal) {
+          const diff = currentTotal - examTotal;
+          newTxList.push({
+            id: `pt-wheel-${studentId}`,
+            studentId,
+            amount: diff,
+            type: 'lucky_wheel',
+            title: 'عجلة الحظ ومكافآت التميز',
+            description: `مجموع نقاط الجوائز ومكافآت عجلة الحظ المكتسبة (+${diff} نقطة)`,
+            createdAt: new Date().toISOString()
+          });
+        }
+
+        if (newTxList.length > 0) {
+          newTxList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          list = [...newTxList, ...list];
+          setStored(STORAGE_KEYS.POINT_TRANSACTIONS, list);
+          return newTxList;
+        }
+      }
+      return studentTx.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+
+    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  addPointTransaction(data: Omit<PointTransaction, 'id' | 'createdAt'> & { createdAt?: string }): PointTransaction {
+    const list = getStored<PointTransaction[]>(STORAGE_KEYS.POINT_TRANSACTIONS, []);
+    const newTx: PointTransaction = {
+      id: 'pt-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
+      studentId: data.studentId,
+      amount: data.amount,
+      type: data.type,
+      title: data.title,
+      description: data.description,
+      referenceId: data.referenceId,
+      createdAt: data.createdAt || new Date().toISOString()
+    };
+
+    list.unshift(newTx);
+    if (list.length > 2000) list.pop();
+    setStored(STORAGE_KEYS.POINT_TRANSACTIONS, list);
+    return newTx;
   }
 };

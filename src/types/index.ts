@@ -454,3 +454,25 @@ export interface AIChatMessage {
   courseId?: string;
 }
 
+export type PointSourceType = 
+  | 'quiz_exam' 
+  | 'lucky_wheel' 
+  | 'activation_code' 
+  | 'weekly_challenge' 
+  | 'teacher_bonus' 
+  | 'streak_reward' 
+  | 'assignment'
+  | 'other';
+
+export interface PointTransaction {
+  id: string;
+  studentId: string;
+  amount: number;
+  type: PointSourceType;
+  title: string;
+  description?: string;
+  referenceId?: string;
+  createdAt: string; // ISO format
+}
+
+

@@ -18,8 +18,9 @@ import {
 import confetti from 'canvas-confetti';
 import { StorageService } from '../services/storage';
 import { LeaderboardEntry, WeeklyChallenge, WeeklyChallengeQuestion } from '../types';
-import { calculateStudentRankStats, STUDENT_LEVELS } from '../utils/studentLevels';
+import { calculateStudentRankStats, STUDENT_LEVELS, getStudentLevel } from '../utils/studentLevels';
 import { StudentLevelRankCard } from './StudentLevelRankCard';
+import { RankTierIcon } from './RankTierIcon';
 
 interface LeaderboardViewProps {
   onNavigate: (view: string, params?: any) => void;
@@ -128,6 +129,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({ onNavigate }) 
               {leaderboard.slice(0, 10).map((entry, idx) => {
                 const isCurrent = student && entry.studentId === student.id;
                 const rankNum = idx + 1;
+                const entryLevel = getStudentLevel(entry.points);
 
                 return (
                   <div
@@ -142,20 +144,37 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({ onNavigate }) 
                       {/* Rank Badge */}
                       <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-black text-sm ${
                         rankNum === 1 
-                          ? 'bg-[#F5B301] text-[#0D1B3E] shadow-xs' 
+                          ? 'bg-gradient-to-tr from-amber-400 via-yellow-400 to-amber-300 text-slate-950 ring-1 ring-amber-400/60 shadow-xs' 
                           : rankNum === 2 
-                          ? 'bg-slate-200 text-[#0D1B3E]' 
+                          ? 'bg-gradient-to-tr from-slate-200 via-slate-100 to-zinc-300 text-slate-800 ring-1 ring-slate-300 shadow-xs' 
                           : rankNum === 3 
-                          ? 'bg-amber-100 text-amber-900' 
+                          ? 'bg-gradient-to-tr from-[#9A3412] via-[#C2410C] to-[#7C2D12] text-amber-100 ring-1 ring-[#EA580C]/50 shadow-xs' 
                           : 'bg-[#F5F7FA] text-[#6B7280] border border-slate-200'
                       }`}>
-                        {rankNum <= 3 ? <Trophy className={`h-4 w-4 ${rankNum === 1 ? 'text-[#0D1B3E]' : rankNum === 2 ? 'text-slate-700' : 'text-amber-800'}`} /> : rankNum}
+                        {rankNum <= 3 ? (
+                          <Trophy className={`h-4 w-4 ${
+                            rankNum === 1 
+                              ? 'text-slate-950 fill-slate-950' 
+                              : rankNum === 2 
+                              ? 'text-slate-700 fill-slate-400/30' 
+                              : 'text-amber-100 fill-amber-200/30'
+                          }`} />
+                        ) : (
+                          rankNum
+                        )}
                       </div>
 
                       {/* Student Info */}
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <h3 className="text-sm font-bold text-[#0D1B3E]">{entry.studentName}</h3>
+                          
+                          {/* Rank Tier Badge */}
+                          <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.2 text-[10px] font-bold border ${entryLevel.badgeClass}`}>
+                            <RankTierIcon tier={entryLevel.tier} className="h-3 w-3 shrink-0" />
+                            <span>{entryLevel.badge}</span>
+                          </span>
+
                           {rankNum === 1 && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 px-2.5 py-0.5 text-[10px] font-black shadow-2xs">
                               <Crown className="h-3 w-3 text-slate-950 fill-slate-950" />

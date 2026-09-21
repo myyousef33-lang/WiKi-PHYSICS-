@@ -9,7 +9,8 @@ import {
   TrendingUp,
   Shield,
   ChevronLeft,
-  Star
+  Star,
+  History
 } from 'lucide-react';
 import { StudentRankStats, STUDENT_LEVELS } from '../utils/studentLevels';
 import { RankTierIcon } from './RankTierIcon';
@@ -17,6 +18,7 @@ import { RankTierIcon } from './RankTierIcon';
 interface StudentLevelRankCardProps {
   stats: StudentRankStats;
   onOpenLeaderboard?: () => void;
+  onOpenPointHistory?: () => void;
   className?: string;
   compact?: boolean;
 }
@@ -24,6 +26,7 @@ interface StudentLevelRankCardProps {
 export const StudentLevelRankCard: React.FC<StudentLevelRankCardProps> = ({
   stats,
   onOpenLeaderboard,
+  onOpenPointHistory,
   className = '',
   compact = false
 }) => {
@@ -68,7 +71,7 @@ export const StudentLevelRankCard: React.FC<StudentLevelRankCardProps> = ({
 
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <RankTierIcon tier={level.tier} className="h-3.5 w-3.5 text-[#1E4FD8] shrink-0" />
+              <RankTierIcon tier={level.tier} className="h-3.5 w-3.5 shrink-0" />
               <span className="text-xs font-black text-[#0D1B3E] dark:text-white truncate">
                 {level.title}
               </span>
@@ -101,12 +104,17 @@ export const StudentLevelRankCard: React.FC<StudentLevelRankCardProps> = ({
     <div className={`rounded-3xl border transition-all relative overflow-hidden p-5 sm:p-6 ${
       isFirstOnPlatform 
         ? 'bg-gradient-to-br from-amber-500/10 via-yellow-500/5 to-white dark:from-amber-950/40 dark:via-[#16224D] dark:to-[#0D1B3E] border-amber-300 dark:border-amber-500/60 shadow-md' 
+        : level.tier === 'bronze'
+        ? 'bg-gradient-to-br from-[#7C2D12]/5 via-[#C2410C]/5 to-white dark:from-[#7C2D12]/20 dark:via-[#16224D] dark:to-[#0D1B3E] border-[#EA580C]/30 dark:border-[#C2410C]/40 shadow-xs'
         : 'bg-white dark:bg-[#16224D] border-slate-200/90 dark:border-slate-800 shadow-sm'
     } ${className}`}>
       
       {/* Decorative background glow */}
       {isFirstOnPlatform && (
         <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-amber-400/20 blur-3xl pointer-events-none" />
+      )}
+      {level.tier === 'bronze' && !isFirstOnPlatform && (
+        <div className="absolute -top-16 -left-16 h-40 w-40 rounded-full bg-[#EA580C]/10 blur-3xl pointer-events-none" />
       )}
 
       <div className="relative z-10 space-y-4">
@@ -121,7 +129,9 @@ export const StudentLevelRankCard: React.FC<StudentLevelRankCardProps> = ({
                 : rank === 2 
                 ? 'bg-gradient-to-br from-slate-200 to-slate-400 text-slate-900 ring-2 ring-slate-300' 
                 : rank === 3 
-                ? 'bg-gradient-to-br from-amber-600 to-amber-700 text-amber-100 ring-2 ring-amber-600/30' 
+                ? 'bg-gradient-to-br from-[#9A3412] via-[#C2410C] to-[#7C2D12] text-amber-100 ring-2 ring-[#EA580C]/40' 
+                : level.tier === 'bronze'
+                ? 'bg-gradient-to-br from-[#7C2D12]/15 to-[#C2410C]/20 text-[#C2410C] dark:text-[#FB923C] border border-[#EA580C]/30'
                 : 'bg-blue-50 dark:bg-blue-950/80 text-[#1E4FD8] dark:text-blue-300 border border-blue-200 dark:border-blue-800'
             }`}>
               {isFirstOnPlatform ? (
@@ -129,7 +139,10 @@ export const StudentLevelRankCard: React.FC<StudentLevelRankCardProps> = ({
               ) : isTopThree ? (
                 <Trophy className="h-6 w-6 sm:h-7 sm:w-7" />
               ) : (
-                <span className="font-mono text-lg sm:text-xl">#{rank}</span>
+                <div className="flex flex-col items-center justify-center">
+                  <RankTierIcon tier={level.tier} className="h-5 w-5 mb-0.5" />
+                  <span className="font-mono text-xs font-black">#{rank}</span>
+                </div>
               )}
             </div>
 
@@ -215,12 +228,45 @@ export const StudentLevelRankCard: React.FC<StudentLevelRankCardProps> = ({
             const isReached = points >= lvl.minPoints;
             const isCurrent = level.level === lvl.level;
 
+            // Tier-specific styles when active/current
+            const currentTierStyles: Record<string, { container: string; iconBg: string }> = {
+              bronze: {
+                container: 'bg-gradient-to-b from-[#7C2D12]/15 to-[#C2410C]/20 border-[#EA580C] ring-2 ring-[#EA580C]/40 shadow-sm text-[#C2410C] dark:text-[#FB923C]',
+                iconBg: 'bg-[#7C2D12]/25 text-[#C2410C]'
+              },
+              silver: {
+                container: 'bg-gradient-to-b from-slate-100 to-zinc-200 dark:bg-slate-800 border-slate-400 ring-2 ring-slate-300 dark:ring-slate-600 shadow-sm text-slate-800 dark:text-slate-100',
+                iconBg: 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200'
+              },
+              gold: {
+                container: 'bg-gradient-to-b from-amber-50 to-yellow-100 dark:bg-amber-950/60 border-amber-400 ring-2 ring-amber-300 dark:ring-amber-500/50 shadow-sm text-amber-950 dark:text-amber-200',
+                iconBg: 'bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300'
+              },
+              platinum: {
+                container: 'bg-gradient-to-b from-cyan-50 to-teal-100 dark:bg-cyan-950/60 border-cyan-400 ring-2 ring-cyan-300 dark:ring-cyan-500/50 shadow-sm text-cyan-950 dark:text-cyan-200',
+                iconBg: 'bg-cyan-100 dark:bg-cyan-900/60 text-cyan-700 dark:text-cyan-300'
+              },
+              diamond: {
+                container: 'bg-gradient-to-b from-indigo-50 to-purple-100 dark:bg-indigo-950/60 border-indigo-400 ring-2 ring-indigo-300 dark:ring-indigo-500/50 shadow-sm text-indigo-950 dark:text-indigo-200',
+                iconBg: 'bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300'
+              },
+              master: {
+                container: 'bg-gradient-to-b from-amber-100 via-yellow-100 to-amber-200 dark:bg-amber-950/80 border-amber-400 ring-2 ring-amber-400 shadow-sm text-slate-950 dark:text-amber-200',
+                iconBg: 'bg-amber-200 dark:bg-amber-900/80 text-amber-800 dark:text-amber-300'
+              }
+            };
+
+            const activeStyle = currentTierStyles[lvl.tier] || {
+              container: 'bg-blue-50 dark:bg-blue-950/80 border-[#1E4FD8] ring-2 ring-blue-400/40 shadow-xs',
+              iconBg: 'bg-blue-100 text-[#1E4FD8]'
+            };
+
             return (
               <div
                 key={lvl.level}
                 className={`flex flex-col items-center justify-center p-2.5 rounded-xl text-center border transition-all ${
                   isCurrent 
-                    ? 'bg-blue-50 dark:bg-blue-950/80 border-[#1E4FD8] ring-2 ring-blue-400/40 shadow-xs' 
+                    ? activeStyle.container 
                     : isReached 
                     ? 'bg-emerald-50/60 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300' 
                     : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 opacity-60'
@@ -228,7 +274,7 @@ export const StudentLevelRankCard: React.FC<StudentLevelRankCardProps> = ({
                 title={`${lvl.title} (${lvl.minPoints} نقطة)`}
               >
                 <div className={`p-1.5 rounded-lg mb-1 ${
-                  isCurrent ? 'bg-blue-100 text-[#1E4FD8]' : isReached ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                  isCurrent ? activeStyle.iconBg : isReached ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
                 }`}>
                   <RankTierIcon tier={lvl.tier} className="h-4 w-4" />
                 </div>
@@ -243,18 +289,28 @@ export const StudentLevelRankCard: React.FC<StudentLevelRankCardProps> = ({
           })}
         </div>
 
-        {/* CTA to Leaderboard */}
-        {onOpenLeaderboard && (
-          <div className="pt-1 flex justify-end">
+        {/* CTAs */}
+        <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 dark:border-slate-800">
+          {onOpenPointHistory ? (
+            <button
+              onClick={onOpenPointHistory}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 dark:text-amber-300 hover:text-amber-900 transition-colors cursor-pointer"
+            >
+              <History className="h-3.5 w-3.5 text-amber-600" />
+              <span>سجل تاريخ ومصادر النقاط</span>
+            </button>
+          ) : <div />}
+
+          {onOpenLeaderboard && (
             <button
               onClick={onOpenLeaderboard}
-              className="inline-flex items-center gap-2 text-xs font-black text-[#1E4FD8] dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs font-black text-[#1E4FD8] dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors cursor-pointer"
             >
-              <span>فتح لوحة الشرف ومنافسة الأوائل</span>
+              <span>لوحة الشرف وترتيب الأوائل</span>
               <ChevronLeft className="h-4 w-4" />
             </button>
-          </div>
-        )}
+          )}
+        </div>
 
       </div>
     </div>
