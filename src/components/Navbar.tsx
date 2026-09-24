@@ -100,7 +100,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   // Primary top-level desktop navigation items
   const primaryNavItems = [
     { id: 'home', label: 'الرئيسية', icon: BookOpen },
-    ...(student ? [{ id: 'dashboard', label: 'لوحة دراستي', icon: GraduationCap }] : []),
+    ...(student ? [{ id: 'dashboard', label: 'لوحة أدائي', icon: GraduationCap }] : []),
     { id: student ? 'my-courses' : 'courses-catalog', label: student ? 'كورساتي' : 'المناهج والكورسات', icon: PlayCircle },
     { id: 'pdf-library', label: 'المذكرات والملازم', icon: FileText }
   ];
@@ -120,7 +120,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const allMobileNavItems = [
     { id: 'home', label: 'الرئيسية', icon: BookOpen },
-    { id: 'dashboard', label: 'لوحة دراستي', icon: GraduationCap, authRequired: true },
+    { id: 'dashboard', label: 'لوحة أدائي', icon: GraduationCap, authRequired: true },
     { id: 'my-courses', label: 'كورساتي', icon: PlayCircle, authRequired: true },
     { id: 'courses-catalog', label: 'المناهج والكورسات', icon: BookOpen },
     { id: 'pdf-library', label: 'المذكرات والملازم', icon: FileText },

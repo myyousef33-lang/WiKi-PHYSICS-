@@ -49,6 +49,7 @@ export interface Student {
     shoes?: string;
   };
   lastDailySpinDate?: string; // YYYY-MM-DD
+  hasCompletedOnboarding?: boolean;
 }
 
 export interface CourseReview {

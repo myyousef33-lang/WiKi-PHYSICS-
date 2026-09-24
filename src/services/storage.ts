@@ -28,7 +28,7 @@ import {
   AssignmentSubmission,
   PointTransaction
 } from '../types';
-import { db, doc, getDoc, setDoc, onSnapshot } from './firebase';
+import { db, doc, getDoc, setDoc, onSnapshot } from './supabaseClient';
 
 const STORAGE_KEYS = {
   STUDENTS: 'wikifizya_db_students_v4',
@@ -988,6 +988,20 @@ export const StorageService = {
     if (!certs.some(c => c.id === cert.id)) {
       certs.unshift(cert);
       this.updateStudent(studentId, { earnedCertificates: certs });
+    }
+  },
+  completeOnboarding(studentId: string): void {
+    this.updateStudent(studentId, { hasCompletedOnboarding: true });
+    const current = this.getCurrentStudent();
+    if (current && current.id === studentId) {
+      this.setCurrentStudent({ ...current, hasCompletedOnboarding: true });
+    }
+  },
+  resetOnboarding(studentId: string): void {
+    this.updateStudent(studentId, { hasCompletedOnboarding: false });
+    const current = this.getCurrentStudent();
+    if (current && current.id === studentId) {
+      this.setCurrentStudent({ ...current, hasCompletedOnboarding: false });
     }
   },
 
