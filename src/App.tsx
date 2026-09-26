@@ -28,6 +28,7 @@ import { GlobalAntiScreenshotShield } from './components/GlobalAntiScreenshotShi
 import { StudentWalletModal } from './components/StudentWalletModal';
 import { FloatingSupportButton } from './components/FloatingSupportButton';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { CinematicIntro3D } from './components/CinematicIntro3D';
 import { StorageService, subscribeToStorage } from './services/storage';
 import { PresenceService } from './services/presence';
 import { EarnedCertificate, Student } from './types';
@@ -53,6 +54,14 @@ export default function App() {
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [selectedCertificate, setSelectedCertificate] = useState<EarnedCertificate | null>(null);
+  const [showIntro, setShowIntro] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const hash = window.location.hash.replace('#', '').toLowerCase();
+    if (hash === 'admin' || hash === 'admin-portal' || hash === 'portal' || hash === 'control') {
+      return false;
+    }
+    return initialRoute.view === 'home';
+  });
 
   useEffect(() => {
     // Initialize presence heartbeat and listener
@@ -228,6 +237,9 @@ export default function App() {
 
   return (
     <GlobalAntiScreenshotShield>
+      {showIntro && !isAdminSecretOpen && currentView !== 'admin' && (
+        <CinematicIntro3D onFinish={() => setShowIntro(false)} />
+      )}
       <div className="min-h-screen bg-[#F5F7FA] text-[#0D1B3E] flex flex-col font-sans selection:bg-[#1E4FD8] selection:text-white overflow-x-hidden max-w-full w-full relative">
       
       {/* Top Navbar */}
