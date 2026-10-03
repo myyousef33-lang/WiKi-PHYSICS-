@@ -1,270 +1,574 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 
-interface CinematicIntro3DProps {
+interface CinematicIntroProps {
   onFinish: () => void;
 }
 
-const TOTAL_INTRO_DURATION_MS = 18500; // 18.5 seconds (within 15-20s target)
-const REDUCED_MOTION_DURATION_MS = 3500;
+/**
+ * ============================================================================
+ * WiKi-PHYSICS CINEMATIC OPENING INTRO CONFIGURATION
+ * ============================================================================
+ * - To adjust total duration: change INTRO_TOTAL_DURATION_SEC (default: 11.0s)
+ * - To adjust when the skip button appears: change SKIP_BUTTON_APPEAR_SEC (default: 2.0s)
+ * - To disable intro completely in development: see src/App.tsx (showIntro state)
+ */
+export const INTRO_TOTAL_DURATION_SEC = 11.0;
+export const SKIP_BUTTON_APPEAR_SEC = 2.0;
+const REDUCED_MOTION_DURATION_SEC = 2.5;
 
-export const CinematicIntro3D: React.FC<CinematicIntro3DProps> = ({ onFinish }) => {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  radius: number;
+  alpha: number;
+  targetAlpha: number;
+  orbitRadius: number;
+  orbitAngle: number;
+  orbitSpeed: number;
+  color: string;
+}
+
+const SUBTLE_EQUATIONS = [
+  { text: 'E = mc²', xRatio: 0.18, yRatio: 0.28 },
+  { text: 'F = ma', xRatio: 0.82, yRatio: 0.24 },
+  { text: 'V = IR', xRatio: 0.16, yRatio: 0.72 },
+  { text: 'λ = h / p', xRatio: 0.84, yRatio: 0.68 },
+  { text: 'ΔE = h · ν', xRatio: 0.50, yRatio: 0.84 },
+  { text: '∇ × B = μ₀ J', xRatio: 0.32, yRatio: 0.18 },
+  { text: 'Φ_B = B · A', xRatio: 0.68, yRatio: 0.18 }
+];
+
+export const CinematicIntro3D: React.FC<CinematicIntroProps> = ({ onFinish }) => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const animFrameRef = useRef<number>(0);
+  const startTimeRef = useRef<number>(0);
   const completedRef = useRef<boolean>(false);
 
+  // Check prefers-reduced-motion
   const [prefersReducedMotion] = useState<boolean>(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return false;
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   });
 
-  const [isMobile] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return window.innerWidth < 768;
-  });
-
-  // Master timeline state in seconds (0.0 -> 18.5)
   const [elapsedSec, setElapsedSec] = useState<number>(0);
-  const [videoReady, setVideoReady] = useState<boolean>(false);
-  const [videoFailed, setVideoFailed] = useState<boolean>(false);
-  const [isDissolvingOut, setIsDissolvingOut] = useState<boolean>(false);
+  const [isTransitioningToSite, setIsTransitioningToSite] = useState<boolean>(false);
 
-  const totalDurationMs = prefersReducedMotion ? REDUCED_MOTION_DURATION_MS : TOTAL_INTRO_DURATION_MS;
+  const totalDuration = prefersReducedMotion ? REDUCED_MOTION_DURATION_SEC : INTRO_TOTAL_DURATION_SEC;
 
-  // Immediate skip when user clicks "تخطي المقدمة" or presses Escape
-  const handleSkipNow = useCallback(() => {
+  // Cleanup & trigger completion
+  const handleComplete = useCallback(() => {
     if (completedRef.current) return;
     completedRef.current = true;
-    if (videoRef.current) {
-      try {
-        videoRef.current.pause();
-      } catch {
-        // Ignore pause errors
-      }
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
     }
     onFinish();
   }, [onFinish]);
 
-  // Smooth cinematic dissolve into homepage when the film concludes
-  const handleFilmEnded = useCallback(() => {
-    if (completedRef.current) return;
-    completedRef.current = true;
-    setIsDissolvingOut(true);
-    window.setTimeout(() => {
-      onFinish();
-    }, 800);
-  }, [onFinish]);
+  // Immediate skip (0ms delay)
+  const handleSkipNow = useCallback(() => {
+    handleComplete();
+  }, [handleComplete]);
 
-  // Escape key skips immediately
+  // Keyboard accessibility: Escape skips immediately
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
         handleSkipNow();
       }
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleSkipNow]);
 
-  // Synchronized master clock
+  // Canvas-based particles, energy fields, and gravitational collapse simulation
   useEffect(() => {
-    let rafId = 0;
-    const startPerf = performance.now();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-    const vid = videoRef.current;
-    if (vid && !prefersReducedMotion) {
-      const playPromise = vid.play();
-      if (playPromise && typeof playPromise.catch === 'function') {
-        playPromise.catch(() => {
-          setVideoFailed(true);
-        });
-      }
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
+
+    const handleResize = () => {
+      if (!canvas) return;
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    };
+    window.addEventListener('resize', handleResize);
+
+    // Generate lightweight quantum particles
+    const particleCount = prefersReducedMotion ? 20 : Math.min(65, Math.floor(width / 20));
+    const particles: Particle[] = [];
+    const colors = ['#38BDF8', '#60A5FA', '#93C5FD', '#F5B301', '#E0F2FE'];
+
+    for (let i = 0; i < particleCount; i++) {
+      const orbitRadius = 40 + Math.random() * (Math.min(width, height) * 0.42);
+      const orbitAngle = Math.random() * Math.PI * 2;
+      particles.push({
+        x: width / 2 + Math.cos(orbitAngle) * orbitRadius,
+        y: height / 2 + Math.sin(orbitAngle) * orbitRadius,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.4,
+        radius: 1 + Math.random() * 2,
+        alpha: 0,
+        targetAlpha: 0.35 + Math.random() * 0.55,
+        orbitRadius,
+        orbitAngle,
+        orbitSpeed: (0.004 + Math.random() * 0.008) * (Math.random() > 0.5 ? 1 : -1),
+        color: colors[i % colors.length]
+      });
     }
 
-    const updateClock = (now: number) => {
-      const wallElapsedMs = now - startPerf;
+    startTimeRef.current = performance.now();
 
-      if (prefersReducedMotion) {
-        const mappedSec = 16.0 + Math.min(wallElapsedMs / totalDurationMs, 1) * 2.5;
-        setElapsedSec(mappedSec);
-        if (wallElapsedMs >= totalDurationMs) {
-          handleFilmEnded();
-          return;
-        }
-        rafId = window.requestAnimationFrame(updateClock);
+    const render = (now: number) => {
+      const elapsed = (now - startTimeRef.current) / 1000;
+      setElapsedSec(elapsed);
+
+      // Trigger seamless exit at Scene 6
+      if (elapsed >= 10.0 && !isTransitioningToSite && !prefersReducedMotion) {
+        setIsTransitioningToSite(true);
+      }
+
+      if (elapsed >= totalDuration) {
+        handleComplete();
         return;
       }
 
-      let currentSec = wallElapsedMs / 1000;
-      if (vid && !vid.paused && !vid.ended && vid.currentTime > 0.1 && !videoFailed) {
-        currentSec = vid.currentTime;
+      // Clear with deepest midnight navy background
+      ctx.fillStyle = '#02050E';
+      ctx.fillRect(0, 0, width, height);
+
+      const cx = width / 2;
+      const cy = height / 2;
+
+      // =======================================================================
+      // SCENE 1 (0:00 -> 0:02): البداية
+      // Tiny blue singularity at center awakening gradually
+      // =======================================================================
+      if (elapsed < 2.0) {
+        const p = elapsed / 2.0;
+        // Central blue light point growing from 0 to 4px with soft ambient glow
+        const glowRadius = p * 60;
+        const radialGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(glowRadius, 1));
+        radialGlow.addColorStop(0, 'rgba(56, 189, 248, ' + (0.9 * p) + ')');
+        radialGlow.addColorStop(0.3, 'rgba(30, 79, 216, ' + (0.45 * p) + ')');
+        radialGlow.addColorStop(1, 'rgba(2, 5, 14, 0)');
+        ctx.fillStyle = radialGlow;
+        ctx.beginPath();
+        ctx.arc(cx, cy, Math.max(glowRadius, 1), 0, Math.PI * 2);
+        ctx.fill();
+
+        // Core white-blue spark
+        ctx.fillStyle = '#FFFFFF';
+        ctx.shadowColor = '#38BDF8';
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 1.2 + p * 1.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
       }
 
-      setElapsedSec(Math.min(currentSec, 18.5));
+      // =======================================================================
+      // SCENE 2 (0:02 -> 0:04): ولادة عالم الفيزياء
+      // Particles drifting, fine field lines and orbits, subtle background equations
+      // =======================================================================
+      if (elapsed >= 2.0 && elapsed < 4.2) {
+        const sceneP = (elapsed - 2.0) / 2.2;
 
-      if (wallElapsedMs >= TOTAL_INTRO_DURATION_MS) {
-        handleFilmEnded();
-      } else {
-        rafId = window.requestAnimationFrame(updateClock);
+        // Ambient radial field glow
+        const radialGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.min(width, height) * 0.45);
+        radialGlow.addColorStop(0, 'rgba(30, 79, 216, 0.22)');
+        radialGlow.addColorStop(0.5, 'rgba(56, 189, 248, 0.08)');
+        radialGlow.addColorStop(1, 'rgba(2, 5, 14, 0)');
+        ctx.fillStyle = radialGlow;
+        ctx.beginPath();
+        ctx.arc(cx, cy, Math.min(width, height) * 0.45, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Fine luminous orbital & field lines
+        ctx.strokeStyle = 'rgba(56, 189, 248, ' + (0.16 * sceneP) + ')';
+        ctx.lineWidth = 1;
+
+        // 3 elegant orbital ellipses
+        for (let i = 0; i < 3; i++) {
+          const rx = 120 + i * 55;
+          const ry = 45 + i * 22;
+          const rot = (i * Math.PI) / 3 + elapsed * 0.15;
+          ctx.beginPath();
+          ctx.ellipse(cx, cy, rx, ry, rot, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // Update and draw particles orbiting smoothly
+        for (let i = 0; i < particles.length; i++) {
+          const pt = particles[i];
+          pt.orbitAngle += pt.orbitSpeed;
+          pt.x = cx + Math.cos(pt.orbitAngle) * pt.orbitRadius;
+          pt.y = cy + Math.sin(pt.orbitAngle) * (pt.orbitRadius * 0.65);
+          pt.alpha = Math.min(pt.targetAlpha, pt.alpha + 0.02);
+
+          ctx.fillStyle = pt.color;
+          ctx.globalAlpha = pt.alpha * sceneP;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
       }
+
+      // =======================================================================
+      // SCENE 3 (0:04 -> 0:06): تجمع الطاقة & الفلاش السينمائي
+      // Particles and lines gravitate inward toward center -> Energy Core -> Blue Flash
+      // =======================================================================
+      if (elapsed >= 4.2 && elapsed < 6.0) {
+        const sceneP = (elapsed - 4.2) / 1.8;
+        const collapseSpeed = Math.pow(sceneP, 2.2);
+
+        // Core pulsation
+        const coreRadius = (1 - sceneP * 0.7) * 45 + Math.sin(elapsed * 18) * 8;
+        const coreGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(coreRadius * 2, 2));
+        coreGlow.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+        coreGlow.addColorStop(0.2, 'rgba(56, 189, 248, 0.85)');
+        coreGlow.addColorStop(0.6, 'rgba(30, 79, 216, 0.45)');
+        coreGlow.addColorStop(1, 'rgba(2, 5, 14, 0)');
+        ctx.fillStyle = coreGlow;
+        ctx.beginPath();
+        ctx.arc(cx, cy, Math.max(coreRadius * 2, 2), 0, Math.PI * 2);
+        ctx.fill();
+
+        // Inward gravitational pull of particles
+        for (let i = 0; i < particles.length; i++) {
+          const pt = particles[i];
+          const dx = cx - pt.x;
+          const dy = cy - pt.y;
+          pt.x += dx * (0.04 + collapseSpeed * 0.12);
+          pt.y += dy * (0.04 + collapseSpeed * 0.12);
+
+          // Connecting energy streak toward center
+          ctx.strokeStyle = pt.color;
+          ctx.globalAlpha = (1 - sceneP * 0.4) * 0.35;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(pt.x, pt.y);
+          ctx.lineTo(pt.x - dx * 0.1, pt.y - dy * 0.1);
+          ctx.stroke();
+
+          ctx.fillStyle = pt.color;
+          ctx.globalAlpha = 0.8;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        // At 5.7s -> 6.0s: Cinematic short electric-blue energy flash
+        if (elapsed >= 5.65) {
+          const flashP = (elapsed - 5.65) / 0.35;
+          const flashAlpha = Math.sin(flashP * Math.PI) * 0.85;
+
+          const flashGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(width, height) * 0.75);
+          flashGrad.addColorStop(0, 'rgba(255, 255, 255, ' + flashAlpha + ')');
+          flashGrad.addColorStop(0.25, 'rgba(56, 189, 248, ' + (flashAlpha * 0.9) + ')');
+          flashGrad.addColorStop(0.65, 'rgba(30, 79, 216, ' + (flashAlpha * 0.6) + ')');
+          flashGrad.addColorStop(1, 'rgba(2, 5, 14, 0)');
+          ctx.fillStyle = flashGrad;
+          ctx.fillRect(0, 0, width, height);
+        }
+      }
+
+      // =======================================================================
+      // SCENE 4 & 5 (0:06 -> 0:10): ظهور اللوجو & الإحساس التعليمي
+      // Logo emerges with 3D depth and blue glow, calm physics wave on horizon
+      // =======================================================================
+      if (elapsed >= 6.0 && elapsed < 10.0) {
+        // Ambient backdrop glow behind logo
+        const ambientGlow = ctx.createRadialGradient(cx, cy - 20, 10, cx, cy - 20, 240);
+        ambientGlow.addColorStop(0, 'rgba(56, 189, 248, 0.28)');
+        ambientGlow.addColorStop(0.45, 'rgba(30, 79, 216, 0.16)');
+        ambientGlow.addColorStop(1, 'rgba(2, 5, 14, 0)');
+        ctx.fillStyle = ambientGlow;
+        ctx.beginPath();
+        ctx.arc(cx, cy - 20, 240, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Scene 5: Gentle educational physics wave in background horizon
+        if (elapsed >= 8.0) {
+          const waveP = Math.min((elapsed - 8.0) / 1.0, 1);
+          ctx.strokeStyle = 'rgba(56, 189, 248, ' + (0.18 * waveP) + ')';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          const waveY = height * 0.78;
+          for (let x = 0; x <= width; x += 8) {
+            const y = waveY + Math.sin(x * 0.012 + elapsed * 2.2) * 14;
+            if (x === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+
+          // Subtle secondary golden wavelength
+          ctx.strokeStyle = 'rgba(245, 179, 1, ' + (0.12 * waveP) + ')';
+          ctx.beginPath();
+          for (let x = 0; x <= width; x += 8) {
+            const y = waveY + Math.sin(x * 0.018 - elapsed * 1.8) * 10;
+            if (x === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+
+        // Delicate floating quantum sparks around logo
+        for (let i = 0; i < Math.min(particles.length, 24); i++) {
+          const pt = particles[i];
+          pt.orbitAngle += pt.orbitSpeed * 0.7;
+          const r = 90 + (i % 6) * 22;
+          const px = cx + Math.cos(pt.orbitAngle) * r;
+          const py = cy - 20 + Math.sin(pt.orbitAngle) * (r * 0.5);
+
+          ctx.fillStyle = pt.color;
+          ctx.globalAlpha = 0.45;
+          ctx.beginPath();
+          ctx.arc(px, py, 1.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      // =======================================================================
+      // SCENE 6 (0:10 -> 0:11.2): الانتقال للموقع
+      // Blue light sweeps smoothly toward top right, seamless fade into homepage
+      // =======================================================================
+      if (elapsed >= 10.0) {
+        const exitP = Math.min((elapsed - 10.0) / 1.2, 1);
+        // Light moves from center toward top navbar position
+        const targetX = width > 768 ? width * 0.85 : width * 0.5;
+        const targetY = 40;
+        const lightX = cx + (targetX - cx) * exitP;
+        const lightY = cy + (targetY - cy) * exitP;
+
+        const exitGlow = ctx.createRadialGradient(lightX, lightY, 0, lightX, lightY, 180 * (1 - exitP * 0.5));
+        exitGlow.addColorStop(0, 'rgba(56, 189, 248, ' + (0.35 * (1 - exitP)) + ')');
+        exitGlow.addColorStop(1, 'rgba(2, 5, 14, 0)');
+        ctx.fillStyle = exitGlow;
+        ctx.beginPath();
+        ctx.arc(lightX, lightY, 180, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      animFrameRef.current = requestAnimationFrame(render);
     };
 
-    rafId = window.requestAnimationFrame(updateClock);
-    return () => window.cancelAnimationFrame(rafId);
-  }, [prefersReducedMotion, totalDurationMs, videoFailed, handleFilmEnded]);
+    animFrameRef.current = requestAnimationFrame(render);
 
-  // =========================================================================
-  // 5-SCENE CINEMATIC TIMELINE (0.0s -> 18.5s)
-  // =========================================================================
-  // Scene 1: 0.0s - 3.6s (بداية هادئة — Dark 3D physics world, slow camera, natural equations)
-  // Scene 2: 3.6s - 7.8s (اكتشاف الفيزياء — "الفيزياء مش حفظ..." -> "دي فهم... وتفكير... وتطبيق.")
-  // Scene 3: 7.8s - 13.2s (دخول عالم المنصة — 5 sequential in-scene elements, one at a time)
-  // Scene 4: 13.2s - 16.0s (رحلة الطالب — "اتعلم." -> "طبّق." -> "طوّر مستواك.")
-  // Scene 5: 16.0s - 18.5s (النهاية — "WiKi-PHYSICS" -> "رحلتك في الفيزياء تبدأ من هنا.")
-  const sceneIndex =
-    elapsedSec < 3.6
-      ? 1
-      : elapsedSec < 7.8
-      ? 2
-      : elapsedSec < 13.2
-      ? 3
-      : elapsedSec < 16.0
-      ? 4
-      : 5;
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [prefersReducedMotion, totalDuration, isTransitioningToSite, handleComplete]);
 
-  // Scene 2 sub-beats (slow, calm transitions)
-  const scene2ShowFirst = elapsedSec >= 3.9;
-  const scene2ShowSecond = elapsedSec >= 5.7;
+  // Stage condition flags for CSS Typography & Logo layers
+  // Scene 2 equations: visible between 2.0s and 4.8s
+  const showEquations = elapsedSec >= 2.0 && elapsedSec < 4.8;
+  // Scene 4 Logo: appears at 6.0s
+  const showLogo = elapsedSec >= 5.95;
+  // Skip button appears strictly after 2.0s as requested
+  const showSkipButton = elapsedSec >= SKIP_BUTTON_APPEAR_SEC && elapsedSec < 10.0;
 
-  // Scene 3 sequential 5 elements (never shown all at once; each appears as part of the 3D scene):
-  // 1 (7.8s - 8.88s): درس فيديو
-  // 2 (8.88s - 9.96s): سؤال تفاعلي
-  // 3 (9.96s - 11.04s): امتحان إلكتروني
-  // 4 (11.04s - 12.12s): نتيجة الطالب
-  // 5 (12.12s - 13.2s): متابعة مستوى الطالب
-  const scene3Step =
-    elapsedSec < 8.88
-      ? 1
-      : elapsedSec < 9.96
-      ? 2
-      : elapsedSec < 11.04
-      ? 3
-      : elapsedSec < 12.12
-      ? 4
-      : 5;
-
-  // Scene 4 sequential words ("اتعلم." -> "طبّق." -> "طوّر مستواك.")
-  const scene4Step = elapsedSec < 14.1 ? 1 : elapsedSec < 15.0 ? 2 : 3;
-
-  // Scene 5 sequential reveal ("WiKi-PHYSICS" -> "رحلتك في الفيزياء تبدأ من هنا.")
-  const scene5ShowSubtitle = elapsedSec >= 16.8;
-
-  const progressRatio = Math.min(Math.max(elapsedSec / 18.5, 0), 1);
+  // Scene 6 smooth dissolve: 10.0s -> 11.0s
+  const isDissolving = elapsedSec >= 10.0;
 
   return (
     <div
+      ref={containerRef}
       dir="rtl"
       role="dialog"
-      aria-label="المقدمة السينمائية لمنصة ويكي فيزياء"
-      className={`fixed inset-0 z-[9999] overflow-hidden bg-[#02050E] select-none transition-opacity duration-700 ease-out ${
-        isDissolvingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'
+      aria-label="افتتاحية منصة ويكي فيزياء"
+      className={`fixed inset-0 z-[9999] overflow-hidden bg-[#02050E] select-none transition-all duration-1000 ease-out ${
+        isDissolving ? 'opacity-0 pointer-events-none scale-102' : 'opacity-100'
       }`}
+      style={{
+        width: '100vw',
+        height: '100vh',
+      }}
     >
+      {/* Background Canvas (Particles, Fields, Energy Flash, Cosmic Atmosphere) */}
+      <canvas
+        ref={canvasRef}
+        aria-hidden="true"
+        className="absolute inset-0 h-full w-full pointer-events-none"
+      />
+
       {/* =====================================================================
-          LAYER 1: REAL WEB-OPTIMIZED CINEMATIC 3D VIDEO + FALLBACK 3D PLATES
+          SCENE 2: SUBTLE PHYSICS EQUATIONS LAYER (Floating unobtrusively in background)
          ===================================================================== */}
-      <div className="absolute inset-0 h-full w-full overflow-hidden bg-[#02050E]">
-        {/* Photorealistic 3D WebP Fallback & Base Camera Plates (Instant first frame, zero white screen) */}
-        <img
-          src="/intro-scene1.webp"
-          alt=""
-          referrerPolicy="no-referrer"
-          className={`absolute inset-0 h-full w-full object-cover transition-all duration-[2200ms] ease-out ${
-            sceneIndex === 1 ? 'opacity-90 scale-105' : 'opacity-0 scale-110'
-          }`}
-        />
-        <img
-          src="/intro-scene2.webp"
-          alt=""
-          referrerPolicy="no-referrer"
-          loading="lazy"
-          className={`absolute inset-0 h-full w-full object-cover transition-all duration-[2200ms] ease-out ${
-            sceneIndex === 2 ? 'opacity-90 scale-105' : 'opacity-0 scale-110'
-          }`}
-        />
-        <img
-          src="/intro-scene3.webp"
-          alt=""
-          referrerPolicy="no-referrer"
-          loading="lazy"
-          className={`absolute inset-0 h-full w-full object-cover transition-all duration-[2200ms] ease-out ${
-            sceneIndex === 3 || sceneIndex === 4 ? 'opacity-85 scale-105' : 'opacity-0 scale-110'
-          }`}
-        />
-        <img
-          src="/intro-scene5.webp"
-          alt=""
-          referrerPolicy="no-referrer"
-          loading="lazy"
-          className={`absolute inset-0 h-full w-full object-cover transition-all duration-[2200ms] ease-out ${
-            sceneIndex === 5 ? 'opacity-95 scale-105' : 'opacity-0 scale-110'
-          }`}
-        />
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-0 transition-opacity duration-1000 ease-out ${
+          showEquations ? 'opacity-100' : 'opacity-0'
+        }`}
+      >
+        {SUBTLE_EQUATIONS.map((item, index) => {
+          // Calculate subtle inward drift toward center as Scene 3 approaches
+          const isCollapsing = elapsedSec >= 4.2;
+          const collapseOffset = isCollapsing ? (elapsedSec - 4.2) * 45 : 0;
+          const driftX = (0.5 - item.xRatio) * collapseOffset;
+          const driftY = (0.5 - item.yRatio) * collapseOffset;
 
-        {/* Web-Optimized HTML5 Cinematic Video Layer (preload="metadata", fast WebP poster) */}
-        {!prefersReducedMotion && !videoFailed && (
-          <video
-            ref={videoRef}
-            preload="metadata"
-            poster="/intro-poster.webp"
-            muted
-            playsInline
-            autoPlay
-            onCanPlay={() => setVideoReady(true)}
-            onError={() => setVideoFailed(true)}
-            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ${
-              videoReady ? 'opacity-95' : 'opacity-0'
-            }`}
-          >
-            {!isMobile && <source src="/intro-cinematic.webm" type="video/webm" />}
-            <source
-              src={isMobile ? '/intro-cinematic-mobile.mp4' : '/intro-cinematic.mp4'}
-              type="video/mp4"
-            />
-          </video>
-        )}
-
-        {/* Measured Volumetric Lighting & Depth-of-Field Vignette */}
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-gradient-to-b from-[#02050E]/80 via-[#030918]/45 to-[#02050E]/90"
-        />
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_20%,rgba(2,5,14,0.82)_100%)]"
-        />
+          return (
+            <div
+              key={index}
+              dir="ltr"
+              className="absolute font-mono font-bold text-xs sm:text-sm tracking-wider text-blue-200/25 blur-[0.3px] transition-transform duration-500 ease-out"
+              style={{
+                left: `${item.xRatio * 100}%`,
+                top: `${item.yRatio * 100}%`,
+                transform: `translate3d(calc(-50% + ${driftX}px), calc(-50% + ${driftY}px), 0)`
+              }}
+            >
+              {item.text}
+            </div>
+          );
+        })}
       </div>
 
       {/* =====================================================================
-          LAYER 2: SMALL, ELEGANT SKIP BUTTON (Top-Left, Instant 0ms Action)
+          SCENE 4 & 5: REAL WIKI-PHYSICS LOGO & TYPOGRAPHY
+          (Emerges from energy flash at 6.0s with subtle 3D depth and blue glow)
          ===================================================================== */}
       <div
-        className="relative z-30 flex items-center justify-end px-5 sm:px-10"
-        style={{ paddingTop: 'max(1.25rem, env(safe-area-inset-top))' }}
+        className={`
+          pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-4
+          transition-all duration-1000 ease-out
+          ${
+            showLogo && !isDissolving
+              ? 'opacity-100 scale-100 translate-y-0'
+              : showLogo && isDissolving
+              ? 'opacity-0 scale-95 -translate-y-8'
+              : 'opacity-0 scale-90 translate-y-4'
+          }
+        `}
+      >
+        <div className="flex flex-col items-center text-center space-y-4 sm:space-y-6">
+          {/* Visual Physics Quantum Badge with Real Project Psi (Ψ) Emblem */}
+          <div className="relative group">
+            {/* Ambient Radial Blue Glow Halo */}
+            <div className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-[#1E4FD8]/60 via-[#38BDF8]/50 to-[#F5B301]/30 blur-xl opacity-90 transition-opacity" />
+
+            {/* Inner Badge Frame (Real WiKi-PHYSICS Quantum Emblem) */}
+            <div className="relative flex h-20 w-20 sm:h-28 sm:w-28 items-center justify-center rounded-3xl bg-[#091536]/90 border-2 border-[#38BDF8]/60 shadow-[0_0_40px_rgba(56,189,248,0.5)] overflow-hidden shrink-0">
+              {/* Spinning Quantum Atomic Orbits SVG (From Project Logo) */}
+              <svg
+                className="absolute inset-0 h-full w-full opacity-75 animate-[spin_10s_linear_infinite]"
+                viewBox="0 0 100 100"
+              >
+                <ellipse
+                  cx="50"
+                  cy="50"
+                  rx="42"
+                  ry="16"
+                  fill="none"
+                  stroke="#38BDF8"
+                  strokeWidth="2.2"
+                  strokeDasharray="4 3"
+                  transform="rotate(30 50 50)"
+                />
+                <ellipse
+                  cx="50"
+                  cy="50"
+                  rx="42"
+                  ry="16"
+                  fill="none"
+                  stroke="#F5B301"
+                  strokeWidth="1.8"
+                  strokeDasharray="3 3"
+                  transform="rotate(-30 50 50)"
+                />
+                <ellipse
+                  cx="50"
+                  cy="50"
+                  rx="42"
+                  ry="16"
+                  fill="none"
+                  stroke="#60A5FA"
+                  strokeWidth="1.8"
+                  transform="rotate(90 50 50)"
+                />
+              </svg>
+
+              {/* Central Greek Psi Symbol (Ψ) */}
+              <div className="relative z-10 flex items-center justify-center font-black text-3xl sm:text-5xl text-transparent bg-clip-text bg-gradient-to-b from-white via-cyan-100 to-[#38BDF8] drop-shadow-[0_2px_12px_rgba(56,189,248,0.8)]">
+                <span>Ψ</span>
+              </div>
+
+              {/* Quantum Particle Spark */}
+              <div className="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-[#F5B301] shadow-[0_0_10px_#F5B301] animate-pulse" />
+
+              {/* Subtle Metallic Light Sweep across badge */}
+              <div
+                className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_3.5s_infinite]"
+                style={{ animationDelay: '0.5s' }}
+              />
+            </div>
+          </div>
+
+          {/* Typography: WiKi-PHYSICS */}
+          <div className="flex flex-col items-center space-y-1.5 sm:space-y-2">
+            <h1
+              dir="ltr"
+              className="text-3xl sm:text-5xl md:text-6xl font-black tracking-[0.16em] text-white drop-shadow-[0_4px_30px_rgba(56,189,248,0.5)]"
+            >
+              WiKi-PHYSICS
+            </h1>
+
+            {/* Typography: مع أستاذ أحمد صلاح */}
+            <p className="text-base sm:text-xl md:text-2xl font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 via-white to-blue-200">
+              مع أستاذ أحمد صلاح
+            </p>
+
+            <span className="text-[11px] sm:text-xs font-semibold text-cyan-300/70 tracking-widest pt-0.5">
+              المنصة الأولى لفيزياء الثانوية العامة
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* =====================================================================
+          UX: DISCREET SKIP BUTTON (Appears strictly after 2.0s as requested)
+         ===================================================================== */}
+      <div
+        className={`
+          absolute z-30 flex items-center transition-all duration-700 ease-out
+          ${
+            showSkipButton
+              ? 'opacity-100 translate-y-0 pointer-events-auto'
+              : 'opacity-0 -translate-y-2 pointer-events-none'
+          }
+        `}
+        style={{
+          top: 'max(1.25rem, env(safe-area-inset-top))',
+          left: 'max(1.25rem, env(safe-area-inset-left))'
+        }}
       >
         <button
           type="button"
           onClick={handleSkipNow}
-          aria-label="تخطي المقدمة والدخول إلى الصفحة الرئيسية فوراً"
-          className="group inline-flex items-center gap-2 rounded-full bg-[#060E22]/60 hover:bg-[#0D1D3E]/85 border border-white/15 hover:border-cyan-400/45 px-4 py-2 text-xs font-medium text-white/75 hover:text-white transition-all duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400"
-          style={{ WebkitBackdropFilter: 'blur(12px)', backdropFilter: 'blur(12px)' }}
+          aria-label="تخطي المقدمة والدخول فوراً للموقع"
+          className="group inline-flex items-center gap-1.5 rounded-full bg-[#050D24]/65 hover:bg-[#0A183E]/85 border border-white/10 hover:border-cyan-400/40 px-3.5 py-1.5 text-xs font-medium text-white/65 hover:text-white transition-all duration-200 cursor-pointer shadow-lg focus-visible:outline-2 focus-visible:outline-cyan-400"
+          style={{ WebkitBackdropFilter: 'blur(10px)', backdropFilter: 'blur(10px)' }}
         >
-          <span>تخطي المقدمة</span>
+          <span>تخطي</span>
           <svg
-            className="h-3.5 w-3.5 text-cyan-300/80 transition-transform duration-200 group-hover:-translate-x-0.5"
+            className="h-3 w-3 text-cyan-300/70 transition-transform duration-200 group-hover:-translate-x-0.5"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2"
+            strokeWidth="2.2"
             strokeLinecap="round"
             strokeLinejoin="round"
           >
@@ -274,410 +578,14 @@ export const CinematicIntro3D: React.FC<CinematicIntro3DProps> = ({ onFinish }) 
       </div>
 
       {/* =====================================================================
-          LAYER 3: 5-SCENE CINEMATIC STORYTELLING STAGE
-         ===================================================================== */}
-      <div className="relative z-20 flex h-[calc(100%-5rem)] w-full items-center justify-center px-6 sm:px-12">
-        {/* -----------------------------------------------------------------
-            SCENE 1 (0.0s – 3.6s): بداية هادئة
-            Quiet dark 3D physics world, slow camera movement, natural equations in background
-           ----------------------------------------------------------------- */}
-        <div
-          aria-hidden={sceneIndex !== 1}
-          className={`
-            pointer-events-none absolute inset-0 flex flex-col items-center justify-center
-            transition-all duration-[1600ms] ease-out
-            ${sceneIndex === 1 ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}
-          `}
-        >
-          <div className="relative h-80 w-full max-w-5xl">
-            <span
-              dir="ltr"
-              className="
-                absolute top-8 right-[14%] font-mono text-xs sm:text-sm tracking-[0.2em]
-                text-cyan-200/25 blur-[0.4px]
-              "
-              style={{
-                transform: `translate3d(0, -${elapsedSec * 3.5}px, 0)`,
-                transition: 'transform 400ms linear',
-              }}
-            >
-              ψ(r, t) = A · exp(i(k·r − ωt))
-            </span>
-            <span
-              dir="ltr"
-              className="
-                absolute bottom-10 left-[15%] font-mono text-xs sm:text-sm tracking-[0.2em]
-                text-amber-100/20 blur-[0.5px]
-              "
-              style={{
-                transform: `translate3d(0, -${elapsedSec * 2.5}px, 0)`,
-                transition: 'transform 400ms linear',
-              }}
-            >
-              ∇ × B = μ₀ J + μ₀ ε₀ ∂E/∂t
-            </span>
-            <span
-              dir="ltr"
-              className="
-                absolute top-1/2 left-[20%] font-mono text-xs tracking-[0.25em]
-                text-blue-200/20 blur-[0.5px] hidden sm:inline
-              "
-            >
-              E = h · ν
-            </span>
-          </div>
-        </div>
-
-        {/* -----------------------------------------------------------------
-            SCENE 2 (3.6s – 7.8s): اكتشاف الفيزياء
-            "الفيزياء مش حفظ..." -> smooth transition -> "دي فهم... وتفكير... وتطبيق."
-           ----------------------------------------------------------------- */}
-        <div
-          aria-hidden={sceneIndex !== 2}
-          className={`
-            pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-6 text-center
-            transition-all duration-[1500ms] ease-out
-            ${sceneIndex === 2 ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}
-          `}
-        >
-          <div className="relative flex min-h-[180px] max-w-3xl flex-col items-center justify-center">
-            <p
-              className={`
-                text-2xl sm:text-4xl md:text-5xl font-bold tracking-wide text-white/95
-                transition-all duration-[1400ms] ease-out
-                ${
-                  sceneIndex === 2 && scene2ShowFirst && !scene2ShowSecond
-                    ? 'opacity-100 translate-y-0 blur-0'
-                    : sceneIndex === 2 && scene2ShowSecond
-                    ? 'opacity-40 -translate-y-4 scale-95 blur-[0.5px]'
-                    : 'opacity-0 translate-y-5 blur-sm'
-                }
-              `}
-            >
-              الفيزياء مش حفظ...
-            </p>
-
-            <p
-              className={`
-                mt-5 text-2xl sm:text-4xl md:text-5xl font-black tracking-wide
-                text-transparent bg-clip-text bg-gradient-to-l from-white via-cyan-100 to-amber-200
-                transition-all duration-[1400ms] ease-out
-                ${
-                  sceneIndex === 2 && scene2ShowSecond
-                    ? 'opacity-100 translate-y-0 blur-0'
-                    : 'opacity-0 translate-y-6 blur-sm'
-                }
-              `}
-            >
-              دي فهم... وتفكير... وتطبيق.
-            </p>
-          </div>
-        </div>
-
-        {/* -----------------------------------------------------------------
-            SCENE 3 (7.8s – 13.2s): دخول عالم المنصة
-            Camera enters the 3D optical world of WiKi-PHYSICS.
-            Each of the 5 platform capabilities materializes sequentially one by one
-            as part of the 3D optical scene (NOT as separate cards):
-            1) درس فيديو
-            2) سؤال تفاعلي
-            3) امتحان إلكتروني
-            4) نتيجة الطالب
-            5) متابعة مستوى الطالب
-           ----------------------------------------------------------------- */}
-        <div
-          aria-hidden={sceneIndex !== 3}
-          className={`
-            pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-6
-            transition-all duration-[1400ms] ease-out
-            ${sceneIndex === 3 ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}
-          `}
-          style={{ perspective: '1200px' }}
-        >
-          {/* Frameless 3D Optical Plane integrated directly into the scene with floor reflection */}
-          <div
-            className="relative flex w-full max-w-2xl flex-col items-center justify-center text-center transition-transform duration-[1200ms] ease-out"
-            style={{
-              transformStyle: 'preserve-3d',
-              transform: `translateZ(${scene3Step * 6}px)`,
-            }}
-          >
-            {/* 1. درس فيديو */}
-            {scene3Step === 1 && (
-              <div className="flex flex-col items-center space-y-5 animate-[fadeIn_800ms_ease-out]">
-                <div className="relative flex h-28 sm:h-32 w-full max-w-lg items-center justify-center">
-                  <svg className="h-24 w-full stroke-cyan-400/70" viewBox="0 0 600 120" fill="none">
-                    <path d="M 0 60 Q 75 12, 150 60 T 300 60 T 450 60 T 600 60" strokeWidth="2" />
-                    <path
-                      d="M 0 60 Q 75 108, 150 60 T 300 60 T 450 60 T 600 60"
-                      stroke="rgba(245,179,1,0.45)"
-                      strokeWidth="1.5"
-                    />
-                  </svg>
-                  <div className="absolute flex h-14 w-14 items-center justify-center rounded-full border border-cyan-300/50 bg-cyan-400/10 text-white shadow-[0_0_40px_rgba(56,189,248,0.4)]">
-                    <svg className="h-6 w-6 fill-current translate-x-0.5" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <span className="text-xs font-medium tracking-wider text-cyan-300/80">
-                    داخل عالم WiKi-PHYSICS
-                  </span>
-                  <h3 className="text-2xl sm:text-4xl font-black text-white">
-                    درس فيديو تفاعلي
-                  </h3>
-                  <p className="text-sm sm:text-base text-white/65">
-                    شروحات بصرية تربط المعادلة الفيزيائية بالتجربة الواقعية
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* 2. سؤال تفاعلي */}
-            {scene3Step === 2 && (
-              <div className="flex flex-col items-center space-y-5 animate-[fadeIn_800ms_ease-out]">
-                <div
-                  dir="ltr"
-                  className="font-mono text-2xl sm:text-4xl font-bold tracking-widest text-cyan-300 drop-shadow-[0_0_25px_rgba(56,189,248,0.4)]"
-                >
-                  Eₖ = h·ν − φ₀
-                </div>
-                <div className="space-y-2">
-                  <span className="text-xs font-medium tracking-wider text-amber-300/85">
-                    تطبيق فوري بعد كل مفهوم
-                  </span>
-                  <h3 className="text-2xl sm:text-4xl font-black text-white">
-                    سؤال تفاعلي ذكي
-                  </h3>
-                  <p className="text-sm sm:text-base text-white/65">
-                    أسئلة متدرجة تقيس الفهم العميق وتفسّر خطوات الحل
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* 3. امتحان إلكتروني */}
-            {scene3Step === 3 && (
-              <div className="flex flex-col items-center space-y-5 animate-[fadeIn_800ms_ease-out]">
-                <div className="relative flex h-24 w-64 items-center justify-center">
-                  <div className="h-px w-full bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
-                  <div className="absolute rounded-full border border-cyan-300/40 bg-[#051026]/90 px-5 py-2 font-mono text-lg sm:text-xl font-bold text-white shadow-[0_0_30px_rgba(56,189,248,0.3)]">
-                    00 : 45 : 00
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <span className="text-xs font-medium tracking-wider text-cyan-300/85">
-                    تقييم بمعايير قياسية
-                  </span>
-                  <h3 className="text-2xl sm:text-4xl font-black text-white">
-                    امتحان إلكتروني شامل
-                  </h3>
-                  <p className="text-sm sm:text-base text-white/65">
-                    بيئة اختبار دقيقة تحاكي نظام الامتحانات النهائية
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* 4. نتيجة الطالب */}
-            {scene3Step === 4 && (
-              <div className="flex flex-col items-center space-y-5 animate-[fadeIn_800ms_ease-out]">
-                <div className="relative flex h-24 w-24 items-center justify-center">
-                  <svg className="h-full w-full -rotate-90 drop-shadow-[0_0_20px_rgba(56,189,248,0.45)]" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="5" />
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="42"
-                      fill="none"
-                      stroke="#38BDF8"
-                      strokeWidth="5"
-                      strokeLinecap="round"
-                      strokeDasharray="264"
-                      strokeDashoffset="14"
-                    />
-                  </svg>
-                  <span className="absolute font-mono text-2xl font-black text-white tabular-nums">
-                    96%
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  <span className="text-xs font-medium tracking-wider text-amber-300/85">
-                    تصحيح وتحليل لحظي
-                  </span>
-                  <h3 className="text-2xl sm:text-4xl font-black text-white">
-                    نتيجة الطالب الفورية
-                  </h3>
-                  <p className="text-sm sm:text-base text-white/65">
-                    رصد دقيق للدرجات وتفصيل كامل لكل إجابة فور إنهاء الاختبار
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* 5. متابعة مستوى الطالب */}
-            {scene3Step === 5 && (
-              <div className="flex flex-col items-center space-y-5 animate-[fadeIn_800ms_ease-out]">
-                <div className="relative flex h-24 w-64 items-end justify-center">
-                  <svg className="h-20 w-full overflow-visible" viewBox="0 0 240 80" fill="none">
-                    <path
-                      d="M 10 68 C 65 64, 95 45, 145 32 C 180 22, 205 14, 230 6"
-                      stroke="#F5B301"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                    />
-                    <circle cx="230" cy="6" r="5" fill="#F5B301" />
-                  </svg>
-                </div>
-                <div className="space-y-2">
-                  <span className="text-xs font-medium tracking-wider text-cyan-300/85">
-                    مسار ارتقاء مستمر
-                  </span>
-                  <h3 className="text-2xl sm:text-4xl font-black text-white">
-                    متابعة مستوى الطالب
-                  </h3>
-                  <p className="text-sm sm:text-base text-white/65">
-                    مؤشرات أداء ذكية تضمن تطور استيعابك من أول درس حتى القمة
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Realistic optical floor reflection glow */}
-            <div
-              aria-hidden="true"
-              className="mt-8 h-px w-56 bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent blur-[1px]"
-            />
-          </div>
-        </div>
-
-        {/* -----------------------------------------------------------------
-            SCENE 4 (13.2s – 16.0s): رحلة الطالب
-            "اتعلم." -> "طبّق." -> "طوّر مستواك."
-           ----------------------------------------------------------------- */}
-        <div
-          aria-hidden={sceneIndex !== 4}
-          className={`
-            pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-6 text-center
-            transition-all duration-[1300ms] ease-out
-            ${sceneIndex === 4 ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}
-          `}
-        >
-          <div className="max-w-4xl w-full space-y-10">
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-14">
-              <span
-                className={`
-                  text-3xl sm:text-5xl md:text-6xl font-black tracking-tight
-                  transition-all duration-[1100ms] ease-out
-                  ${
-                    sceneIndex === 4 && scene4Step >= 1
-                      ? 'opacity-100 translate-y-0 blur-0 text-white'
-                      : 'opacity-0 translate-y-5 blur-sm text-white/40'
-                  }
-                `}
-              >
-                اتعلم.
-              </span>
-
-              <span
-                className={`
-                  text-3xl sm:text-5xl md:text-6xl font-black tracking-tight
-                  transition-all duration-[1100ms] ease-out
-                  ${
-                    sceneIndex === 4 && scene4Step >= 2
-                      ? 'opacity-100 translate-y-0 blur-0 text-cyan-300'
-                      : 'opacity-0 translate-y-5 blur-sm text-cyan-300/40'
-                  }
-                `}
-              >
-                طبّق.
-              </span>
-
-              <span
-                className={`
-                  text-3xl sm:text-5xl md:text-6xl font-black tracking-tight
-                  transition-all duration-[1100ms] ease-out
-                  ${
-                    sceneIndex === 4 && scene4Step >= 3
-                      ? 'opacity-100 translate-y-0 blur-0 text-amber-300'
-                      : 'opacity-0 translate-y-5 blur-sm text-amber-300/40'
-                  }
-                `}
-              >
-                طوّر مستواك.
-              </span>
-            </div>
-
-            {/* Connected optical journey line: درس -> حل الأسئلة -> امتحان -> تطور المستوى */}
-            <div className="mx-auto max-w-xl">
-              <div className="relative h-px w-full bg-white/15 overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-l from-cyan-400 via-blue-400 to-amber-400 transition-all duration-1000 ease-out"
-                  style={{ width: `${scene4Step === 1 ? 33 : scene4Step === 2 ? 66 : 100}%` }}
-                />
-              </div>
-              <div className="mt-3 flex items-center justify-between text-xs sm:text-sm font-medium text-white/60">
-                <span className={scene4Step >= 1 ? 'text-white' : ''}>درس</span>
-                <span className={scene4Step >= 2 ? 'text-cyan-200' : ''}>حل الأسئلة</span>
-                <span className={scene4Step >= 2 ? 'text-cyan-200' : ''}>امتحان</span>
-                <span className={scene4Step >= 3 ? 'text-amber-300 font-bold' : ''}>تطور في المستوى</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* -----------------------------------------------------------------
-            SCENE 5 (16.0s – 18.5s): النهاية
-            Visual elements converge into WiKi-PHYSICS logo & closing statement
-           ----------------------------------------------------------------- */}
-        <div
-          aria-hidden={sceneIndex !== 5}
-          className={`
-            pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-6 text-center
-            transition-all duration-[1500ms] ease-out
-            ${sceneIndex === 5 ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}
-          `}
-        >
-          <div className="flex flex-col items-center space-y-6">
-            {/* Converged 3D Quantum Emblem */}
-            <div className="relative flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-3xl border border-amber-300/45 bg-[#08132E]/85 shadow-[0_0_70px_rgba(56,189,248,0.4)]">
-              <span className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white via-cyan-200 to-amber-300">
-                Ψ
-              </span>
-            </div>
-
-            {/* Brand Title: WiKi-PHYSICS */}
-            <h1
-              dir="ltr"
-              className="text-3xl sm:text-6xl md:text-7xl font-black tracking-[0.14em] text-white drop-shadow-[0_4px_35px_rgba(56,189,248,0.4)]"
-            >
-              WiKi-PHYSICS
-            </h1>
-
-            {/* Closing Tagline: "رحلتك في الفيزياء تبدأ من هنا." */}
-            <p
-              className={`
-                text-lg sm:text-2xl md:text-3xl font-bold text-cyan-100/90 tracking-wide
-                transition-all duration-[1200ms] ease-out
-                ${scene5ShowSubtitle ? 'opacity-100 translate-y-0 blur-0' : 'opacity-0 translate-y-4 blur-sm'}
-              `}
-            >
-              رحلتك في الفيزياء تبدأ من هنا.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* =====================================================================
-          LAYER 4: SUBTLE HAIRLINE PROGRESS LINE AT BOTTOM EDGE
+          HAIRLINE BLUE ENERGY PROGRESS LINE AT BOTTOM
          ===================================================================== */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 h-[2px] bg-white/10">
         <div
-          className="h-full origin-right bg-gradient-to-l from-cyan-400 via-blue-500 to-amber-400 transition-transform duration-150 ease-linear"
+          className="h-full origin-right bg-gradient-to-l from-cyan-400 via-[#1E4FD8] to-[#F5B301] transition-transform duration-100 ease-linear"
           style={{
-            transform: `scaleX(${progressRatio})`,
-            willChange: 'transform',
+            transform: `scaleX(${Math.min(elapsedSec / totalDuration, 1)})`,
+            willChange: 'transform'
           }}
         />
       </div>

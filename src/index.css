@@ -193,6 +193,11 @@ body.dark #root,
   }
 }
 
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  50%, 100% { transform: translateX(100%); }
+}
+
 .protected-page {
   -webkit-user-select: none !important;
   -moz-user-select: none !important;
