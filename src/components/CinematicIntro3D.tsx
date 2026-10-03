@@ -1,594 +1,509 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 interface CinematicIntroProps {
   onFinish: () => void;
 }
 
 /**
- * ============================================================================
- * WiKi-PHYSICS CINEMATIC OPENING INTRO CONFIGURATION
- * ============================================================================
- * - To adjust total duration: change INTRO_TOTAL_DURATION_SEC (default: 11.0s)
- * - To adjust when the skip button appears: change SKIP_BUTTON_APPEAR_SEC (default: 2.0s)
- * - To disable intro completely in development: see src/App.tsx (showIntro state)
+ * WiKi-PHYSICS — Premium Cinematic Opening
+ * Pure Canvas + CSS: no heavy video asset required.
  */
-export const INTRO_TOTAL_DURATION_SEC = 11.0;
-export const SKIP_BUTTON_APPEAR_SEC = 2.0;
-const REDUCED_MOTION_DURATION_SEC = 2.5;
+export const INTRO_TOTAL_DURATION_SEC = 11.5;
+export const SKIP_BUTTON_APPEAR_SEC = 2.2;
 
-interface Particle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
+const REDUCED_MOTION_DURATION_SEC = 2.2;
+
+type Particle = {
+  angle: number;
   radius: number;
+  speed: number;
+  size: number;
   alpha: number;
-  targetAlpha: number;
-  orbitRadius: number;
-  orbitAngle: number;
-  orbitSpeed: number;
-  color: string;
-}
+  phase: number;
+};
 
-const SUBTLE_EQUATIONS = [
-  { text: 'E = mc²', xRatio: 0.18, yRatio: 0.28 },
-  { text: 'F = ma', xRatio: 0.82, yRatio: 0.24 },
-  { text: 'V = IR', xRatio: 0.16, yRatio: 0.72 },
-  { text: 'λ = h / p', xRatio: 0.84, yRatio: 0.68 },
-  { text: 'ΔE = h · ν', xRatio: 0.50, yRatio: 0.84 },
-  { text: '∇ × B = μ₀ J', xRatio: 0.32, yRatio: 0.18 },
-  { text: 'Φ_B = B · A', xRatio: 0.68, yRatio: 0.18 }
+const EQUATIONS = [
+  ['E = mc²', 13, 25, -8],
+  ['F = ma', 78, 22, 7],
+  ['V = IR', 12, 70, 6],
+  ['λ = h / p', 80, 67, -6],
+  ['ΔE = hν', 47, 18, 4],
+  ['∇ × B = μ₀J', 27, 82, -5],
+  ['Φ = B · A', 70, 82, 5]
 ];
+
+const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+const easeOut = (t: number) => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
+const easeInOut = (t: number) => {
+  const x = clamp(t, 0, 1);
+  return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+};
 
 export const CinematicIntro3D: React.FC<CinematicIntroProps> = ({ onFinish }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const animFrameRef = useRef<number>(0);
-  const startTimeRef = useRef<number>(0);
-  const completedRef = useRef<boolean>(false);
+  const frameRef = useRef<number | null>(null);
+  const startRef = useRef(0);
+  const finishedRef = useRef(false);
+  const finishRef = useRef(onFinish);
+  const [elapsed, setElapsed] = useState(0);
+  const [reducedMotion] = useState(() =>
+    typeof window !== 'undefined' &&
+    !!window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
 
-  // Check prefers-reduced-motion
-  const [prefersReducedMotion] = useState<boolean>(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return false;
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  });
-
-  const [elapsedSec, setElapsedSec] = useState<number>(0);
-  const [isTransitioningToSite, setIsTransitioningToSite] = useState<boolean>(false);
-
-  const totalDuration = prefersReducedMotion ? REDUCED_MOTION_DURATION_SEC : INTRO_TOTAL_DURATION_SEC;
-
-  // Cleanup & trigger completion
-  const handleComplete = useCallback(() => {
-    if (completedRef.current) return;
-    completedRef.current = true;
-    if (animFrameRef.current) {
-      cancelAnimationFrame(animFrameRef.current);
-    }
-    onFinish();
+  useEffect(() => {
+    finishRef.current = onFinish;
   }, [onFinish]);
 
-  // Immediate skip (0ms delay)
-  const handleSkipNow = useCallback(() => {
-    handleComplete();
-  }, [handleComplete]);
+  const totalDuration = reducedMotion
+    ? REDUCED_MOTION_DURATION_SEC
+    : INTRO_TOTAL_DURATION_SEC;
 
-  // Keyboard accessibility: Escape skips immediately
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        handleSkipNow();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSkipNow]);
+  const finish = useCallback(() => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+    finishRef.current();
+  }, []);
 
-  // Canvas-based particles, energy fields, and gravitational collapse simulation
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return;
 
-    let width = (canvas.width = window.innerWidth);
-    let height = (canvas.height = window.innerHeight);
+    let width = 0;
+    let height = 0;
+    let dpr = 1;
 
-    const handleResize = () => {
-      if (!canvas) return;
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
+    const resize = () => {
+      dpr = Math.min(window.devicePixelRatio || 1, 1.75);
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
-    window.addEventListener('resize', handleResize);
 
-    // Generate lightweight quantum particles
-    const particleCount = prefersReducedMotion ? 20 : Math.min(65, Math.floor(width / 20));
-    const particles: Particle[] = [];
-    const colors = ['#38BDF8', '#60A5FA', '#93C5FD', '#F5B301', '#E0F2FE'];
+    resize();
+    window.addEventListener('resize', resize, { passive: true });
 
-    for (let i = 0; i < particleCount; i++) {
-      const orbitRadius = 40 + Math.random() * (Math.min(width, height) * 0.42);
-      const orbitAngle = Math.random() * Math.PI * 2;
-      particles.push({
-        x: width / 2 + Math.cos(orbitAngle) * orbitRadius,
-        y: height / 2 + Math.sin(orbitAngle) * orbitRadius,
-        vx: (Math.random() - 0.5) * 0.4,
-        vy: (Math.random() - 0.5) * 0.4,
-        radius: 1 + Math.random() * 2,
-        alpha: 0,
-        targetAlpha: 0.35 + Math.random() * 0.55,
-        orbitRadius,
-        orbitAngle,
-        orbitSpeed: (0.004 + Math.random() * 0.008) * (Math.random() > 0.5 ? 1 : -1),
-        color: colors[i % colors.length]
-      });
-    }
+    const count = reducedMotion ? 12 : Math.min(92, Math.max(42, Math.floor(width / 15)));
+    const particles: Particle[] = Array.from({ length: count }, (_, i) => ({
+      angle: (i / count) * Math.PI * 2 + Math.random() * 0.5,
+      radius: Math.min(width, height) * (0.13 + Math.random() * 0.47),
+      speed: (0.0017 + Math.random() * 0.0038) * (i % 2 ? 1 : -1),
+      size: 0.7 + Math.random() * 1.8,
+      alpha: 0.25 + Math.random() * 0.55,
+      phase: Math.random() * Math.PI * 2
+    }));
 
-    startTimeRef.current = performance.now();
+    startRef.current = performance.now();
+
+    const drawGlow = (
+      x: number,
+      y: number,
+      radius: number,
+      inner: string,
+      outer = 'rgba(2, 6, 18, 0)'
+    ) => {
+      const g = ctx.createRadialGradient(x, y, 0, x, y, Math.max(radius, 1));
+      g.addColorStop(0, inner);
+      g.addColorStop(1, outer);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, Math.max(radius, 1), 0, Math.PI * 2);
+      ctx.fill();
+    };
+
+    const drawOrbit = (
+      cx: number,
+      cy: number,
+      rx: number,
+      ry: number,
+      rotation: number,
+      alpha: number,
+      dash = ''
+    ) => {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(rotation);
+      ctx.strokeStyle = 'rgba(70, 180, 255, ' + alpha + ')';
+      ctx.lineWidth = 0.8;
+      if (dash) ctx.setLineDash([4, 7]);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+      ctx.setLineDash([]);
+    };
 
     const render = (now: number) => {
-      const elapsed = (now - startTimeRef.current) / 1000;
-      setElapsedSec(elapsed);
+      const t = (now - startRef.current) / 1000;
+      setElapsed(t);
 
-      // Trigger seamless exit at Scene 6
-      if (elapsed >= 10.0 && !isTransitioningToSite && !prefersReducedMotion) {
-        setIsTransitioningToSite(true);
-      }
-
-      if (elapsed >= totalDuration) {
-        handleComplete();
+      if (t >= totalDuration) {
+        finish();
         return;
       }
-
-      // Clear with deepest midnight navy background
-      ctx.fillStyle = '#02050E';
-      ctx.fillRect(0, 0, width, height);
 
       const cx = width / 2;
       const cy = height / 2;
 
-      // =======================================================================
-      // SCENE 1 (0:00 -> 0:02): البداية
-      // Tiny blue singularity at center awakening gradually
-      // =======================================================================
-      if (elapsed < 2.0) {
-        const p = elapsed / 2.0;
-        // Central blue light point growing from 0 to 4px with soft ambient glow
-        const glowRadius = p * 60;
-        const radialGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(glowRadius, 1));
-        radialGlow.addColorStop(0, 'rgba(56, 189, 248, ' + (0.9 * p) + ')');
-        radialGlow.addColorStop(0.3, 'rgba(30, 79, 216, ' + (0.45 * p) + ')');
-        radialGlow.addColorStop(1, 'rgba(2, 5, 14, 0)');
-        ctx.fillStyle = radialGlow;
-        ctx.beginPath();
-        ctx.arc(cx, cy, Math.max(glowRadius, 1), 0, Math.PI * 2);
-        ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = '#020611';
+      ctx.fillRect(0, 0, width, height);
 
-        // Core white-blue spark
-        ctx.fillStyle = '#FFFFFF';
-        ctx.shadowColor = '#38BDF8';
-        ctx.shadowBlur = 12;
+      // Deep cinematic vignette.
+      const bg = ctx.createRadialGradient(cx, cy * 0.92, 0, cx, cy, Math.max(width, height) * 0.78);
+      bg.addColorStop(0, '#0a1834');
+      bg.addColorStop(0.42, '#041026');
+      bg.addColorStop(1, '#01030a');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, width, height);
+
+      if (reducedMotion) {
+        drawGlow(cx, cy, 190, 'rgba(56,189,248,0.30)');
+      }
+
+      // Scene 1: singularity awakening.
+      if (t < 2.15) {
+        const p = easeOut(t / 2.15);
+        drawGlow(cx, cy, 30 + p * 130, 'rgba(56,189,248,' + (0.28 * p) + ')');
+        drawGlow(cx, cy, 3 + p * 12, 'rgba(255,255,255,' + (0.75 * p) + ')');
+        ctx.fillStyle = '#fff';
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 20;
         ctx.beginPath();
-        ctx.arc(cx, cy, 1.2 + p * 1.8, 0, Math.PI * 2);
+        ctx.arc(cx, cy, 1.2 + p * 2.2, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
       }
 
-      // =======================================================================
-      // SCENE 2 (0:02 -> 0:04): ولادة عالم الفيزياء
-      // Particles drifting, fine field lines and orbits, subtle background equations
-      // =======================================================================
-      if (elapsed >= 2.0 && elapsed < 4.2) {
-        const sceneP = (elapsed - 2.0) / 2.2;
+      // Scene 2: physics field comes alive.
+      const fieldStart = 1.55;
+      if (t >= fieldStart && t < 6.0) {
+        const p = easeOut((t - fieldStart) / 2.2);
+        const maxR = Math.min(width, height) * 0.46;
 
-        // Ambient radial field glow
-        const radialGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.min(width, height) * 0.45);
-        radialGlow.addColorStop(0, 'rgba(30, 79, 216, 0.22)');
-        radialGlow.addColorStop(0.5, 'rgba(56, 189, 248, 0.08)');
-        radialGlow.addColorStop(1, 'rgba(2, 5, 14, 0)');
-        ctx.fillStyle = radialGlow;
-        ctx.beginPath();
-        ctx.arc(cx, cy, Math.min(width, height) * 0.45, 0, Math.PI * 2);
-        ctx.fill();
+        drawGlow(cx, cy, maxR * 0.75, 'rgba(30,79,216,' + (0.09 * p) + ')');
 
-        // Fine luminous orbital & field lines
-        ctx.strokeStyle = 'rgba(56, 189, 248, ' + (0.16 * sceneP) + ')';
-        ctx.lineWidth = 1;
+        for (let i = 0; i < 4; i++) {
+          drawOrbit(
+            cx,
+            cy,
+            105 + i * 64,
+            36 + i * 23,
+            i * 0.58 + t * 0.035 * (i % 2 ? 1 : -1),
+            0.12 * p,
+            i % 2 === 0 ? 'dash' : ''
+          );
+        }
 
-        // 3 elegant orbital ellipses
+        ctx.globalCompositeOperation = 'lighter';
+        particles.forEach((pt, i) => {
+          const collapse = t >= 4.15 ? easeInOut((t - 4.15) / 1.55) : 0;
+          pt.angle += pt.speed;
+          const orbitR = pt.radius * (1 - collapse * 0.91);
+          const x = cx + Math.cos(pt.angle) * orbitR;
+          const y = cy + Math.sin(pt.angle) * orbitR * 0.62;
+          const a = pt.alpha * p * (1 - collapse * 0.18);
+
+          ctx.fillStyle = i % 7 === 0
+            ? 'rgba(245,179,1,' + a + ')'
+            : 'rgba(91,190,255,' + a + ')';
+          ctx.beginPath();
+          ctx.arc(x, y, pt.size, 0, Math.PI * 2);
+          ctx.fill();
+
+          if (collapse > 0.1 && i % 3 === 0) {
+            ctx.strokeStyle = 'rgba(56,189,248,' + (0.08 * collapse) + ')';
+            ctx.lineWidth = 0.7;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(cx, cy);
+            ctx.stroke();
+          }
+        });
+        ctx.globalCompositeOperation = 'source-over';
+      }
+
+      // Equations are rendered as atmospheric typography in the first half.
+      if (t >= 2.0 && t < 5.2) {
+        const ep = easeInOut((t - 2) / 2.0);
+        EQUATIONS.forEach(([text, x, y, rot]) => {
+          const collapse = t > 4.1 ? easeInOut((t - 4.1) / 1.1) : 0;
+          const dx = (50 - Number(x)) * collapse * 0.55;
+          const dy = (50 - Number(y)) * collapse * 0.55;
+          ctx.save();
+          ctx.translate((Number(x) + dx) * width / 100, (Number(y) + dy) * height / 100);
+          ctx.rotate(Number(rot) * Math.PI / 180);
+          ctx.font = '600 ' + (Math.max(11, Math.min(17, width * 0.012))) + 'px ui-monospace, SFMono-Regular, Menlo, monospace';
+          ctx.textAlign = 'center';
+          ctx.fillStyle = 'rgba(180,225,255,' + (0.16 * ep * (1 - collapse * 0.7)) + ')';
+          ctx.fillText(String(text), 0, 0);
+          ctx.restore();
+        });
+      }
+
+      // Scene 3: energy core and flash.
+      if (t >= 4.15 && t < 6.65) {
+        const p = easeInOut((t - 4.15) / 1.85);
+        const r = 74 * (1 - p) + 9;
+        drawGlow(cx, cy, r * 4.5, 'rgba(30,79,216,' + (0.18 + p * 0.12) + ')');
+        drawGlow(cx, cy, r * 1.8, 'rgba(56,189,248,' + (0.35 + p * 0.28) + ')');
+
+        ctx.strokeStyle = 'rgba(135,225,255,' + (0.22 + p * 0.5) + ')';
+        ctx.lineWidth = 1.2;
         for (let i = 0; i < 3; i++) {
-          const rx = 120 + i * 55;
-          const ry = 45 + i * 22;
-          const rot = (i * Math.PI) / 3 + elapsed * 0.15;
+          const rr = 32 + i * 24 + Math.sin(t * 5 + i) * 3;
           ctx.beginPath();
-          ctx.ellipse(cx, cy, rx, ry, rot, 0, Math.PI * 2);
+          ctx.arc(cx, cy, rr, 0, Math.PI * 2);
           ctx.stroke();
         }
 
-        // Update and draw particles orbiting smoothly
-        for (let i = 0; i < particles.length; i++) {
-          const pt = particles[i];
-          pt.orbitAngle += pt.orbitSpeed;
-          pt.x = cx + Math.cos(pt.orbitAngle) * pt.orbitRadius;
-          pt.y = cy + Math.sin(pt.orbitAngle) * (pt.orbitRadius * 0.65);
-          pt.alpha = Math.min(pt.targetAlpha, pt.alpha + 0.02);
-
-          ctx.fillStyle = pt.color;
-          ctx.globalAlpha = pt.alpha * sceneP;
-          ctx.beginPath();
-          ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.globalAlpha = 1;
-      }
-
-      // =======================================================================
-      // SCENE 3 (0:04 -> 0:06): تجمع الطاقة & الفلاش السينمائي
-      // Particles and lines gravitate inward toward center -> Energy Core -> Blue Flash
-      // =======================================================================
-      if (elapsed >= 4.2 && elapsed < 6.0) {
-        const sceneP = (elapsed - 4.2) / 1.8;
-        const collapseSpeed = Math.pow(sceneP, 2.2);
-
-        // Core pulsation
-        const coreRadius = (1 - sceneP * 0.7) * 45 + Math.sin(elapsed * 18) * 8;
-        const coreGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(coreRadius * 2, 2));
-        coreGlow.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
-        coreGlow.addColorStop(0.2, 'rgba(56, 189, 248, 0.85)');
-        coreGlow.addColorStop(0.6, 'rgba(30, 79, 216, 0.45)');
-        coreGlow.addColorStop(1, 'rgba(2, 5, 14, 0)');
-        ctx.fillStyle = coreGlow;
-        ctx.beginPath();
-        ctx.arc(cx, cy, Math.max(coreRadius * 2, 2), 0, Math.PI * 2);
-        ctx.fill();
-
-        // Inward gravitational pull of particles
-        for (let i = 0; i < particles.length; i++) {
-          const pt = particles[i];
-          const dx = cx - pt.x;
-          const dy = cy - pt.y;
-          pt.x += dx * (0.04 + collapseSpeed * 0.12);
-          pt.y += dy * (0.04 + collapseSpeed * 0.12);
-
-          // Connecting energy streak toward center
-          ctx.strokeStyle = pt.color;
-          ctx.globalAlpha = (1 - sceneP * 0.4) * 0.35;
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.moveTo(pt.x, pt.y);
-          ctx.lineTo(pt.x - dx * 0.1, pt.y - dy * 0.1);
-          ctx.stroke();
-
-          ctx.fillStyle = pt.color;
-          ctx.globalAlpha = 0.8;
-          ctx.beginPath();
-          ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.globalAlpha = 1;
-
-        // At 5.7s -> 6.0s: Cinematic short electric-blue energy flash
-        if (elapsed >= 5.65) {
-          const flashP = (elapsed - 5.65) / 0.35;
-          const flashAlpha = Math.sin(flashP * Math.PI) * 0.85;
-
-          const flashGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(width, height) * 0.75);
-          flashGrad.addColorStop(0, 'rgba(255, 255, 255, ' + flashAlpha + ')');
-          flashGrad.addColorStop(0.25, 'rgba(56, 189, 248, ' + (flashAlpha * 0.9) + ')');
-          flashGrad.addColorStop(0.65, 'rgba(30, 79, 216, ' + (flashAlpha * 0.6) + ')');
-          flashGrad.addColorStop(1, 'rgba(2, 5, 14, 0)');
-          ctx.fillStyle = flashGrad;
+        if (t >= 5.65 && t < 6.45) {
+          const fp = Math.sin(((t - 5.65) / 0.8) * Math.PI);
+          ctx.fillStyle = 'rgba(105,205,255,' + (0.34 * fp) + ')';
           ctx.fillRect(0, 0, width, height);
+          drawGlow(cx, cy, Math.max(width, height) * (0.2 + fp * 0.65), 'rgba(255,255,255,' + (0.28 * fp) + ')');
         }
       }
 
-      // =======================================================================
-      // SCENE 4 & 5 (0:06 -> 0:10): ظهور اللوجو & الإحساس التعليمي
-      // Logo emerges with 3D depth and blue glow, calm physics wave on horizon
-      // =======================================================================
-      if (elapsed >= 6.0 && elapsed < 10.0) {
-        // Ambient backdrop glow behind logo
-        const ambientGlow = ctx.createRadialGradient(cx, cy - 20, 10, cx, cy - 20, 240);
-        ambientGlow.addColorStop(0, 'rgba(56, 189, 248, 0.28)');
-        ambientGlow.addColorStop(0.45, 'rgba(30, 79, 216, 0.16)');
-        ambientGlow.addColorStop(1, 'rgba(2, 5, 14, 0)');
-        ctx.fillStyle = ambientGlow;
+      // Scene 4/5: brand reveal and calm wave field.
+      if (t >= 6.0 && t < 10.65) {
+        const p = easeOut((t - 6) / 0.85);
+        drawGlow(cx, cy - 25, 270, 'rgba(56,189,248,' + (0.16 * p) + ')');
+
+        ctx.save();
+        ctx.globalAlpha = 0.14 * p;
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1.1;
         ctx.beginPath();
-        ctx.arc(cx, cy - 20, 240, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Scene 5: Gentle educational physics wave in background horizon
-        if (elapsed >= 8.0) {
-          const waveP = Math.min((elapsed - 8.0) / 1.0, 1);
-          ctx.strokeStyle = 'rgba(56, 189, 248, ' + (0.18 * waveP) + ')';
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          const waveY = height * 0.78;
-          for (let x = 0; x <= width; x += 8) {
-            const y = waveY + Math.sin(x * 0.012 + elapsed * 2.2) * 14;
-            if (x === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-          }
-          ctx.stroke();
-
-          // Subtle secondary golden wavelength
-          ctx.strokeStyle = 'rgba(245, 179, 1, ' + (0.12 * waveP) + ')';
-          ctx.beginPath();
-          for (let x = 0; x <= width; x += 8) {
-            const y = waveY + Math.sin(x * 0.018 - elapsed * 1.8) * 10;
-            if (x === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-          }
-          ctx.stroke();
+        const base = height * 0.76;
+        for (let x = 0; x <= width; x += 7) {
+          const y = base + Math.sin(x * 0.0105 + t * 1.8) * (12 + 5 * Math.sin(t)) + Math.sin(x * 0.023 - t) * 5;
+          if (x === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
         }
+        ctx.stroke();
+        ctx.restore();
 
-        // Delicate floating quantum sparks around logo
-        for (let i = 0; i < Math.min(particles.length, 24); i++) {
-          const pt = particles[i];
-          pt.orbitAngle += pt.orbitSpeed * 0.7;
-          const r = 90 + (i % 6) * 22;
-          const px = cx + Math.cos(pt.orbitAngle) * r;
-          const py = cy - 20 + Math.sin(pt.orbitAngle) * (r * 0.5);
-
-          ctx.fillStyle = pt.color;
-          ctx.globalAlpha = 0.45;
+        ctx.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 20; i++) {
+          const a = t * (0.24 + (i % 4) * 0.025) + i * 1.8;
+          const rr = 115 + (i % 5) * 27;
+          const x = cx + Math.cos(a) * rr;
+          const y = cy - 20 + Math.sin(a * 1.18) * rr * 0.42;
+          ctx.fillStyle = i % 6 === 0
+            ? 'rgba(245,179,1,0.52)'
+            : 'rgba(90,200,255,0.52)';
           ctx.beginPath();
-          ctx.arc(px, py, 1.2, 0, Math.PI * 2);
+          ctx.arc(x, y, 0.9 + (i % 3) * 0.35, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
       }
 
-      // =======================================================================
-      // SCENE 6 (0:10 -> 0:11.2): الانتقال للموقع
-      // Blue light sweeps smoothly toward top right, seamless fade into homepage
-      // =======================================================================
-      if (elapsed >= 10.0) {
-        const exitP = Math.min((elapsed - 10.0) / 1.2, 1);
-        // Light moves from center toward top navbar position
-        const targetX = width > 768 ? width * 0.85 : width * 0.5;
-        const targetY = 40;
-        const lightX = cx + (targetX - cx) * exitP;
-        const lightY = cy + (targetY - cy) * exitP;
+      // Scene 6: luminous handoff to the actual site.
+      if (t >= 10.0) {
+        const p = easeInOut((t - 10) / 1.5);
+        const targetX = width > 700 ? width * 0.86 : width * 0.5;
+        const targetY = width > 700 ? 42 : 28;
+        const x = cx + (targetX - cx) * p;
+        const y = cy + (targetY - cy) * p;
+        drawGlow(x, y, 160 * (1 - p * 0.45), 'rgba(56,189,248,' + (0.25 * (1 - p)) + ')');
 
-        const exitGlow = ctx.createRadialGradient(lightX, lightY, 0, lightX, lightY, 180 * (1 - exitP * 0.5));
-        exitGlow.addColorStop(0, 'rgba(56, 189, 248, ' + (0.35 * (1 - exitP)) + ')');
-        exitGlow.addColorStop(1, 'rgba(2, 5, 14, 0)');
-        ctx.fillStyle = exitGlow;
-        ctx.beginPath();
-        ctx.arc(lightX, lightY, 180, 0, Math.PI * 2);
-        ctx.fill();
+        const sweep = width * (p * 1.25 - 0.25);
+        const grad = ctx.createLinearGradient(sweep - 260, 0, sweep + 260, 0);
+        grad.addColorStop(0, 'rgba(56,189,248,0)');
+        grad.addColorStop(0.5, 'rgba(120,220,255,' + (0.08 * (1 - p)) + ')');
+        grad.addColorStop(1, 'rgba(56,189,248,0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, width, height);
       }
 
-      animFrameRef.current = requestAnimationFrame(render);
+      frameRef.current = requestAnimationFrame(render);
     };
 
-    animFrameRef.current = requestAnimationFrame(render);
+    frameRef.current = requestAnimationFrame(render);
 
     return () => {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      window.removeEventListener('resize', handleResize);
+      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+      window.removeEventListener('resize', resize);
     };
-  }, [prefersReducedMotion, totalDuration, isTransitioningToSite, handleComplete]);
+  }, [finish, reducedMotion, totalDuration]);
 
-  // Stage condition flags for CSS Typography & Logo layers
-  // Scene 2 equations: visible between 2.0s and 4.8s
-  const showEquations = elapsedSec >= 2.0 && elapsedSec < 4.8;
-  // Scene 4 Logo: appears at 6.0s
-  const showLogo = elapsedSec >= 5.95;
-  // Skip button appears strictly after 2.0s as requested
-  const showSkipButton = elapsedSec >= SKIP_BUTTON_APPEAR_SEC && elapsedSec < 10.0;
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        finish();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [finish]);
 
-  // Scene 6 smooth dissolve: 10.0s -> 11.0s
-  const isDissolving = elapsedSec >= 10.0;
+  const showEquations = elapsed >= 2 && elapsed < 5.25;
+  const showBrand = elapsed >= 5.85;
+  const exiting = elapsed >= 10.0;
+  const showSkip = elapsed >= SKIP_BUTTON_APPEAR_SEC && !exiting;
 
   return (
     <div
-      ref={containerRef}
       dir="rtl"
       role="dialog"
       aria-label="افتتاحية منصة ويكي فيزياء"
-      className={`fixed inset-0 z-[9999] overflow-hidden bg-[#02050E] select-none transition-all duration-1000 ease-out ${
-        isDissolving ? 'opacity-0 pointer-events-none scale-102' : 'opacity-100'
-      }`}
-      style={{
-        width: '100vw',
-        height: '100vh',
-      }}
+      className={
+        'fixed inset-0 z-[9999] overflow-hidden select-none bg-[#020611] ' +
+        'transition-opacity duration-1000 ease-out ' +
+        (exiting ? 'opacity-0 pointer-events-none' : 'opacity-100')
+      }
+      style={{ width: '100vw', height: '100dvh' }}
     >
-      {/* Background Canvas (Particles, Fields, Energy Flash, Cosmic Atmosphere) */}
-      <canvas
-        ref={canvasRef}
+      <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" aria-hidden="true" />
+
+      {/* Soft cinematic vignette */}
+      <div
         aria-hidden="true"
-        className="absolute inset-0 h-full w-full pointer-events-none"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(circle at 50% 46%, transparent 0%, rgba(1,3,10,.10) 45%, rgba(0,0,0,.78) 100%)'
+        }}
       />
 
-      {/* =====================================================================
-          SCENE 2: SUBTLE PHYSICS EQUATIONS LAYER (Floating unobtrusively in background)
-         ===================================================================== */}
+      {/* Atmospheric equations */}
       <div
         aria-hidden="true"
-        className={`pointer-events-none absolute inset-0 transition-opacity duration-1000 ease-out ${
-          showEquations ? 'opacity-100' : 'opacity-0'
-        }`}
+        className={
+          'pointer-events-none absolute inset-0 transition-opacity duration-700 ' +
+          (showEquations ? 'opacity-100' : 'opacity-0')
+        }
       >
-        {SUBTLE_EQUATIONS.map((item, index) => {
-          // Calculate subtle inward drift toward center as Scene 3 approaches
-          const isCollapsing = elapsedSec >= 4.2;
-          const collapseOffset = isCollapsing ? (elapsedSec - 4.2) * 45 : 0;
-          const driftX = (0.5 - item.xRatio) * collapseOffset;
-          const driftY = (0.5 - item.yRatio) * collapseOffset;
-
-          return (
-            <div
-              key={index}
-              dir="ltr"
-              className="absolute font-mono font-bold text-xs sm:text-sm tracking-wider text-blue-200/25 blur-[0.3px] transition-transform duration-500 ease-out"
-              style={{
-                left: `${item.xRatio * 100}%`,
-                top: `${item.yRatio * 100}%`,
-                transform: `translate3d(calc(-50% + ${driftX}px), calc(-50% + ${driftY}px), 0)`
-              }}
-            >
-              {item.text}
-            </div>
-          );
-        })}
+        {EQUATIONS.map(([text, left, top, rotation], i) => (
+          <span
+            key={i}
+            className="absolute font-mono text-[10px] sm:text-xs md:text-sm font-semibold tracking-widest text-sky-100/25"
+            style={{
+              left: left + '%',
+              top: top + '%',
+              transform: 'translate(-50%, -50%) rotate(' + rotation + 'deg)',
+              textShadow: '0 0 18px rgba(56,189,248,.22)'
+            }}
+          >
+            {text}
+          </span>
+        ))}
       </div>
 
-      {/* =====================================================================
-          SCENE 4 & 5: REAL WIKI-PHYSICS LOGO & TYPOGRAPHY
-          (Emerges from energy flash at 6.0s with subtle 3D depth and blue glow)
-         ===================================================================== */}
+      {/* Premium brand reveal */}
       <div
-        className={`
-          pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-4
-          transition-all duration-1000 ease-out
-          ${
-            showLogo && !isDissolving
-              ? 'opacity-100 scale-100 translate-y-0'
-              : showLogo && isDissolving
-              ? 'opacity-0 scale-95 -translate-y-8'
-              : 'opacity-0 scale-90 translate-y-4'
-          }
-        `}
+        className={
+          'absolute inset-0 flex items-center justify-center px-6 transition-all duration-[900ms] ' +
+          (showBrand
+            ? exiting
+              ? 'opacity-0 scale-95 -translate-y-6'
+              : 'opacity-100 scale-100 translate-y-0'
+            : 'opacity-0 scale-90 translate-y-5')
+        }
       >
-        <div className="flex flex-col items-center text-center space-y-4 sm:space-y-6">
-          {/* Visual Physics Quantum Badge with Real Project Psi (Ψ) Emblem */}
-          <div className="relative group">
-            {/* Ambient Radial Blue Glow Halo */}
-            <div className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-[#1E4FD8]/60 via-[#38BDF8]/50 to-[#F5B301]/30 blur-xl opacity-90 transition-opacity" />
+        <div className="flex flex-col items-center text-center">
+          <div className="relative mb-7 sm:mb-8">
+            <div
+              className="absolute -inset-8 rounded-full blur-3xl"
+              style={{
+                background:
+                  'radial-gradient(circle, rgba(56,189,248,.34) 0%, rgba(30,79,216,.18) 42%, transparent 72%)'
+              }}
+            />
 
-            {/* Inner Badge Frame (Real WiKi-PHYSICS Quantum Emblem) */}
-            <div className="relative flex h-20 w-20 sm:h-28 sm:w-28 items-center justify-center rounded-3xl bg-[#091536]/90 border-2 border-[#38BDF8]/60 shadow-[0_0_40px_rgba(56,189,248,0.5)] overflow-hidden shrink-0">
-              {/* Spinning Quantum Atomic Orbits SVG (From Project Logo) */}
+            <div
+              className="relative h-24 w-24 sm:h-32 sm:w-32 rounded-[30px] border border-sky-300/40 bg-[#07142d]/90 shadow-[0_0_70px_rgba(56,189,248,.28)] flex items-center justify-center overflow-hidden"
+            >
               <svg
-                className="absolute inset-0 h-full w-full opacity-75 animate-[spin_10s_linear_infinite]"
                 viewBox="0 0 100 100"
+                className="absolute inset-0 h-full w-full animate-[spin_14s_linear_infinite] opacity-80"
+                aria-hidden="true"
               >
-                <ellipse
-                  cx="50"
-                  cy="50"
-                  rx="42"
-                  ry="16"
-                  fill="none"
-                  stroke="#38BDF8"
-                  strokeWidth="2.2"
-                  strokeDasharray="4 3"
-                  transform="rotate(30 50 50)"
-                />
-                <ellipse
-                  cx="50"
-                  cy="50"
-                  rx="42"
-                  ry="16"
-                  fill="none"
-                  stroke="#F5B301"
-                  strokeWidth="1.8"
-                  strokeDasharray="3 3"
-                  transform="rotate(-30 50 50)"
-                />
-                <ellipse
-                  cx="50"
-                  cy="50"
-                  rx="42"
-                  ry="16"
-                  fill="none"
-                  stroke="#60A5FA"
-                  strokeWidth="1.8"
-                  transform="rotate(90 50 50)"
-                />
+                <ellipse cx="50" cy="50" rx="43" ry="16" fill="none" stroke="#38BDF8" strokeWidth="1.4" transform="rotate(28 50 50)" />
+                <ellipse cx="50" cy="50" rx="43" ry="16" fill="none" stroke="#60A5FA" strokeWidth="1.1" transform="rotate(-28 50 50)" />
+                <ellipse cx="50" cy="50" rx="43" ry="16" fill="none" stroke="#F5B301" strokeWidth="1" strokeDasharray="3 4" transform="rotate(90 50 50)" />
+                <circle cx="50" cy="50" r="8" fill="rgba(56,189,248,.16)" stroke="#BAE6FD" strokeWidth="1" />
+                <circle cx="50" cy="50" r="3.2" fill="#fff" />
               </svg>
 
-              {/* Central Greek Psi Symbol (Ψ) */}
-              <div className="relative z-10 flex items-center justify-center font-black text-3xl sm:text-5xl text-transparent bg-clip-text bg-gradient-to-b from-white via-cyan-100 to-[#38BDF8] drop-shadow-[0_2px_12px_rgba(56,189,248,0.8)]">
-                <span>Ψ</span>
-              </div>
-
-              {/* Quantum Particle Spark */}
-              <div className="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-[#F5B301] shadow-[0_0_10px_#F5B301] animate-pulse" />
-
-              {/* Subtle Metallic Light Sweep across badge */}
-              <div
-                className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_3.5s_infinite]"
-                style={{ animationDelay: '0.5s' }}
-              />
+              <span
+                className="relative z-10 text-5xl sm:text-6xl font-black italic text-white"
+                style={{ textShadow: '0 0 25px rgba(56,189,248,.7)' }}
+              >
+                Ψ
+              </span>
             </div>
+
+            <span
+              className="absolute -right-1 top-1 h-2.5 w-2.5 rounded-full bg-amber-300"
+              style={{ boxShadow: '0 0 16px rgba(245,179,1,.9)' }}
+            />
           </div>
 
-          {/* Typography: WiKi-PHYSICS */}
-          <div className="flex flex-col items-center space-y-1.5 sm:space-y-2">
-            <h1
-              dir="ltr"
-              className="text-3xl sm:text-5xl md:text-6xl font-black tracking-[0.16em] text-white drop-shadow-[0_4px_30px_rgba(56,189,248,0.5)]"
+          <div className="tracking-[-0.04em] leading-none text-4xl sm:text-6xl md:text-7xl font-black text-white">
+            <span>WiKi-</span>
+            <span
+              className="text-sky-300"
+              style={{ textShadow: '0 0 34px rgba(56,189,248,.35)' }}
             >
-              WiKi-PHYSICS
-            </h1>
-
-            {/* Typography: مع أستاذ أحمد صلاح */}
-            <p className="text-base sm:text-xl md:text-2xl font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 via-white to-blue-200">
-              مع أستاذ أحمد صلاح
-            </p>
-
-            <span className="text-[11px] sm:text-xs font-semibold text-cyan-300/70 tracking-widest pt-0.5">
-              المنصة الأولى لفيزياء الثانوية العامة
+              PHYSICS
             </span>
+          </div>
+
+          <div className="mt-5 flex items-center gap-3">
+            <span className="h-px w-9 sm:w-14 bg-gradient-to-l from-transparent to-sky-300/70" />
+            <span className="text-sm sm:text-base md:text-lg font-bold tracking-wide text-slate-200/90">
+              مع أستاذ أحمد صلاح
+            </span>
+            <span className="h-px w-9 sm:w-14 bg-gradient-to-r from-transparent to-sky-300/70" />
+          </div>
+
+          <div
+            className="mt-3 text-[9px] sm:text-[11px] uppercase tracking-[0.35em] text-sky-200/45"
+            dir="ltr"
+          >
+            PHYSICS • UNDERSTOOD
           </div>
         </div>
       </div>
 
-      {/* =====================================================================
-          UX: DISCREET SKIP BUTTON (Appears strictly after 2.0s as requested)
-         ===================================================================== */}
+      {/* Minimal skip control */}
       <div
-        className={`
-          absolute z-30 flex items-center transition-all duration-700 ease-out
-          ${
-            showSkipButton
-              ? 'opacity-100 translate-y-0 pointer-events-auto'
-              : 'opacity-0 -translate-y-2 pointer-events-none'
-          }
-        `}
-        style={{
-          top: 'max(1.25rem, env(safe-area-inset-top))',
-          left: 'max(1.25rem, env(safe-area-inset-left))'
-        }}
+        className={
+          'absolute left-5 bottom-5 sm:left-7 sm:bottom-7 transition-all duration-500 ' +
+          (showSkip ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none')
+        }
       >
         <button
           type="button"
-          onClick={handleSkipNow}
-          aria-label="تخطي المقدمة والدخول فوراً للموقع"
-          className="group inline-flex items-center gap-1.5 rounded-full bg-[#050D24]/65 hover:bg-[#0A183E]/85 border border-white/10 hover:border-cyan-400/40 px-3.5 py-1.5 text-xs font-medium text-white/65 hover:text-white transition-all duration-200 cursor-pointer shadow-lg focus-visible:outline-2 focus-visible:outline-cyan-400"
-          style={{ WebkitBackdropFilter: 'blur(10px)', backdropFilter: 'blur(10px)' }}
+          onClick={finish}
+          className="rounded-full border border-white/15 bg-black/20 px-4 py-2 text-[11px] font-bold text-white/65 backdrop-blur-md transition hover:border-sky-300/40 hover:bg-sky-400/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-sky-300/50"
+          aria-label="تخطي المقدمة"
         >
-          <span>تخطي</span>
-          <svg
-            className="h-3 w-3 text-cyan-300/70 transition-transform duration-200 group-hover:-translate-x-0.5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="m15 18-6-6 6-6" />
-          </svg>
+          تخطي المقدمة
         </button>
       </div>
 
-      {/* =====================================================================
-          HAIRLINE BLUE ENERGY PROGRESS LINE AT BOTTOM
-         ===================================================================== */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 h-[2px] bg-white/10">
-        <div
-          className="h-full origin-right bg-gradient-to-l from-cyan-400 via-[#1E4FD8] to-[#F5B301] transition-transform duration-100 ease-linear"
-          style={{
-            transform: `scaleX(${Math.min(elapsedSec / totalDuration, 1)})`,
-            willChange: 'transform'
-          }}
-        />
-      </div>
+      {/* Tiny progress indicator — intentionally subtle */}
+      {!reducedMotion && (
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-white/5">
+          <div
+            className="h-full bg-sky-300/70 transition-[width] duration-100"
+            style={{ width: Math.min(100, (elapsed / totalDuration) * 100) + '%' }}
+          />
+        </div>
+      )}
     </div>
   );
 };
