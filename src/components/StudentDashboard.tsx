@@ -582,7 +582,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* 4. Performance Charts Grid (Line Chart + Circular Progress)                */}
+      {/* 4. Daily Streak / التسجيل اليومي                                          */}
+      {/* ========================================================================= */}
+      {activeStudent && <StreakBanner student={activeStudent} />}
+
+      {/* ========================================================================= */}
+      {/* 5. Performance Charts Grid (Line Chart + Circular Progress)                */}
       {/* ========================================================================= */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Line Chart: "تطور مستواك" (Takes 2 columns on lg) */}
