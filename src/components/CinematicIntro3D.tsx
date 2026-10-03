@@ -8,10 +8,10 @@ interface CinematicIntroProps {
  * WiKi-PHYSICS — Premium Cinematic Opening
  * Pure Canvas + CSS: no heavy video asset required.
  */
-export const INTRO_TOTAL_DURATION_SEC = 11.5;
-export const SKIP_BUTTON_APPEAR_SEC = 2.2;
+export const INTRO_TOTAL_DURATION_SEC = 13.5;
+export const SKIP_BUTTON_APPEAR_SEC = 2.6;
 
-const REDUCED_MOTION_DURATION_SEC = 2.2;
+const REDUCED_MOTION_DURATION_SEC = 2.6;
 
 type Particle = {
   angle: number;
@@ -91,7 +91,7 @@ export const CinematicIntro3D: React.FC<CinematicIntroProps> = ({ onFinish }) =>
     resize();
     window.addEventListener('resize', resize, { passive: true });
 
-    const count = reducedMotion ? 12 : Math.min(92, Math.max(42, Math.floor(width / 15)));
+    const count = reducedMotion ? 18 : Math.min(150, Math.max(70, Math.floor(width / 9)));
     const particles: Particle[] = Array.from({ length: count }, (_, i) => ({
       angle: (i / count) * Math.PI * 2 + Math.random() * 0.5,
       radius: Math.min(width, height) * (0.13 + Math.random() * 0.47),
@@ -184,19 +184,19 @@ export const CinematicIntro3D: React.FC<CinematicIntroProps> = ({ onFinish }) =>
       }
 
       // Scene 2: physics field comes alive.
-      const fieldStart = 1.55;
-      if (t >= fieldStart && t < 6.0) {
+      const fieldStart = 1.25;
+      if (t >= fieldStart && t < 7.0) {
         const p = easeOut((t - fieldStart) / 2.2);
-        const maxR = Math.min(width, height) * 0.46;
+        const maxR = Math.min(width, height) * 0.58;
 
         drawGlow(cx, cy, maxR * 0.75, 'rgba(30,79,216,' + (0.09 * p) + ')');
 
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < 6; i++) {
           drawOrbit(
             cx,
             cy,
-            105 + i * 64,
-            36 + i * 23,
+            135 + i * 78,
+            46 + i * 30,
             i * 0.58 + t * 0.035 * (i % 2 ? 1 : -1),
             0.12 * p,
             i % 2 === 0 ? 'dash' : ''
@@ -274,8 +274,8 @@ export const CinematicIntro3D: React.FC<CinematicIntroProps> = ({ onFinish }) =>
       }
 
       // Scene 4/5: brand reveal and calm wave field.
-      if (t >= 6.0 && t < 10.65) {
-        const p = easeOut((t - 6) / 0.85);
+      if (t >= 6.5 && t < 12.3) {
+        const p = easeOut((t - 6.5) / 1.05);
         drawGlow(cx, cy - 25, 270, 'rgba(56,189,248,' + (0.16 * p) + ')');
 
         ctx.save();
@@ -309,8 +309,8 @@ export const CinematicIntro3D: React.FC<CinematicIntroProps> = ({ onFinish }) =>
       }
 
       // Scene 6: luminous handoff to the actual site.
-      if (t >= 10.0) {
-        const p = easeInOut((t - 10) / 1.5);
+      if (t >= 12.0) {
+        const p = easeInOut((t - 12) / 1.5);
         const targetX = width > 700 ? width * 0.86 : width * 0.5;
         const targetY = width > 700 ? 42 : 28;
         const x = cx + (targetX - cx) * p;
@@ -349,8 +349,8 @@ export const CinematicIntro3D: React.FC<CinematicIntroProps> = ({ onFinish }) =>
   }, [finish]);
 
   const showEquations = elapsed >= 2 && elapsed < 5.25;
-  const showBrand = elapsed >= 5.85;
-  const exiting = elapsed >= 10.0;
+  const showBrand = elapsed >= 6.15;
+  const exiting = elapsed >= 12.0;
   const showSkip = elapsed >= SKIP_BUTTON_APPEAR_SEC && !exiting;
 
   return (
@@ -423,7 +423,7 @@ export const CinematicIntro3D: React.FC<CinematicIntroProps> = ({ onFinish }) =>
             />
 
             <div
-              className="relative h-24 w-24 sm:h-32 sm:w-32 rounded-[30px] border border-sky-300/40 bg-[#07142d]/90 shadow-[0_0_70px_rgba(56,189,248,.28)] flex items-center justify-center overflow-hidden"
+              className="relative h-44 w-44 sm:h-56 sm:w-56 md:h-64 md:w-64 rounded-[44px] border border-sky-300/40 bg-[#07142d]/90 shadow-[0_0_70px_rgba(56,189,248,.28)] flex items-center justify-center overflow-hidden"
             >
               <svg
                 viewBox="0 0 100 100"
@@ -438,7 +438,7 @@ export const CinematicIntro3D: React.FC<CinematicIntroProps> = ({ onFinish }) =>
               </svg>
 
               <span
-                className="relative z-10 text-5xl sm:text-6xl font-black italic text-white"
+                className="relative z-10 text-8xl sm:text-9xl md:text-[10rem] font-black italic text-white leading-none"
                 style={{ textShadow: '0 0 25px rgba(56,189,248,.7)' }}
               >
                 Ψ
@@ -446,12 +446,12 @@ export const CinematicIntro3D: React.FC<CinematicIntroProps> = ({ onFinish }) =>
             </div>
 
             <span
-              className="absolute -right-1 top-1 h-2.5 w-2.5 rounded-full bg-amber-300"
+              className="absolute right-3 top-3 h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full bg-amber-300"
               style={{ boxShadow: '0 0 16px rgba(245,179,1,.9)' }}
             />
           </div>
 
-          <div className="tracking-[-0.04em] leading-none text-4xl sm:text-6xl md:text-7xl font-black text-white">
+          <div className="tracking-[-0.055em] leading-none text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black text-white">
             <span>WiKi-</span>
             <span
               className="text-sky-300"
@@ -461,16 +461,16 @@ export const CinematicIntro3D: React.FC<CinematicIntroProps> = ({ onFinish }) =>
             </span>
           </div>
 
-          <div className="mt-5 flex items-center gap-3">
+          <div className="mt-7 sm:mt-9 flex items-center gap-4">
             <span className="h-px w-9 sm:w-14 bg-gradient-to-l from-transparent to-sky-300/70" />
-            <span className="text-sm sm:text-base md:text-lg font-bold tracking-wide text-slate-200/90">
+            <span className="text-base sm:text-xl md:text-2xl font-bold tracking-wide text-slate-100">
               مع أستاذ أحمد صلاح
             </span>
             <span className="h-px w-9 sm:w-14 bg-gradient-to-r from-transparent to-sky-300/70" />
           </div>
 
           <div
-            className="mt-3 text-[9px] sm:text-[11px] uppercase tracking-[0.35em] text-sky-200/45"
+            className="mt-4 text-[10px] sm:text-xs uppercase tracking-[0.45em] text-sky-200/55"
             dir="ltr"
           >
             PHYSICS • UNDERSTOOD
