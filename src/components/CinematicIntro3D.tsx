@@ -8,7 +8,7 @@ interface CinematicIntroProps {
  * WiKi-PHYSICS — Premium Cinematic Opening
  * Pure Canvas + CSS: no heavy video asset required.
  */
-export const INTRO_TOTAL_DURATION_SEC = 14.2;
+export const INTRO_TOTAL_DURATION_SEC = 13.5;
 export const SKIP_BUTTON_APPEAR_SEC = 2.6;
 
 const REDUCED_MOTION_DURATION_SEC = 2.6;
@@ -309,8 +309,8 @@ export const CinematicIntro3D: React.FC<CinematicIntroProps> = ({ onFinish }) =>
       }
 
       // Scene 6: luminous handoff to the actual site.
-      if (t >= 12.7) {
-        const p = easeInOut((t - 12.7) / 1.5);
+      if (t >= 12.0) {
+        const p = easeInOut((t - 12) / 1.5);
         const targetX = width > 700 ? width * 0.86 : width * 0.5;
         const targetY = width > 700 ? 42 : 28;
         const x = cx + (targetX - cx) * p;
@@ -350,7 +350,7 @@ export const CinematicIntro3D: React.FC<CinematicIntroProps> = ({ onFinish }) =>
 
   const showEquations = elapsed >= 2 && elapsed < 5.25;
   const showBrand = elapsed >= 6.15;
-  const exiting = elapsed >= 12.7;
+  const exiting = elapsed >= 12.0;
   const showSkip = elapsed >= SKIP_BUTTON_APPEAR_SEC && !exiting;
 
   return (
@@ -401,173 +401,81 @@ export const CinematicIntro3D: React.FC<CinematicIntroProps> = ({ onFinish }) =>
         ))}
       </div>
 
-      {/* ================================================================ */}
-      {/* PREMIUM CINEMATIC STORY LAYERS                                  */}
-      {/* ================================================================ */}
-      <div className="absolute inset-0 flex items-center justify-center px-4 sm:px-8 pointer-events-none">
+      {/* Premium brand reveal */}
+      <div
+        className={
+          'absolute inset-0 flex items-center justify-center px-6 transition-all duration-[900ms] ' +
+          (showBrand
+            ? exiting
+              ? 'opacity-0 scale-95 -translate-y-6'
+              : 'opacity-100 scale-100 translate-y-0'
+            : 'opacity-0 scale-90 translate-y-5')
+        }
+      >
+        <div className="flex flex-col items-center text-center">
+          <div className="relative mb-7 sm:mb-8">
+            <div
+              className="absolute -inset-8 rounded-full blur-3xl"
+              style={{
+                background:
+                  'radial-gradient(circle, rgba(56,189,248,.34) 0%, rgba(30,79,216,.18) 42%, transparent 72%)'
+              }}
+            />
 
-        {/* Scene 1 — Opening statement */}
-        <div
-          className={
-            'absolute inset-0 flex flex-col items-center justify-center text-center transition-all duration-1000 ' +
-            (elapsed < 2.5 ? 'opacity-100 scale-100' : 'opacity-0 scale-105')
-          }
-        >
-          <div className="mb-5 text-[10px] sm:text-xs font-bold tracking-[0.45em] text-sky-300/60" dir="ltr">
-            WELCOME TO A NEW PHYSICS EXPERIENCE
+            <div
+              className="relative h-44 w-44 sm:h-56 sm:w-56 md:h-64 md:w-64 rounded-[44px] border border-sky-300/40 bg-[#07142d]/90 shadow-[0_0_70px_rgba(56,189,248,.28)] flex items-center justify-center overflow-hidden"
+            >
+              <svg
+                viewBox="0 0 100 100"
+                className="absolute inset-0 h-full w-full animate-[spin_14s_linear_infinite] opacity-80"
+                aria-hidden="true"
+              >
+                <ellipse cx="50" cy="50" rx="43" ry="16" fill="none" stroke="#38BDF8" strokeWidth="1.4" transform="rotate(28 50 50)" />
+                <ellipse cx="50" cy="50" rx="43" ry="16" fill="none" stroke="#60A5FA" strokeWidth="1.1" transform="rotate(-28 50 50)" />
+                <ellipse cx="50" cy="50" rx="43" ry="16" fill="none" stroke="#F5B301" strokeWidth="1" strokeDasharray="3 4" transform="rotate(90 50 50)" />
+                <circle cx="50" cy="50" r="8" fill="rgba(56,189,248,.16)" stroke="#BAE6FD" strokeWidth="1" />
+                <circle cx="50" cy="50" r="3.2" fill="#fff" />
+              </svg>
+
+              <span
+                className="relative z-10 text-8xl sm:text-9xl md:text-[10rem] font-black italic text-white leading-none"
+                style={{ textShadow: '0 0 25px rgba(56,189,248,.7)' }}
+              >
+                Ψ
+              </span>
+            </div>
+
+            <span
+              className="absolute right-3 top-3 h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full bg-amber-300"
+              style={{ boxShadow: '0 0 16px rgba(245,179,1,.9)' }}
+            />
           </div>
-          <div className="text-3xl sm:text-5xl md:text-6xl font-black text-white tracking-tight">
-            الفيزياء بشكل مختلف
+
+          <div className="tracking-[-0.055em] leading-none text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black text-white">
+            <span>WiKi-</span>
+            <span
+              className="text-sky-300"
+              style={{ textShadow: '0 0 34px rgba(56,189,248,.35)' }}
+            >
+              PHYSICS
+            </span>
           </div>
-          <div className="mt-3 text-sm sm:text-lg text-slate-300/70">
-            من الفهم إلى الإتقان
+
+          <div className="mt-7 sm:mt-9 flex items-center gap-4">
+            <span className="h-px w-9 sm:w-14 bg-gradient-to-l from-transparent to-sky-300/70" />
+            <span className="text-base sm:text-xl md:text-2xl font-bold tracking-wide text-slate-100">
+              مع أستاذ أحمد صلاح
+            </span>
+            <span className="h-px w-9 sm:w-14 bg-gradient-to-r from-transparent to-sky-300/70" />
+          </div>
+
+          <div
+            className="mt-4 text-[10px] sm:text-xs uppercase tracking-[0.45em] text-sky-200/55"
+            dir="ltr"
+          >
+            PHYSICS • UNDERSTOOD
           </div>
         </div>
-
-        {/* Scene 2 — Equations + physics universe */}
-        <div
-          className={
-            'absolute inset-0 flex items-center justify-center transition-all duration-1000 ' +
-            (elapsed >= 2.1 && elapsed < 5.1 ? 'opacity-100' : 'opacity-0')
-          }
-        >
-          <div className="relative w-[min(900px,90vw)] h-[min(500px,62vh)]">
-            <div className="absolute inset-0 rounded-[36px] border border-sky-300/10 bg-sky-400/[0.025] backdrop-blur-[1px]" />
-            <div className="absolute left-[7%] top-[12%] font-mono text-sky-200/65 text-sm sm:text-base md:text-lg rotate-[-7deg]">E = mc²</div>
-            <div className="absolute right-[8%] top-[20%] font-mono text-sky-200/55 text-sm sm:text-base md:text-lg rotate-[6deg]">F = ma</div>
-            <div className="absolute left-[13%] bottom-[20%] font-mono text-sky-200/50 text-xs sm:text-base rotate-[5deg]">V = IR</div>
-            <div className="absolute right-[12%] bottom-[16%] font-mono text-sky-200/55 text-xs sm:text-base rotate-[-6deg]">λ = h / p</div>
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-              <div className="text-2xl sm:text-4xl md:text-5xl font-black text-white">
-                قوانين... <span className="text-sky-300">تفهمها</span>
-              </div>
-              <div className="mt-3 text-xs sm:text-base text-slate-300/65">
-                مش مجرد معادلات تحفظها
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Scene 3 — Energy core */}
-        <div
-          className={
-            'absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 ' +
-            (elapsed >= 4.6 && elapsed < 6.7 ? 'opacity-100' : 'opacity-0')
-          }
-        >
-          <div className="relative h-44 w-44 sm:h-60 sm:w-60">
-            <div className="absolute inset-0 rounded-full bg-sky-400/10 blur-3xl" />
-            <div className="absolute inset-[14%] rounded-full border border-sky-300/30 animate-[spin_7s_linear_infinite]" />
-            <div className="absolute inset-[25%] rounded-full border border-sky-200/25 animate-[spin_5s_linear_infinite_reverse]" />
-            <div className="absolute inset-[37%] rounded-full bg-sky-300/10 border border-sky-200/40 shadow-[0_0_70px_rgba(56,189,248,.45)]" />
-            <div className="absolute inset-0 flex items-center justify-center text-4xl sm:text-6xl font-black text-white">Ψ</div>
-          </div>
-          <div className="mt-7 text-lg sm:text-2xl font-bold text-white">
-            هنا تبدأ الرحلة
-          </div>
-        </div>
-
-        {/* Scene 4 — Platform identity / product reveal */}
-        <div
-          className={
-            'absolute inset-0 flex items-center justify-center transition-all duration-1000 ' +
-            (elapsed >= 6.2 && elapsed < 9.7 ? 'opacity-100' : 'opacity-0')
-          }
-        >
-          <div className="w-[min(1040px,92vw)] flex flex-col items-center">
-            <div className="relative w-full max-w-[820px] h-[190px] sm:h-[280px] md:h-[330px] rounded-[22px] sm:rounded-[32px] border border-sky-200/15 bg-[#061127]/80 shadow-[0_25px_100px_rgba(0,0,0,.45)] overflow-hidden">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(56,189,248,.18),transparent_55%)]" />
-              <div className="absolute top-0 left-0 right-0 h-9 sm:h-11 border-b border-white/10 bg-white/[0.025] flex items-center px-4 gap-2">
-                <span className="h-2 w-2 rounded-full bg-white/20" />
-                <span className="h-2 w-2 rounded-full bg-white/15" />
-                <span className="h-2 w-2 rounded-full bg-white/10" />
-                <span className="mx-auto text-[8px] sm:text-[10px] tracking-[0.28em] text-sky-200/40" dir="ltr">
-                  WIKIPHYSICS
-                </span>
-              </div>
-              <div className="absolute top-16 left-5 right-5 sm:top-20 sm:left-10 sm:right-10 grid grid-cols-3 gap-3 sm:gap-5">
-                <div className="col-span-2 h-20 sm:h-32 rounded-2xl border border-sky-300/10 bg-sky-300/[0.045] p-3 sm:p-5">
-                  <div className="h-2 w-24 sm:w-40 rounded bg-sky-300/20" />
-                  <div className="mt-4 h-2 w-32 sm:w-56 rounded bg-white/10" />
-                  <div className="mt-3 h-2 w-20 sm:w-36 rounded bg-white/5" />
-                  <div className="mt-5 h-1.5 w-full rounded bg-gradient-to-r from-sky-300/60 via-sky-300/20 to-transparent" />
-                </div>
-                <div className="h-20 sm:h-32 rounded-2xl border border-amber-200/10 bg-amber-200/[0.035] p-3 sm:p-5">
-                  <div className="text-[9px] sm:text-xs text-slate-300/60">تقدمك اليوم</div>
-                  <div className="mt-3 text-lg sm:text-3xl font-black text-white">+82%</div>
-                  <div className="mt-2 h-1.5 rounded-full bg-white/10"><div className="h-full w-[82%] rounded-full bg-sky-300/60" /></div>
-                </div>
-              </div>
-              <div className="absolute bottom-4 left-5 right-5 sm:left-10 sm:right-10 flex gap-2 sm:gap-3">
-                <span className="h-1.5 flex-1 rounded bg-sky-300/30" />
-                <span className="h-1.5 flex-1 rounded bg-white/10" />
-                <span className="h-1.5 flex-1 rounded bg-white/10" />
-                <span className="h-1.5 flex-1 rounded bg-white/10" />
-              </div>
-            </div>
-            <div className="mt-6 text-xl sm:text-3xl md:text-4xl font-black text-white">
-              منصة واحدة لكل رحلتك في الفيزياء
-            </div>
-            <div className="mt-2 text-xs sm:text-base text-slate-300/65">
-              شرح • تدريبات • امتحانات • متابعة مستواك
-            </div>
-          </div>
-        </div>
-
-        {/* Scene 5 — Logo + teacher */}
-        <div
-          className={
-            'absolute inset-0 flex items-center justify-center transition-all duration-1000 ' +
-            (elapsed >= 8.9 && elapsed < 12.5 ? 'opacity-100 scale-100' : 'opacity-0 scale-90')
-          }
-        >
-          <div className="flex flex-col items-center text-center">
-            <div className="relative mb-7 sm:mb-9">
-              <div className="absolute -inset-12 rounded-full blur-3xl bg-sky-400/20" />
-              <div className="relative h-36 w-36 sm:h-48 sm:w-48 md:h-56 md:w-56 rounded-[38px] sm:rounded-[48px] border border-sky-300/35 bg-[#07142d]/90 shadow-[0_0_90px_rgba(56,189,248,.25)] flex items-center justify-center overflow-hidden">
-                <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full animate-[spin_12s_linear_infinite]" aria-hidden="true">
-                  <ellipse cx="50" cy="50" rx="43" ry="16" fill="none" stroke="#38BDF8" strokeWidth="1.4" transform="rotate(28 50 50)" />
-                  <ellipse cx="50" cy="50" rx="43" ry="16" fill="none" stroke="#60A5FA" strokeWidth="1.1" transform="rotate(-28 50 50)" />
-                  <ellipse cx="50" cy="50" rx="43" ry="16" fill="none" stroke="#F5B301" strokeWidth="1" strokeDasharray="3 4" transform="rotate(90 50 50)" />
-                  <circle cx="50" cy="50" r="8" fill="rgba(56,189,248,.16)" stroke="#BAE6FD" strokeWidth="1" />
-                  <circle cx="50" cy="50" r="3.2" fill="#fff" />
-                </svg>
-                <span className="relative z-10 text-8xl sm:text-9xl md:text-[9rem] font-black italic text-white leading-none" style={{textShadow:'0 0 30px rgba(56,189,248,.75)'}}>Ψ</span>
-              </div>
-              <span className="absolute right-1 top-1 h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full bg-amber-300" style={{boxShadow:'0 0 20px rgba(245,179,1,.95)'}} />
-            </div>
-
-            <div className="tracking-[-0.055em] leading-none text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black text-white">
-              <span>WiKi-</span><span className="text-sky-300" style={{textShadow:'0 0 38px rgba(56,189,248,.4)'}}>PHYSICS</span>
-            </div>
-
-            <div className="mt-7 sm:mt-9 flex items-center gap-4">
-              <span className="h-px w-10 sm:w-20 bg-gradient-to-l from-transparent to-sky-300/70" />
-              <span className="text-base sm:text-xl md:text-2xl font-bold text-slate-100">مع أستاذ أحمد صلاح</span>
-              <span className="h-px w-10 sm:w-20 bg-gradient-to-r from-transparent to-sky-300/70" />
-            </div>
-
-            <div className="mt-4 text-[10px] sm:text-xs uppercase tracking-[0.45em] text-sky-200/55" dir="ltr">
-              PHYSICS • UNDERSTOOD • MASTERED
-            </div>
-          </div>
-        </div>
-
-        {/* Scene 6 — Final promise before handoff */}
-        <div
-          className={
-            'absolute bottom-[12%] sm:bottom-[10%] text-center transition-all duration-700 ' +
-            (elapsed >= 10.5 && elapsed < 12.6 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3')
-          }
-        >
-          <div className="text-sm sm:text-lg font-semibold text-slate-200/80">
-            ابدأ... افهم... واتقن الفيزياء
-          </div>
-          <div className="mt-2 text-[9px] sm:text-[11px] tracking-[0.3em] text-sky-200/40" dir="ltr">
-            YOUR JOURNEY STARTS HERE
-          </div>
-        </div>
-
       </div>
 
       {/* Minimal skip control */}
