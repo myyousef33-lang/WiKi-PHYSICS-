@@ -115,36 +115,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  const handleQuickDemoSwitch = async (studentId: string) => {
-    const s = StorageService.getStudentById(studentId);
-    if (s) {
-      StorageService.setCurrentStudent(s);
-      setSuccess(`تم الدخول بحساب: ${s.name}`);
-      setTimeout(() => {
-        onClose();
-        if (onSuccess) onSuccess();
-      }, 500);
-    } else {
-      // If demo student doesn't exist, create one
-      const res = await StorageService.registerStudent({
-        name: 'أحمد محمود (طالب تجريبي)',
-        phone: '01012345678',
-        parentPhone: '01112345678',
-        password: '123',
-        grade: GradeLevel.GRADE_12,
-        governorate: 'القاهرة'
-      });
-      if (res.student) {
-        StorageService.setCurrentStudent(res.student);
-        setSuccess(`تم الدخول بالحساب التجريبي بنجاح`);
-        setTimeout(() => {
-          onClose();
-          if (onSuccess) onSuccess();
-        }, 500);
-      }
-    }
-  };
-
   const governorates = [
     'القاهرة', 'الجيزة', 'الإسكندرية', 'الدقهلية', 'الشرقية', 'المنوفية', 'القليوبية', 
     'البحيرة', 'الغربية', 'كفر الشيخ', 'الفيوم', 'بني سويف', 'المنيا', 'أسيوط', 
@@ -287,19 +257,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               {loading ? 'جارٍ تسجيل الدخول...' : 'دخول إلى حسابي'}
             </button>
 
-            {/* Quick Demo Switcher */}
-            <div className="pt-3 border-t border-slate-100 text-center space-y-2">
-              <span className="text-[11px] text-[#6B7280] font-medium">حسابات تجريبية للاختبار السريع:</span>
-              <div className="flex flex-wrap justify-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemoSwitch('student-demo')}
-                  className="rounded-xl border border-slate-200 bg-[#F5F7FA] px-3 py-1.5 text-xs font-bold text-[#1E4FD8] hover:border-blue-300 hover:bg-blue-50 transition-all shadow-xs"
-                >
-                  أحمد محمود (3 ثانوي)
-                </button>
-              </div>
-            </div>
           </form>
         )}
 
