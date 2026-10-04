@@ -125,28 +125,23 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenActivationModa
 
           {/* Developer Signature */}
           <div
-            className="group relative inline-flex items-center gap-3 rounded-2xl border border-slate-200/80 dark:border-slate-700/70 bg-white/80 dark:bg-[#101A34]/90 px-3.5 py-2.5 shadow-[0_8px_30px_rgba(15,23,42,0.06)] backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-[#1E4FD8]/40 hover:shadow-[0_12px_34px_rgba(30,79,216,0.12)]"
+            className="group inline-flex items-center gap-2.5 rounded-full border border-slate-200/70 dark:border-slate-700/60 bg-slate-50/70 dark:bg-white/[0.035] px-3 py-1.5 transition-all duration-300 hover:border-[#1E4FD8]/35 hover:bg-[#1E4FD8]/[0.04]"
             dir="ltr"
             aria-label="Designed and developed by Yousef Emad"
           >
-            <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#0D1B3E] via-[#1E4FD8] to-[#38BDF8] shadow-[0_5px_18px_rgba(30,79,216,0.28)]">
-              <span className="text-[11px] font-black tracking-tight text-white">YE</span>
-              <span className="absolute -bottom-2 -right-2 h-6 w-6 rounded-full bg-white/15 blur-md" />
-            </div>
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#1E4FD8]/10 text-[8px] font-black tracking-tight text-[#1E4FD8] dark:bg-sky-400/10 dark:text-sky-300">
+              YE
+            </span>
 
-            <div className="flex flex-col leading-none">
-              <span className="mb-1 text-[8px] font-bold uppercase tracking-[0.28em] text-slate-400 dark:text-slate-500">
-                Designed & Developed by
-              </span>
-              <span className="text-sm font-black tracking-[0.08em] text-[#0D1B3E] dark:text-white transition-colors group-hover:text-[#1E4FD8] dark:group-hover:text-sky-300">
-                YOUSEF EMAD
-              </span>
-              <span className="mt-1 text-[8px] font-medium tracking-[0.18em] text-slate-400 dark:text-slate-500">
-                WEB DEVELOPER • WiKi-PHYSICS
-              </span>
-            </div>
+            <span className="text-[9px] font-medium tracking-wide text-slate-400 dark:text-slate-500">
+              Crafted by
+            </span>
 
-            <Code2 className="ml-1 h-4 w-4 text-[#1E4FD8]/70 transition-transform duration-300 group-hover:rotate-12 group-hover:text-[#1E4FD8] dark:text-sky-300/70" />
+            <span className="text-[11px] font-bold tracking-wide text-slate-700 dark:text-slate-200 transition-colors group-hover:text-[#1E4FD8] dark:group-hover:text-sky-300">
+              Yousef Emad
+            </span>
+
+            <Code2 className="h-3.5 w-3.5 text-[#1E4FD8]/55 dark:text-sky-300/50 transition-transform duration-300 group-hover:rotate-6" />
           </div>
 
           <div className="flex items-center gap-2 text-[#0D1B3E] dark:text-slate-200 font-medium">
