@@ -123,16 +123,30 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenActivationModa
         <div className="mt-10 border-t border-slate-200 dark:border-slate-800 pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-[#6B7280] dark:text-slate-400">
           <p>© {new Date().getFullYear()} منصة ويكي فيزياء التعليمية — جميع الحقوق محفوظة</p>
 
-          {/* Designed & Developed by YOUSEF EMAD */}
-          <div className="inline-flex items-center gap-2.5 rounded-full border border-blue-200 dark:border-blue-800/80 bg-white dark:bg-[#121E3E] px-4 py-2 shadow-sm hover:border-[#1E4FD8] transition-all duration-300 group cursor-default" dir="ltr">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#1E4FD8] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#1E4FD8]"></span>
-            </span>
-            <Code2 className="h-4 w-4 text-[#1E4FD8] group-hover:rotate-12 transition-transform duration-300" />
-            <span className="text-xs text-[#6B7280] dark:text-slate-400 font-sans tracking-wide">
-              Designed & Engineered by <span className="font-bold text-[#1E4FD8] dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors tracking-wider">Yousef Emad</span>
-            </span>
+          {/* Developer Signature */}
+          <div
+            className="group relative inline-flex items-center gap-3 rounded-2xl border border-slate-200/80 dark:border-slate-700/70 bg-white/80 dark:bg-[#101A34]/90 px-3.5 py-2.5 shadow-[0_8px_30px_rgba(15,23,42,0.06)] backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-[#1E4FD8]/40 hover:shadow-[0_12px_34px_rgba(30,79,216,0.12)]"
+            dir="ltr"
+            aria-label="Designed and developed by Yousef Emad"
+          >
+            <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#0D1B3E] via-[#1E4FD8] to-[#38BDF8] shadow-[0_5px_18px_rgba(30,79,216,0.28)]">
+              <span className="text-[11px] font-black tracking-tight text-white">YE</span>
+              <span className="absolute -bottom-2 -right-2 h-6 w-6 rounded-full bg-white/15 blur-md" />
+            </div>
+
+            <div className="flex flex-col leading-none">
+              <span className="mb-1 text-[8px] font-bold uppercase tracking-[0.28em] text-slate-400 dark:text-slate-500">
+                Designed & Developed by
+              </span>
+              <span className="text-sm font-black tracking-[0.08em] text-[#0D1B3E] dark:text-white transition-colors group-hover:text-[#1E4FD8] dark:group-hover:text-sky-300">
+                YOUSEF EMAD
+              </span>
+              <span className="mt-1 text-[8px] font-medium tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                WEB DEVELOPER • WiKi-PHYSICS
+              </span>
+            </div>
+
+            <Code2 className="ml-1 h-4 w-4 text-[#1E4FD8]/70 transition-transform duration-300 group-hover:rotate-12 group-hover:text-[#1E4FD8] dark:text-sky-300/70" />
           </div>
 
           <div className="flex items-center gap-2 text-[#0D1B3E] dark:text-slate-200 font-medium">
