@@ -35,7 +35,6 @@ import {
 import { Assignment, AssignmentSubmission, Student } from '../types';
 import { StorageService } from '../services/storage';
 import { resolvePdfUrl, getEmbedPdfSource, downloadPdfFile } from '../utils/pdfHelper';
-import { MediaStore } from '../services/mediaStore';
 
 interface DrawPoint {
   x: number;
@@ -191,35 +190,47 @@ export const AssignmentSolverModal: React.FC<AssignmentSolverModalProps> = ({
     if (!files || files.length === 0) return;
 
     setIsUploadingFile(true);
-    const newFileUrls: string[] = [];
+    try {
+      const token = sessionStorage.getItem('wikifizya_student_token');
+      const formData = new FormData();
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      
-      // If image or small PDF, convert to base64 DataURL or store in MediaStore
-      if (file.type.startsWith('image/')) {
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        newFileUrls.push(base64);
-      } else {
-        // PDF or other documents -> Save to MediaStore
-        try {
-          const mediaId = 'solution_' + Date.now() + '_' + i;
-          const url = await MediaStore.saveMedia(mediaId, file, file.name);
-          newFileUrls.push(url);
-        } catch (err) {
-          console.error('Error saving solution file:', err);
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+
+        if (!(file.type === 'application/pdf' || file.type.startsWith('image/'))) {
+          throw new Error('الواجب يقبل ملفات PDF أو الصور فقط.');
         }
-      }
-    }
 
-    setUploadedFiles(prev => [...prev, ...newFileUrls]);
-    setIsUploadingFile(false);
-    if (e.target) e.target.value = '';
+        if (file.size > 25 * 1024 * 1024) {
+          throw new Error('حجم كل ملف حل يجب ألا يتجاوز 25 ميجابايت.');
+        }
+
+        formData.append('files', file);
+      }
+
+      const headers: Record<string, string> = {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const response = await fetch('/api/student/upload-assignment-solution', {
+        method: 'POST',
+        headers,
+        body: formData
+      });
+
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'تعذر رفع ملفات الحل.');
+      }
+
+      const uploadedUrls = (result.files || []).map((item: { url: string }) => item.url).filter(Boolean);
+      setUploadedFiles(prev => [...prev, ...uploadedUrls]);
+    } catch (err: any) {
+      console.error('Error uploading assignment solution:', err);
+      alert(err?.message || 'تعذر رفع ملفات الحل. حاول مرة أخرى.');
+    } finally {
+      setIsUploadingFile(false);
+      if (e.target) e.target.value = '';
+    }
   };
 
   const handleRemoveUploadedFile = (indexToRemove: number) => {
@@ -480,8 +491,8 @@ export const AssignmentSolverModal: React.FC<AssignmentSolverModalProps> = ({
       assignmentId: assignment.id,
       assignmentTitle: assignment.title,
       courseId: assignment.courseId,
-      studentId: student?.id || submission?.studentId || 'std_guest',
-      studentName: student?.name || submission?.studentName || 'طالب',
+      studentId: student?.id || submission?.studentId || '',
+      studentName: student?.name || submission?.studentName || '',
       studentPhone: student?.phone || submission?.studentPhone || '',
       studentGrade: student?.grade || submission?.studentGrade || assignment.gradeLevel,
       submittedAt: new Date().toISOString(),
