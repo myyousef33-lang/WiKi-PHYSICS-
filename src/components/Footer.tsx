@@ -125,23 +125,25 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenActivationModa
 
           {/* Developer Signature */}
           <div
-            className="group inline-flex items-center gap-2.5 rounded-full border border-slate-200/70 dark:border-slate-700/60 bg-slate-50/70 dark:bg-white/[0.035] px-3 py-1.5 transition-all duration-300 hover:border-[#1E4FD8]/35 hover:bg-[#1E4FD8]/[0.04]"
+            className="group relative inline-flex items-center gap-2 rounded-full border border-slate-200/70 dark:border-slate-700/60 bg-white/70 dark:bg-white/[0.035] px-2.5 py-1.5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#1E4FD8]/40 hover:shadow-[0_8px_24px_rgba(30,79,216,0.12)]"
             dir="ltr"
             aria-label="Designed and developed by Yousef Emad"
           >
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#1E4FD8]/10 text-[8px] font-black tracking-tight text-[#1E4FD8] dark:bg-sky-400/10 dark:text-sky-300">
+            <span className="relative flex h-5 w-5 items-center justify-center rounded-full bg-[#1E4FD8]/10 text-[7px] font-black text-[#1E4FD8] dark:bg-sky-400/10 dark:text-sky-300">
               YE
+              <span className="absolute inset-0 rounded-full border border-sky-400/30 animate-[ping_2.2s_ease-out_infinite]" />
             </span>
 
-            <span className="text-[9px] font-medium tracking-wide text-slate-400 dark:text-slate-500">
+            <span className="text-[8px] uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
               Crafted by
             </span>
 
-            <span className="text-[11px] font-bold tracking-wide text-slate-700 dark:text-slate-200 transition-colors group-hover:text-[#1E4FD8] dark:group-hover:text-sky-300">
+            <span className="relative text-[10px] font-bold tracking-wide text-slate-700 dark:text-slate-200">
               Yousef Emad
+              <span className="absolute -bottom-0.5 left-0 h-px w-full origin-left scale-x-0 bg-gradient-to-r from-[#1E4FD8] to-sky-300 transition-transform duration-300 group-hover:scale-x-100" />
             </span>
 
-            <Code2 className="h-3.5 w-3.5 text-[#1E4FD8]/55 dark:text-sky-300/50 transition-transform duration-300 group-hover:rotate-6" />
+            <Code2 className="h-3 w-3 text-[#1E4FD8]/55 transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-[#1E4FD8] dark:text-sky-300/50" />
           </div>
 
           <div className="flex items-center gap-2 text-[#0D1B3E] dark:text-slate-200 font-medium">
