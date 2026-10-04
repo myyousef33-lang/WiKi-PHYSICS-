@@ -121,8 +121,17 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           : [];
         setCourses(studentCourses);
 
-        const studentId = currentStudent?.id || 'demo-student';
-        const studentGrade = currentStudent?.grade || 'الصف الثالث الثانوي';
+        if (!currentStudent) {
+          setAttempts([]);
+          setNotifications([]);
+          setRecommendations([]);
+          setCourses([]);
+          setNextStepInfo(null);
+          return;
+        }
+
+        const studentId = currentStudent.id;
+        const studentGrade = currentStudent.grade || 'الصف الثالث الثانوي';
 
         const studentAttempts = StorageService.getStudentAttempts(studentId) || [];
         setAttempts(studentAttempts);
@@ -206,20 +215,19 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     return subscribeToStorage(refreshData);
   }, []);
 
-  const activeStudent: Student = student || {
-    id: 'demo-student',
-    name: 'طالب متفوق',
-    phone: '01012345678',
-    parentPhone: '01087654321',
-    grade: 'الصف الثالث الثانوي',
-    governorate: 'القاهرة',
-    walletBalance: 150,
-    streakDays: 14,
-    registeredAt: new Date().toISOString(),
-    lastActiveAt: new Date().toISOString(),
-    enrolledCourseIds: [],
-    unlockedPdfIds: []
-  };
+  const activeStudent = student;
+
+  if (!activeStudent) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center px-4" dir="rtl">
+        <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-xl dark:border-slate-800 dark:bg-[#121E3E]">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-[#1E4FD8] dark:bg-blue-950/50 dark:text-sky-300">🔒</div>
+          <h2 className="text-xl font-black text-[#0D1B3E] dark:text-white">لوحة الطالب</h2>
+          <p className="mt-2 text-sm leading-7 text-slate-500 dark:text-slate-300">سجّل الدخول أولاً للوصول إلى بياناتك وتقدمك وواجباتك.</p>
+        </div>
+      </div>
+    );
+  }
 
   // Metrics
   const progressList = StorageService.getStudentProgressList(activeStudent.id) || [];
