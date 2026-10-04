@@ -1771,13 +1771,18 @@ ${linkUrl ? `للدخول مباشرة: ${linkUrl}` : ''}
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Wikifizya LMS Server running on http://0.0.0.0:${PORT}`);
-  });
+  // Vercel runs the Express app as a serverless function. A persistent
+  // listener is only started for the local/standalone Node server.
+  if (!process.env.VERCEL) {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Wikifizya LMS Server running on http://0.0.0.0:${PORT}`);
+    });
+  }
 }
 
-startServer().catch((err) => {
+export const serverReady = startServer().catch((err) => {
   console.error('Fatal Server Start Error:', err);
+  throw err;
 });
 
 export default app;
