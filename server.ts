@@ -1321,6 +1321,52 @@ async function startServer() {
     }
   });
 
+  // Student assignment solution uploads — persistent server storage
+  app.post('/api/student/upload-assignment-solution', requireStudentAuth, requireUploadRateLimit, upload.array('files', 10), (req, res): any => {
+    try {
+      const files = (req.files || []) as Express.Multer.File[];
+      if (!files.length) {
+        return res.status(400).json({ success: false, error: 'لم يتم اختيار ملفات للرفع.' });
+      }
+
+      const uploaded: Array<{ url: string; name: string; type: string; size: number }> = [];
+
+      for (const file of files) {
+        const ext = path.extname(file.originalname).toLowerCase();
+        const isPdf = ext === '.pdf' || file.mimetype === 'application/pdf';
+        const isImage = ['.jpg', '.jpeg', '.png', '.webp'].includes(ext) && file.mimetype.startsWith('image/');
+
+        if (!isPdf && !isImage) {
+          try { fs.unlinkSync(file.path); } catch {}
+          return res.status(400).json({ success: false, error: 'الواجب يقبل ملفات PDF أو صور JPG/PNG/WEBP فقط.' });
+        }
+
+        if (file.size > 25 * 1024 * 1024) {
+          try { fs.unlinkSync(file.path); } catch {}
+          return res.status(413).json({ success: false, error: 'حجم كل ملف حل يجب ألا يتجاوز 25 ميجابايت.' });
+        }
+
+        const validation = validateFileContent(file.path, file.originalname, file.mimetype);
+        if (!validation.isValid) {
+          try { fs.unlinkSync(file.path); } catch {}
+          return res.status(400).json({ success: false, error: validation.error || 'الملف غير صالح.' });
+        }
+
+        uploaded.push({
+          url: '/uploads/' + file.filename,
+          name: file.originalname,
+          type: file.mimetype,
+          size: file.size
+        });
+      }
+
+      return res.json({ success: true, files: uploaded });
+    } catch (err) {
+      console.error('Assignment solution upload error:', err);
+      return res.status(500).json({ success: false, error: 'تعذر رفع ملفات الحل. حاول مرة أخرى.' });
+    }
+  });
+
   // Student Payment Receipt Upload endpoint
   app.post('/api/student/upload-receipt', requireUploadRateLimit, upload.single('file'), (req, res): any => {
     try {
